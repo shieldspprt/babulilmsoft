@@ -109,6 +109,21 @@ const Auth = () => {
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign In
             </Button>
+            
+            <div className="mt-6 pt-4 border-t border-border">
+              <p className="text-center text-sm text-muted-foreground">
+                Don't have an account?{' '}
+                <a 
+                  href="/signup" 
+                  className="text-emerald-600 hover:text-emerald-700 font-medium underline"
+                >
+                  Start your free trial →
+                </a>
+              </p>
+              <p className="text-center text-xs text-muted-foreground mt-2">
+                Get 100 free credits for 14 days
+              </p>
+            </div>
           </form>
         </CardContent>
       </Card>

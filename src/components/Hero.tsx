@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, School, Sparkles } from "lucide-react";
 
 const Hero = () => {
   return (
@@ -57,6 +57,30 @@ const Hero = () => {
           <div className="text-center">
             <div className="text-3xl font-bold text-emerald mb-2">Canadian Framework</div>
             <div className="text-sm text-muted-foreground">International Standards</div>
+          </div>
+        </div>
+
+        {/* SaaS CTA Section */}
+        <div className="mt-20 mb-8">
+          <div className="bg-gradient-to-r from-emerald/10 via-emerald/5 to-emerald/10 border border-emerald/20 rounded-2xl p-8 max-w-2xl mx-auto">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <School className="h-6 w-6 text-emerald" />
+              <span className="text-sm font-medium text-emerald uppercase tracking-wider">For Schools</span>
+            </div>
+            <h3 className="text-2xl font-bold mb-2">School Management Software</h3>
+            <p className="text-muted-foreground mb-4">
+              Manage students, fees, attendance, and finances in one place.
+              <br />
+              <span className="inline-flex items-center gap-1 text-emerald font-medium">
+                <Sparkles className="h-4 w-4" />
+                Start free trial — 100 credits, 14 days
+              </span>
+            </p>
+            <Button size="lg" className="w-full sm:w-auto" asChild>
+              <a href="/signup">
+                Get Started Free →
+              </a>
+            </Button>
           </div>
         </div>
       </div>
