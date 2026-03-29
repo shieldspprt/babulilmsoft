@@ -45,12 +45,17 @@ const Signup = () => {
         },
       });
 
-      if (signUpError) {
-        toast.error(signUpError.message);
-      } else if (user) {
-        toast.success('School registered successfully! You can now log in.');
-        navigate('/auth');
+      if (signUpError || !user) {
+        toast.error(signUpError?.message || 'Signup failed');
+        setLoading(false);
+        return;
       }
+
+      // Note: Database trigger automatically creates school record
+      // based on metadata (school_name, phone, etc.)
+      
+      toast.success('School registered successfully! You can now log in.');
+      navigate('/auth');
     } catch (err) {
       if (err instanceof z.ZodError) {
         toast.error(err.errors[0].message);
