@@ -14,6 +14,9 @@ import GlobalPathways from "./pages/GlobalPathways";
 import Leadership from "./pages/Leadership";
 import Activities from "./pages/Activities";
 import Auth from "./pages/Auth";
+import Signup from "./pages/Signup";
+import Billing from "./pages/Billing";
+import Payment from "./pages/billing/Payment";
 import Dashboard from "./pages/Dashboard";
 import Enrollment from "./pages/Enrollment";
 import FeeCollection from "./pages/FeeCollection";
@@ -64,6 +67,23 @@ const App = () => (
           <Route path="/uniforms" element={<Uniforms />} />
           <Route path="/fees" element={<Fees />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route 
+            path="/billing" 
+            element={
+              <ProtectedRoute requireUser>
+                <Billing />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/billing/payment" 
+            element={
+              <ProtectedRoute requireUser>
+                <Payment />
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/dashboard" 
             element={
