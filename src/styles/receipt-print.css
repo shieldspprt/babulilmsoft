@@ -1,0 +1,148 @@
+/* Receipt Print Styles - 80mm Thermal Printer Format */
+
+@media print {
+  /* Page setup for 80mm thermal printer */
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  /* Reset body and html */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 80mm !important;
+    background: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Hide EVERYTHING first */
+  body > *:not(#receipt-print-area),
+  header,
+  nav,
+  footer,
+  aside,
+  [role="navigation"],
+  [role="banner"],
+  [role="dialog"],
+  [data-radix-portal],
+  [data-radix-popper-content-wrapper],
+  [data-radix-dialog-overlay],
+  [data-radix-dialog-content],
+  [data-state],
+  .fixed,
+  .sticky,
+  button,
+  .print\\:hidden,
+  .DialogOverlay,
+  .DialogContent,
+  [class*="Dialog"],
+  [class*="Overlay"],
+  [class*="Sheet"],
+  [class*="navigation"],
+  [class*="sidebar"],
+  [class*="header"],
+  [class*="footer"],
+  [class*="nav-"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+
+  /* Now show ONLY the receipt */
+  #receipt-print-area {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 3mm !important;
+    background: white !important;
+    color: black !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    z-index: 999999 !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #receipt-print-area * {
+    visibility: visible !important;
+    display: revert !important;
+    color: black !important;
+    background: transparent !important;
+  }
+
+  /* Receipt typography */
+  .print-header {
+    font-size: 14px !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    margin-bottom: 4px !important;
+  }
+
+  .print-subheader {
+    font-size: 12px !important;
+    text-align: center !important;
+    margin-bottom: 2px !important;
+  }
+
+  .print-title {
+    font-size: 14px !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+  }
+
+  .print-body {
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+  }
+
+  .print-small {
+    font-size: 10px !important;
+  }
+
+  .print-large {
+    font-size: 14px !important;
+    font-weight: bold !important;
+  }
+
+  /* Ensure borders print */
+  .print-border-dashed {
+    border-top: 1px dashed black !important;
+    margin: 6px 0 !important;
+  }
+
+  .print-border-solid {
+    border-top: 1px solid black !important;
+    margin: 4px 0 !important;
+  }
+
+  .print-border-double {
+    border-top: 3px double black !important;
+    margin: 6px 0 !important;
+  }
+
+  /* Force background colors to print for highlighted sections */
+  #receipt-print-area .bg-gray-100 {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
