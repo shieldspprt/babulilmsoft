@@ -2,6 +2,13 @@
   command = "npm run build"
   publish = "dist"
 
+# Allow assets to pass through without rewrite
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+
+# SPA fallback for all other routes
 [[redirects]]
   from = "/*"
   to = "/index.html"
