@@ -1,73 +1,99 @@
-# Welcome to your Lovable project
+# MultiSchool - Multi-Tenant School Management SaaS Platform
 
-## Project info
+A comprehensive SaaS platform for managing multiple schools, built with modern web technologies.
 
-**URL**: https://lovable.dev/projects/36f1f112-2d31-47cc-a88a-f7cb86e16aea
+## About
 
-## How can I edit this code?
+MultiSchool transforms from a single-school management system into a multi-tenant SaaS platform where multiple schools can:
+- Sign up independently
+- Buy credits to use the software
+- Manage their own students, fees, and data
+- Have isolated data with RLS policies
 
-There are several ways of editing your application.
+## Architecture
 
-**Use Lovable**
+### Backend (Supabase)
+- **PostgreSQL** with Row Level Security (RLS)
+- **Multi-tenant architecture** with school isolation
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/36f1f112-2d31-47cc-a88a-f7cb86e16aea) and start prompting.
+### Phase 1: Foundation
+- Schools table with owner references
+- School Credits table for billing
+- Credit consumption function
+- Updated RLS policies across all tables
 
-Changes made via Lovable will be committed automatically to this repo.
+### Phase 2: Credit System & Payments
+**Pricing Tiers:**
+- Starter: 500 credits for PKR 5,000
+- Standard: 1,200 credits for PKR 10,000
+- Premium: 3,000 credits for PKR 20,000
 
-**Use your preferred IDE**
+**Payment Methods:**
+- Bank Transfer (manual verification)
+- EasyPaisa
+- JazzCash
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Tech Stack
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Framework:** React + TypeScript + Vite
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Backend:** Supabase
+- **Router:** React Router
+- **Query:** TanStack Query
+- **Icons:** Lucide React
 
-Follow these steps:
+## Features
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Core Modules
+- **Student Enrollment** - Complete student registration with parent records
+- **Fee Collection** - Fee management and receipt generation
+- **Accounts Management** - Income/expense tracking with category management
+- **Teacher Management** - Staff records and assignments
+- **Class Management** - Class/section organization
+- **Supplier Management** - Vendor transactions and reports
+- **Book Sales** - Inventory and sales tracking
+- **Reports** - Comprehensive analytics and exports
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Mobile-First Design
+- PWA support with offline capabilities
+- Responsive mobile interface
+- Touch-optimized workflows
+- Haptic feedback for interactions
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Getting Started
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+## Credit System
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Schools operate on a credit-based model:
+- Actions consume credits (enrollment, fee collection, etc.)
+- Low credit alerts at 100 remaining
+- Auto-suspension at 0 credits
+- Top-up via payment dashboard
 
-**Use GitHub Codespaces**
+## Project Structure
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+src/
+├── components/        # UI components
+├── pages/            # Route pages
+│   ├── mobile/       # Mobile-optimized pages
+├── hooks/            # Custom React hooks
+├── lib/              # Utilities
+├── integrations/     # Supabase client
+└── content/          # Static content
+```
 
-## What technologies are used for this project?
+## License
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/36f1f112-2d31-47cc-a88a-f7cb86e16aea) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Private - All rights reserved
