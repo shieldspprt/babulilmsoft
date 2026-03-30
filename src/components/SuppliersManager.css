@@ -1,73 +1,93 @@
+/* Suppliers Manager - Uses Global CSS Variables */
+
 .suppliers-manager {
   padding: 1.5rem;
+  background: var(--bg-color);
+  min-height: 100%;
 }
 
+/* Header */
 .suppliers-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .suppliers-header h3 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #fff;
+  color: var(--text-main);
   margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .header-actions {
   display: flex;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.btn-add-supplier, .btn-add-transaction {
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
+.btn-add-supplier,
+.btn-add-transaction {
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
   border: none;
   cursor: pointer;
   font-weight: 500;
+  font-size: 0.95rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   transition: all 0.2s;
+  min-height: 44px;
 }
 
 .btn-add-supplier {
-  background: #10b981;
+  background: var(--success);
   color: white;
 }
 
 .btn-add-supplier:hover {
-  background: #059669;
+  filter: brightness(1.1);
 }
 
 .btn-add-transaction {
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
-  opacity: 0.6;
+}
+
+.btn-add-transaction:hover:not(:disabled) {
+  filter: brightness(1.1);
 }
 
 .btn-add-transaction:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  opacity: 0.4;
 }
 
+/* Supplier Form */
 .supplier-form {
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
 }
 
 .supplier-form h4 {
-  margin: 0 0 1rem 0;
-  color: #fff;
+  margin: 0 0 1.25rem 0;
+  color: var(--text-main);
+  font-size: 1.1rem;
 }
 
 .form-row {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -75,51 +95,74 @@
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 .form-field label {
-  color: #94a3b8;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .form-field input {
-  padding: 0.6rem 0.8rem;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(0,0,0,0.2);
-  color: #fff;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-color);
+  color: var(--text-main);
   font-size: 1rem;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+
+.form-field input:focus {
+  outline: none;
+  border-color: var(--primary);
 }
 
 .balance-hint {
-  color: #64748b;
-  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
 .btn-cancel {
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.2);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
   background: transparent;
-  color: #94a3b8;
+  color: var(--text-muted);
   cursor: pointer;
+  font-weight: 500;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+  background: var(--bg-surface-hover);
 }
 
 .btn-save {
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
   border: none;
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
   cursor: pointer;
+  font-weight: 500;
+  min-height: 44px;
+  transition: all 0.2s;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: var(--accent);
 }
 
 .btn-save:disabled {
@@ -127,8 +170,10 @@
   cursor: not-allowed;
 }
 
+/* Suppliers List */
 .suppliers-list {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
 }
 
@@ -137,58 +182,83 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.25rem;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.supplier-card:hover {
+  border-color: var(--primary);
 }
 
 .supplier-info h4 {
   margin: 0 0 0.25rem 0;
-  color: #fff;
+  color: var(--text-main);
+  font-size: 1.1rem;
 }
 
 .business-name {
-  color: #94a3b8;
-  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
 }
 
 .contact-row {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #64748b;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
   margin-top: 0.5rem;
 }
 
 .balance-section {
   text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.balance-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .balance {
   padding: 0.5rem 1rem;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .balance.owe {
   background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .balance.owed {
   background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
+  color: var(--success);
 }
 
 .balance.zero {
   background: rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .empty-state {
   text-align: center;
   padding: 3rem;
-  color: #64748b;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.empty-state svg {
+  margin-bottom: 1rem;
+  opacity: 0.5;
 }
 
 /* Transaction Tabs */
@@ -197,8 +267,9 @@
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-surface);
   border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
   flex-wrap: wrap;
 }
 
@@ -206,19 +277,21 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.6rem 1rem;
+  padding: 0.75rem 1rem;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
   border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 500;
   transition: all 0.2s;
+  min-height: 44px;
 }
 
 .tab-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-surface-hover);
+  color: var(--text-main);
 }
 
 .tab-btn.active {
@@ -234,9 +307,13 @@
   border-color: rgba(239, 68, 68, 0.3);
 }
 
-/* Transaction Form */
+.tab-btn.close:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* Transaction Form Container */
 .transaction-form-container {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-surface);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
@@ -248,8 +325,11 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: var(--text-main);
+  font-size: 1.1rem;
 }
 
+/* Supplier Selector */
 .supplier-selector {
   margin-bottom: 1.25rem;
 }
@@ -259,6 +339,7 @@
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 .supplier-selector select {
@@ -269,14 +350,21 @@
   border-radius: var(--radius-md);
   color: var(--text-main);
   font-size: 1rem;
+  min-height: 44px;
 }
 
+.supplier-selector select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Balance Summary */
 .balance-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-color);
   border-radius: var(--radius-md);
   margin-bottom: 1.5rem;
 }
@@ -305,6 +393,7 @@
   color: var(--danger);
 }
 
+/* Transaction Form */
 .transaction-form {
   display: flex;
   flex-direction: column;
@@ -326,6 +415,7 @@
 .transaction-form label {
   font-size: 0.9rem;
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 .transaction-form input,
@@ -337,6 +427,8 @@
   border-radius: var(--radius-md);
   color: var(--text-main);
   font-size: 1rem;
+  min-height: 44px;
+  transition: all 0.2s;
 }
 
 .transaction-form input:focus,
@@ -344,6 +436,11 @@
 .transaction-form textarea:focus {
   outline: none;
   border-color: var(--primary);
+}
+
+.transaction-form textarea {
+  min-height: 80px;
+  resize: vertical;
 }
 
 .submit-btn {
@@ -361,6 +458,7 @@
   cursor: pointer;
   transition: all 0.2s;
   margin-top: 0.5rem;
+  min-height: 44px;
 }
 
 .submit-btn:hover:not(:disabled) {
@@ -382,7 +480,7 @@
 
 /* Ledger */
 .ledger-container {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-surface);
   border-radius: var(--radius-lg);
   padding: 1.5rem;
   border: 1px solid var(--border);
@@ -399,11 +497,13 @@
 
 .ledger-header h3 {
   margin: 0;
+  color: var(--text-main);
+  font-size: 1.1rem;
 }
 
 .ledger-summary {
   padding: 0.5rem 1rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bg-color);
   border-radius: var(--radius-md);
 }
 
@@ -414,7 +514,7 @@
 .ledger-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .ledger-table th,
@@ -447,18 +547,18 @@
   align-items: center;
   padding: 0.25rem 0.75rem;
   border-radius: var(--radius-xl);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 500;
   text-transform: capitalize;
 }
 
 .tx-type.bill {
-  background: rgba(245, 158, 11, 0.1);
+  background: rgba(245, 158, 11, 0.15);
   color: #f59e0b;
 }
 
 .tx-type.payment {
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(16, 185, 129, 0.15);
   color: var(--success);
 }
 
@@ -469,7 +569,7 @@
 
 .tx-balance {
   font-weight: 500;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 .tx-balance.positive {
@@ -498,10 +598,71 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: 500;
+  font-size: 0.95rem;
   transition: all 0.2s;
+  min-height: 44px;
 }
 
 .view-ledger-btn:hover {
   background: var(--primary);
   color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .suppliers-manager {
+    padding: 1rem;
+  }
+  
+  .suppliers-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .btn-add-supplier,
+  .btn-add-transaction {
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .supplier-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .balance-section {
+    text-align: left;
+    width: 100%;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .transaction-tabs {
+    justify-content: center;
+  }
+  
+  .tab-btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .tab-btn span {
+    display: none;
+  }
+  
+  .ledger-table th,
+  .ledger-table td {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
 }
