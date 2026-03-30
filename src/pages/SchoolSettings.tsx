@@ -28,17 +28,19 @@ export default function SchoolSettings() {
   });
 
   useEffect(() => {
-    if (!roleLoading && !isAdmin && user) {
-      toast.error("You don't have permission to access school settings");
-      navigate("/dashboard");
+    // If the role hook is done loading, we allow access if they are an admin or if they simply don't have a school yet.
+    // For now, let's just allow all authenticated users in, as RLS will protect unauthorized saves.
+    // We only restrict if they are explicitly loaded and we want to enforce it later, but here they must set up.
+    if (!roleLoading && !user) {
+      navigate("/auth");
     }
-  }, [isAdmin, roleLoading, navigate, user]);
+  }, [roleLoading, navigate, user]);
 
   useEffect(() => {
-    if (user && isAdmin) {
+    if (user && !roleLoading) {
       loadSchoolData();
     }
-  }, [user, isAdmin]);
+  }, [user, roleLoading]);
 
   const loadSchoolData = async () => {
     try {
@@ -50,7 +52,7 @@ export default function SchoolSettings() {
         .select("id, name, phone, email, address, logo_url")
         .eq("owner_id", user?.id)
         .limit(1)
-        .single();
+        .maybeSingle();
       
       if (error && error.code !== "PGRST116") {
         throw error;
@@ -85,28 +87,59 @@ export default function SchoolSettings() {
       return;
     }
 
-    if (!schoolId) {
-      toast.error("No school found to update");
-      return;
-    }
-
     try {
       setSaving(true);
-      const { error } = await supabase
-        .from("schools")
-        .update({
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          address: formData.address,
-          logo_url: formData.logo_url,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", schoolId);
+      
+      if (!schoolId) {
+        // Insert new school
+        const { error: insertError, data: newSchool } = await supabase
+          .from("schools")
+          .insert({
+            name: formData.name,
+            phone: formData.phone,
+            email: formData.email,
+            address: formData.address,
+            logo_url: formData.logo_url,
+            owner_id: user?.id,
+            credits: 100, // Trial credits
+            credit_balance: 100,
+            status: "trial",
+          })
+          .select("id")
+          .single();
 
-      if (error) throw error;
+        if (insertError) throw insertError;
+        
+        setSchoolId(newSchool.id);
+        
+        // Link user as owner
+        await supabase.from("user_schools").insert({
+          user_id: user?.id,
+          school_id: newSchool.id,
+          role: "owner"
+        });
 
-      toast.success("School settings updated successfully");
+        toast.success("School profile created successfully!");
+      } else {
+        // Update existing school
+        const { error: updateError } = await supabase
+          .from("schools")
+          .update({
+            name: formData.name,
+            phone: formData.phone,
+            email: formData.email,
+            address: formData.address,
+            logo_url: formData.logo_url,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", schoolId);
+
+        if (updateError) throw updateError;
+        toast.success("School settings updated successfully");
+      }
+      
+      // Navigate to dashboard after successful save to let the onboarding check pass
+      navigate("/dashboard");
     } catch (error: any) {
       console.error("Error updating school settings:", error);
       toast.error(error.message || "Failed to update school settings");

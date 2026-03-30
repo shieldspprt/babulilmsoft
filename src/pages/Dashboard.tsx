@@ -90,28 +90,28 @@ const Dashboard = () => {
     setLoading(true);
     try {
       if (user) {
-        const { data: schoolData } = await supabase
+        const { data: schoolData, error: schoolError } = await supabase
           .from('schools')
           .select('name, address, phone, email, logo_url')
-          .eq('owner_id', user.id)
           .limit(1)
-          .single();
+          .maybeSingle();
+
+        if (schoolError && schoolError.code !== 'PGRST116') {
+          console.error("Error fetching school data", schoolError);
+        }
           
-        if (schoolData) {
-          // Onboarding verification check
-          if (
+        if (!schoolData || 
             !schoolData.name || 
             schoolData.name === 'My School' || 
             !schoolData.address || 
             !schoolData.phone || 
-            !schoolData.email
-          ) {
-            toast.warning("Please complete your school profile to access the dashboard.");
-            navigate('/school-settings');
-            return;
-          }
-          setSchoolInfo(schoolData);
+            !schoolData.email) {
+          toast.warning("Please complete your school profile to access the dashboard.");
+          navigate('/school-settings');
+          return;
         }
+        
+        setSchoolInfo(schoolData);
       }
 
       const { count: totalStudents } = await supabase

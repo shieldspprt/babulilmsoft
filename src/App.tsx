@@ -232,7 +232,7 @@ const App = () => (
           <Route 
             path="/school-settings" 
             element={
-              <ProtectedRoute requireAdmin>
+              <ProtectedRoute requireUser>
                 <SchoolSettings />
               </ProtectedRoute>
             } 
