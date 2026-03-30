@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Button } from './ui/Button';
+// import { Button } from './ui/Button';
 import { Edit2, Save, X, Users } from 'lucide-react';
 import './ClassesManager.css';
 
