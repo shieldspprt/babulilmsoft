@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Button } from './ui/Button';
-import { Plus, Store, Phone, MapPin, ArrowLeft, ArrowUpCircle, ArrowDownCircle, FileText, BookOpen } from 'lucide-react';
+import { Plus, Store, Phone, MapPin, ArrowLeft, ArrowUpCircle, ArrowDownCircle, BookOpen } from 'lucide-react';
 import './SuppliersManager.css';
 
 type Supplier = {
