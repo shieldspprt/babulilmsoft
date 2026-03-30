@@ -161,14 +161,14 @@ export const Dashboard = () => {
                   {paymentMethod === 'JazzCash' ? (
                     <>
                       <p>Send <strong>Rs {selectedPlan.pkr}</strong> via JazzCash to:</p>
-                      <div className="account-box">0300-1234567 (Babulilmsoft)</div>
+                      <div className="account-box">0300-1234567 (ilmsoft)</div>
                     </>
                   ) : (
                     <>
                       <p>Transfer <strong>Rs {selectedPlan.pkr}</strong> to Bank Account:</p>
                       <div className="account-box">
                         <strong>Bank:</strong> Meezan Bank<br/>
-                        <strong>Acct Title:</strong> Babulilmsoft<br/>
+                        <strong>Acct Title:</strong> ilmsoft<br/>
                         <strong>IBAN:</strong> PK12MEZN000123456789
                       </div>
                     </>

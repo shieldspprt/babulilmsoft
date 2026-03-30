@@ -17,9 +17,9 @@ export const Navbar = () => {
   return (
     <nav className="navbar glass" aria-label="Main Navigation">
       <div className="nav-container">
-        <Link to="/" className="nav-logo" aria-label="Babulilmsoft Home">
+        <Link to="/" className="nav-logo" aria-label="ilmsoft Home">
           <GraduationCap size={28} className="logo-icon" aria-hidden="true" />
-          <span>Babulilm<span className="logo-accent">soft</span></span>
+          <span>ilm<span className="logo-accent">soft</span></span>
         </Link>
         
         <div className="nav-actions">

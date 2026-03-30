@@ -58,7 +58,7 @@ export const Signup = () => {
         <div className="auth-header">
           <div className="auth-icon"><Building size={32} /></div>
           <h2>Register School</h2>
-          <p>Create your Babulilmsoft account</p>
+          <p>Create your ilmsoft account</p>
         </div>
 
         {error && <div className="auth-error">{error}</div>}

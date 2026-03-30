@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://babulilmsoft.netlify.app/sitemap.xml
+Sitemap: https://ilmsoft.netlify.app/sitemap.xml

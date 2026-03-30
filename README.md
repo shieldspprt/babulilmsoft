@@ -1,73 +1,59 @@
-# React + TypeScript + Vite
+# ilmsoft
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Modern School Management System for day-to-day administrative excellence.
 
-Currently, two official plugins are available:
+ilmsoft is a premium, intuitive platform designed to streamline school operations, focusing on administrative efficiency rather than just education management. It empowers school administrators to handle complex daily tasks with ease and transparency.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Key Features
 
-## React Compiler
+- **Student Registration**: Digital onboarding with automated ID generation and comprehensive student records.
+- **Fee Collection**: Transparent tracking of payments, automated invoicing, and flexible fee structures.
+- **Teacher Management**: Efficient staff oversight, profile management, and coordination tools.
+- **Financial Reporting**: Real-time insights into income, expenses, and overall financial health with detailed reports.
+- **Admin Dashboard**: A centralized hub for managing all aspects of your institution at a glance.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Tech Stack
 
-## Expanding the ESLint configuration
+- **Frontend**: React 19, TypeScript, Vite
+- **Styling**: Vanilla CSS with modern design principles (Glassmorphism, CSS Variables)
+- **Backend**: Supabase (PostgreSQL, Auth)
+- **Icons**: Lucide React
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 📦 Installation
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/your-repo/ilmsoft.git
+   cd ilmsoft
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+3. **Environment Setup**:
+   Create a `.env.local` file with your Supabase credentials:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+4. **Run the development server**:
+   ```bash
+   npm run dev
+   ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🌐 Deployment
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+The application is optimized for deployment on Netlify or Vercel.
+
+- **Netlify**: Connect your repository and it will automatically build using the provided `netlify.toml` configuration.
+- **Vite Build**:
+  ```bash
+  npm run build
+  ```
+
+## 📄 License
+
+This project is licensed under the MIT License.

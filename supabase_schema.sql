@@ -1,4 +1,4 @@
--- SQL Schema for Babulilmsoft
+-- SQL Schema for ilmsoft
 
 -- 1. Create the schools table
 CREATE TABLE IF NOT EXISTS public.schools (
