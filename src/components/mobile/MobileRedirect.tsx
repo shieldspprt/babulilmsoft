@@ -29,6 +29,8 @@ export const MobileRedirect = ({ children }: MobileRedirectProps) => {
         '/accounts/income': '/mobile/income',
         '/accounts/expense': '/mobile/expense',
         '/manage-teachers': '/mobile/manage-teachers',
+        '/school-settings': '/school-settings',
+        '/billing': '/billing',
       };
 
       const mobilePath = mobileRouteMap[location.pathname] || '/mobile/dashboard';

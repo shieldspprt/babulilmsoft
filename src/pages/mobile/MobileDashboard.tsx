@@ -53,6 +53,7 @@ const MobileDashboard = () => {
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [savingName, setSavingName] = useState(false);
+  const [schoolInfo, setSchoolInfo] = useState<{name?: string, logo_url?: string, address?: string, phone?: string, email?: string} | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -142,6 +143,27 @@ const MobileDashboard = () => {
   const loadDashboardStats = async () => {
     setLoading(true);
     try {
+      if (user) {
+        const { data: schoolData, error: schoolError } = await supabase
+          .from('schools')
+          .select('name, address, phone, email, logo_url')
+          .limit(1)
+          .maybeSingle();
+
+        if (!schoolData || 
+            !schoolData.name || 
+            schoolData.name === 'My School' || 
+            !schoolData.address || 
+            !schoolData.phone || 
+            !schoolData.email) {
+          toast.warning("Please complete your school profile to access the dashboard.");
+          navigate('/school-settings');
+          return;
+        }
+        
+        setSchoolInfo(schoolData);
+      }
+
       const { count: totalStudents } = await supabase
         .from('students')
         .select('*', { count: 'exact', head: true });
@@ -248,24 +270,31 @@ const MobileDashboard = () => {
         
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="BAB UL ILM" className="h-10 w-10 rounded-lg shadow-md" />
+            <img 
+              src={schoolInfo?.logo_url || logo} 
+              alt="School Logo" 
+              className="h-10 w-10 rounded-lg shadow-md object-contain bg-white p-1" 
+              onError={(e) => (e.currentTarget.style.display = 'none')}
+            />
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold mobile-fade-in">
-                  {getGreeting()}{userName ? `, ${userName}` : ''}!
+                <h1 className="text-xl font-bold mobile-fade-in line-clamp-1 max-w-[150px]">
+                  {schoolInfo?.name ? schoolInfo.name : `${getGreeting()}${userName ? `, ${userName}` : ''}!`}
                 </h1>
                 <button
                   onClick={openNameDialog}
-                  className="p-1 rounded-full hover:bg-primary-foreground/10 transition-colors"
+                  className="p-1 rounded-full hover:bg-primary-foreground/10 transition-colors shrink-0"
                   aria-label={userName ? 'Edit name' : 'Set your name'}
                 >
                   <Edit2 className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <p className="text-xs opacity-80 mobile-fade-in mt-0.5">BAB UL ILM K12 International</p>
+              <p className="text-xs opacity-80 mobile-fade-in mt-0.5 line-clamp-1">
+                {schoolInfo?.name ? `Welcome back, ${userName || 'Administrator'}.` : 'BAB UL ILM K12 International'}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => setShowInstallGuide(true)}
               className="p-2 rounded-full hover:bg-primary-foreground/10 transition-colors mobile-fade-in"
