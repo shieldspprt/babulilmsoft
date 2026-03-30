@@ -54,4 +54,5 @@ export type Teacher = {
   notes: string;
   is_active: boolean;
   created_at: string;
+  type: 'Teacher' | 'Staff';
 };
