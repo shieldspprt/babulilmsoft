@@ -31,3 +31,11 @@ export type CreditRequest = {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
 };
+
+export type Class = {
+  id: string;
+  school_id: string;
+  name: string;
+  description: string;
+  created_at: string;
+};
