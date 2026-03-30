@@ -1,214 +1,304 @@
+/* Teachers Manager - Step-by-Step Form Design */
+
 .teachers-manager {
-  padding: 1.5rem;
-}
-
-.teachers-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
-.teachers-header h3 {
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.25rem;
-  margin-bottom: 0.25rem;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
-.teachers-header p {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.btn-add-teacher {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-add-teacher:hover {
-  background: var(--accent);
-  transform: translateY(-1px);
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  margin-bottom: 1.5rem;
-}
-
-.search-bar input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--text-main);
-  font-size: 1rem;
-  outline: none;
-}
-
-.teacher-form {
-  padding: 1.5rem;
+.modal-content {
+  background: var(--bg-surface);
   border-radius: var(--radius-lg);
-  margin-bottom: 2rem;
-  border: 1px solid var(--border);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
 }
 
-.form-header {
+.modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border);
 }
 
-.form-header h4 {
-  font-size: 1.1rem;
-  color: var(--text-main);
+.modal-header h3 {
+  margin: 0;
+  font-size: var(--font-size-xl);
 }
 
 .btn-close {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  width: 40px;
+  height: 40px;
+  background: var(--bg-color);
+  border: none;
+  border-radius: var(--radius-md);
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .btn-close:hover {
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--danger-light);
   color: var(--danger);
-  border-color: var(--danger);
 }
 
-.form-grid {
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.step span {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-color);
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.step small {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.step.active span {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.step.completed span {
+  background: var(--success);
+  border-color: var(--success);
+  color: white;
+}
+
+.step-line {
+  width: 40px;
+  height: 2px;
+  background: var(--border);
+}
+
+.step.completed + .step-line {
+  background: var(--success);
+}
+
+/* Form Step */
+.form-step {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Type Selector */
+.type-selector {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  margin-bottom: 1rem;
 }
 
+.type-selector label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  background: var(--bg-color);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.type-selector label:hover {
+  border-color: var(--primary-light);
+}
+
+.type-selector label.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.type-selector label svg {
+  color: var(--primary);
+}
+
+.type-selector label span {
+  font-weight: 600;
+}
+
+/* Form Row */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-row.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Form Group */
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.form-group.full-width {
-  grid-column: 1 / -1;
-}
-
 .form-group label {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  gap: 0.35rem;
+  font-size: var(--font-size-base);
   font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
-  padding: 0.625rem 0.875rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  padding: 0.875rem 1rem;
+  background: var(--bg-color);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
   color: var(--text-main);
-  font-size: 0.95rem;
-  outline: none;
-  transition: all 0.2s;
+  font-size: var(--font-size-base);
+  min-height: var(--touch-min);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
+  outline: none;
   border-color: var(--primary);
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 60px;
+  box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .form-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
   border-top: 1px solid var(--border);
+  margin-top: 0.5rem;
 }
 
-.btn-cancel {
-  padding: 0.625rem 1.25rem;
-  background: transparent;
+/* Review Card */
+.review-card {
+  background: var(--bg-color);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  color: var(--text-muted);
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  padding: 1.25rem;
 }
 
-.btn-cancel:hover {
-  background: var(--bg-surface-hover);
-  color: var(--text-main);
+.review-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
 }
 
-.btn-submit {
+.review-header h4 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.review-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.review-details p {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: var(--success);
-  border: none;
-  border-radius: var(--radius-md);
-  color: white;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  margin: 0;
+  color: var(--text-secondary);
 }
 
-.btn-submit:hover {
-  background: #059669;
-  transform: translateY(-1px);
+.review-details svg {
+  color: var(--primary);
+  flex-shrink: 0;
 }
 
-/* Teachers Grid */
-.teachers-grid {
+/* Type Badge */
+.type-badge {
+  display: inline-flex;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-xl);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.type-badge.teacher {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.type-badge.staff {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* Teachers List */
+.teachers-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .teacher-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 1.25rem;
+  border-radius: var(--radius-md);
   transition: all 0.2s;
 }
 
@@ -218,176 +308,73 @@
   box-shadow: var(--shadow-md);
 }
 
-.teacher-card.inactive {
-  opacity: 0.6;
-}
-
-.teacher-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
 .teacher-avatar {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-radius: 50%;
   font-size: 1.25rem;
-  font-weight: 600;
+  font-weight: 700;
   color: white;
+  flex-shrink: 0;
 }
 
 .teacher-info {
   flex: 1;
+  min-width: 0;
 }
 
-.teacher-info h4 {
-  font-size: 1.1rem;
-  margin-bottom: 0.25rem;
-}
-
-.teacher-gender {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.15rem 0.5rem;
-  border-radius: var(--radius-xl);
-}
-
-.teacher-actions {
+.teacher-header {
   display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
-.btn-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-icon:hover {
-  background: rgba(59, 130, 246, 0.1);
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-.btn-icon.delete:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--danger);
-  border-color: var(--danger);
+.teacher-header h4 {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 600;
 }
 
 .teacher-details {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.detail-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.detail-row .label {
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
-  font-weight: 500;
-  min-width: 80px;
+}
+
+.teacher-details span {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.35rem;
 }
 
-.detail-row .address,
-.detail-row .notes-text {
-  flex: 1;
-  line-height: 1.4;
-}
-
-.detail-row .salary {
-  color: var(--success);
-  font-weight: 600;
-}
-
-.detail-row.notes {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px dashed var(--border);
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  color: var(--text-muted);
-  text-align: center;
-}
-
-.empty-state svg {
-  margin-bottom: 1rem;
-  opacity: 0.5;
-}
-
+/* Responsive */
 @media (max-width: 768px) {
-  .form-grid {
+  .modal-content {
+    max-height: 95vh;
+    margin: 0.5rem;
+  }
+  
+  .form-row.two-col {
     grid-template-columns: 1fr;
   }
   
-  .teachers-grid {
+  .step small {
+    display: none;
+  }
+  
+  .step-line {
+    width: 20px;
+  }
+  
+  .teachers-list {
     grid-template-columns: 1fr;
   }
-}
-
-/* Type Badge */
-.type-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.type-badge.teacher {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
-}
-
-.type-badge.staff {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34d399;
-}
-
-/* Form select styling */
-.form-group select {
-  width: 100%;
-  padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text-main);
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.form-group select:focus {
-  outline: none;
-  border-color: var(--primary);
 }

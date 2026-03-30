@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, Edit2, Save, X, Users } from 'lucide-react';
+import { Plus, X, Users, Phone, MapPin, GraduationCap, Briefcase } from 'lucide-react';
+import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import './TeachersManager.css';
 
-export type Teacher = {
+type Teacher = {
   id: string;
   school_id: string;
   name: string;
+  type: 'Teacher' | 'Staff';
   cnic: string;
   gender: 'Male' | 'Female';
   personal_contact: string;
@@ -16,17 +18,18 @@ export type Teacher = {
   education: string;
   salary: number;
   notes: string;
-  is_active: boolean;
-  created_at: string;
-  type: 'Teacher' | 'Staff';
 };
+
 
 export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formStep, setFormStep] = useState(1);
+  const [message, setMessage] = useState('');
+  
   const [formData, setFormData] = useState({
+    type: 'Teacher' as 'Teacher' | 'Staff',
     name: '',
     cnic: '',
     gender: 'Male' as 'Male' | 'Female',
@@ -35,192 +38,305 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
     address: '',
     education: '',
     salary: '',
-    notes: '',
-    type: 'Teacher' as 'Teacher' | 'Staff'
+    notes: ''
   });
 
-  useEffect(() => { loadTeachers(); }, [schoolId]);
+  useEffect(() => {
+    loadTeachers();
+  }, [schoolId]);
 
   const loadTeachers = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('teachers')
       .select('*')
       .eq('school_id', schoolId)
       .eq('is_active', true)
-      .order('type', { ascending: true })
-      .order('created_at', { ascending: false });
-    if (!error && data) setTeachers(data as Teacher[]);
+      .order('type')
+      .order('name');
+    setTeachers(data || []);
     setLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const teacherData = {
-      school_id: schoolId,
-      name: formData.name,
-      cnic: formData.cnic,
-      gender: formData.gender,
-      personal_contact: formData.personal_contact,
-      home_contact: formData.home_contact,
-      address: formData.address,
-      education: formData.education,
-      salary: parseInt(formData.salary) || 0,
-      notes: formData.notes,
-      type: formData.type,
-      is_active: true
-    };
-    if (editingId) {
-      await supabase.from('teachers').update(teacherData).eq('id', editingId);
-    } else {
-      await supabase.from('teachers').insert(teacherData);
-    }
-    resetForm();
-    loadTeachers();
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this record?')) return;
-    await supabase.from('teachers').update({ is_active: false }).eq('id', id);
-    loadTeachers();
-  };
-
-  const startEdit = (teacher: Teacher) => {
-    setEditingId(teacher.id);
-    setFormData({
-      name: teacher.name, cnic: teacher.cnic, gender: teacher.gender,
-      personal_contact: teacher.personal_contact, home_contact: teacher.home_contact,
-      address: teacher.address, education: teacher.education,
-      salary: teacher.salary.toString(), notes: teacher.notes, type: teacher.type
-    });
-    setShowForm(true);
-  };
-
   const resetForm = () => {
-    setFormData({ name: '', cnic: '', gender: 'Male', personal_contact: '', home_contact: '', address: '', education: '', salary: '', notes: '', type: 'Teacher' });
-    setEditingId(null); setShowForm(false);
+    setFormData({
+      type: 'Teacher',
+      name: '',
+      cnic: '',
+      gender: 'Male',
+      personal_contact: '',
+      home_contact: '',
+      address: '',
+      education: '',
+      salary: '',
+      notes: ''
+    });
+    setFormStep(1);
+    setShowForm(false);
   };
 
-  const getTypeBadge = (type: string) => (
-    <span className={`type-badge ${type.toLowerCase()}`}>{type}</span>
-  );
+  const handleSubmit = async () => {
+    const { error } = await supabase.from('teachers').insert({
+      school_id: schoolId,
+      ...formData,
+      salary: parseInt(formData.salary) || 0,
+      is_active: true
+    });
 
-  if (loading) return <div className="teachers-loading">Loading...</div>;
+    if (error) {
+      setMessage('Error saving. Please try again.');
+    } else {
+      setMessage(`${formData.type} added successfully!`);
+      setTimeout(() => setMessage(''), 2000);
+      resetForm();
+      loadTeachers();
+    }
+  };
+
+  const isStep1Valid = formData.name.trim() && formData.personal_contact.trim();
+  const isStep2Valid = formData.cnic.trim() && formData.address.trim();
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="spinner" />
+        <span>Loading...</span>
+      </div>
+    );
+  }
+
+  const teacherCount = teachers.filter(t => t.type === 'Teacher').length;
+  const staffCount = teachers.filter(t => t.type === 'Staff').length;
 
   return (
     <div className="teachers-manager">
-      <div className="teachers-header">
-        <h3><Users size={20} /> Teachers & Staff</h3>
-        <button className="btn-add" onClick={() => setShowForm(!showForm)}>
-          <Plus size={16} /> {showForm ? 'Cancel' : 'Add Teacher/Staff'}
-        </button>
+      {/* Header */}
+      <div className="manager-header">
+        <div className="manager-title">
+          <Users size={28} />
+          <div>
+            <h3>Teachers & Staff</h3>
+            <p>{teacherCount} Teachers, {staffCount} Staff</p>
+          </div>
+        </div>
+        <Button onClick={() => setShowForm(true)} size="lg">
+          <Plus size={20} /> Add Person
+        </Button>
       </div>
 
-      {showForm && (
-        <form className="teacher-form" onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Type *</label>
-              <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value as 'Teacher' | 'Staff'})}>
-                <option value="Teacher">Teacher</option>
-                <option value="Staff">Staff</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Full Name *</label>
-              <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>CNIC *</label>
-              <Input value={formData.cnic} onChange={(e) => setFormData({...formData, cnic: e.target.value})} required />
-            </div>
-            <div className="form-group">
-              <label>Gender *</label>
-              <select value={formData.gender} onChange={(e) => setFormData({...formData, gender: e.target.value as 'Male' | 'Female'})}>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Personal Contact *</label>
-              <Input value={formData.personal_contact} onChange={(e) => setFormData({...formData, personal_contact: e.target.value})} required />
-            </div>
-            <div className="form-group">
-              <label>Home Contact</label>
-              <Input value={formData.home_contact} onChange={(e) => setFormData({...formData, home_contact: e.target.value})} />
-            </div>
-          </div>
-
-          <div className="form-group full-width">
-            <label>Address</label>
-            <Input value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Education</label>
-              <Input value={formData.education} onChange={(e) => setFormData({...formData, education: e.target.value})} />
-            </div>
-            <div className="form-group">
-              <label>Salary (PKR)</label>
-              <Input type="number" value={formData.salary} onChange={(e) => setFormData({...formData, salary: e.target.value})} />
-            </div>
-          </div>
-
-          <div className="form-group full-width">
-            <label>Additional Notes</label>
-            <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} />
-          </div>
-
-          <div className="form-actions">
-            <button type="submit" className="btn-submit"><Save size={16} /> {editingId ? 'Update' : 'Save'}</button>
-            <button type="button" className="btn-cancel" onClick={resetForm}><X size={16} /> Cancel</button>
-          </div>
-        </form>
+      {/* Message */}
+      {message && (
+        <div className={`manager-message ${message.includes('Error') ? 'error' : 'success'}`}>
+          {message}
+        </div>
       )}
 
-      <div className="teachers-table-wrap">
-        <table className="teachers-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Name</th>
-              <th>CNIC</th>
-              <th>Gender</th>
-              <th>Personal Contact</th>
-              <th>Home Contact</th>
-              <th>Education</th>
-              <th>Salary</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teachers.length === 0 ? (
-              <tr><td colSpan={9} className="empty-cell">No teachers or staff added yet</td></tr>
-            ) : teachers.map(t => (
-              <tr key={t.id}>
-                <td>{getTypeBadge(t.type)}</td>
-                <td>{t.name}</td>
-                <td>{t.cnic}</td>
-                <td>{t.gender}</td>
-                <td>{t.personal_contact}</td>
-                <td>{t.home_contact || '-'}</td>
-                <td>{t.education || '-'}</td>
-                <td>Rs {t.salary.toLocaleString()}</td>
-                <td className="actions-cell">
-                  <button onClick={() => startEdit(t)} title="Edit"><Edit2 size={16} /></button>
-                  <button onClick={() => handleDelete(t.id)} title="Delete"><Trash2 size={16} /></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Form Modal */}
+      {showForm && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && resetForm()}>
+          <div className="modal-content animate-fade-in">
+            <div className="modal-header">
+              <h3>Add New {formData.type}</h3>
+              <button className="btn-close" onClick={resetForm}>
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Step Indicator */}
+            <div className="step-indicator">
+              <div className={`step ${formStep >= 1 ? 'active' : ''} ${formStep > 1 ? 'completed' : ''}`}>
+                <span>1</span>
+                <small>Basic Info</small>
+              </div>
+              <div className="step-line"></div>
+              <div className={`step ${formStep >= 2 ? 'active' : ''} ${formStep > 2 ? 'completed' : ''}`}>
+                <span>2</span>
+                <small>Details</small>
+              </div>
+              <div className="step-line"></div>
+              <div className={`step ${formStep >= 3 ? 'active' : ''}`}>
+                <span>3</span>
+                <small>Review</small>
+              </div>
+            </div>
+
+            {/* Step 1: Basic Info */}
+            {formStep === 1 && (
+              <div className="form-step">
+                <div className="type-selector">
+                  <label className={formData.type === 'Teacher' ? 'active' : ''}
+                    onClick={() => setFormData({...formData, type: 'Teacher'})}>
+                    <GraduationCap size={24} />
+                    <span>Teacher</span>
+                  </label>
+                  <label className={formData.type === 'Staff' ? 'active' : ''}
+                    onClick={() => setFormData({...formData, type: 'Staff'})}>
+                    <Briefcase size={24} />
+                    <span>Staff</span>
+                  </label>
+                </div>
+
+                <Input
+                  label="Full Name"
+                  placeholder="Enter full name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  required
+                />
+
+                <div className="form-row two-col">
+                  <Input
+                    label="Personal Contact"
+                    placeholder="03XX-XXXXXXX"
+                    value={formData.personal_contact}
+                    onChange={(e) => setFormData({...formData, personal_contact: e.target.value})}
+                    required
+                  />
+                  <Input
+                    label="Home Contact (Optional)"
+                    placeholder="03XX-XXXXXXX"
+                    value={formData.home_contact}
+                    onChange={(e) => setFormData({...formData, home_contact: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-actions">
+                  <Button variant="secondary" onClick={resetForm}>Cancel</Button>
+                  <Button onClick={() => setFormStep(2)} disabled={!isStep1Valid}>
+                    Next →
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Details */}
+            {formStep === 2 && (
+              <div className="form-step">
+                <div className="form-row two-col">
+                  <div className="form-group">
+                    <label>Gender</label>
+                    <select
+                      value={formData.gender}
+                      onChange={(e) => setFormData({...formData, gender: e.target.value as 'Male' | 'Female'})}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                  <Input
+                    label="CNIC"
+                    placeholder="XXXXX-XXXXXXX-X"
+                    value={formData.cnic}
+                    onChange={(e) => setFormData({...formData, cnic: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label><MapPin size={16} /> Address</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Enter complete address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-row two-col">
+                  <Input
+                    label="Education"
+                    placeholder="e.g., BA, BEd, MA"
+                    value={formData.education}
+                    onChange={(e) => setFormData({...formData, education: e.target.value})}
+                  />
+                  <Input
+                    label="Monthly Salary (PKR)"
+                    type="number"
+                    placeholder="e.g., 25000"
+                    value={formData.salary}
+                    onChange={(e) => setFormData({...formData, salary: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Additional Notes (Optional)</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Any special notes..."
+                    value={formData.notes}
+                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  />
+                </div>
+
+                <div className="form-actions">
+                  <Button variant="secondary" onClick={() => setFormStep(1)}>← Back</Button>
+                  <Button onClick={() => setFormStep(3)} disabled={!isStep2Valid}>
+                    Review →
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Review */}
+            {formStep === 3 && (
+              <div className="form-step">
+                <div className="review-card">
+                  <div className="review-header">
+                    <span className={`type-badge ${formData.type.toLowerCase()}`}>{formData.type}</span>
+                    <h4>{formData.name}</h4>
+                  </div>
+                  <div className="review-details">
+                    <p><Phone size={16} /> {formData.personal_contact}</p>
+                    <p><MapPin size={16} /> {formData.address}</p>
+                    {formData.education && <p><GraduationCap size={16} /> {formData.education}</p>}
+                    {formData.salary && <p>Salary: Rs {parseInt(formData.salary).toLocaleString()}/month</p>}
+                  </div>
+                </div>
+
+                <div className="form-actions">
+                  <Button variant="secondary" onClick={() => setFormStep(2)}>← Back</Button>
+                  <Button onClick={handleSubmit}>
+                    <Plus size={18} /> Save {formData.type}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Teachers List */}
+      <div className="teachers-list">
+        {teachers.map((teacher) => (
+          <div key={teacher.id} className="teacher-card">
+            <div className="teacher-avatar">
+              {teacher.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="teacher-info">
+              <div className="teacher-header">
+                <h4>{teacher.name}</h4>
+                <span className={`type-badge ${teacher.type.toLowerCase()}`}>
+                  {teacher.type}
+                </span>
+              </div>
+              <div className="teacher-details">
+                <span><Phone size={14} /> {teacher.personal_contact}</span>
+                {teacher.cnic && <span>CNIC: {teacher.cnic}</span>}
+                {teacher.education && <span><GraduationCap size={14} /> {teacher.education}</span>}
+                {teacher.salary > 0 && <span>Rs {teacher.salary.toLocaleString()}/mo</span>}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
+
+      {teachers.length === 0 && (
+        <div className="empty-state">
+          <Users size={48} />
+          <p>No teachers or staff added yet</p>
+          <Button onClick={() => setShowForm(true)}>
+            <Plus size={18} /> Add First Person
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

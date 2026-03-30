@@ -2,9 +2,10 @@ import React from 'react';
 import './Button.css';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'success';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  fullWidth?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -12,20 +13,27 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
   isLoading,
+  fullWidth,
   className = '',
+  disabled,
   ...props
 }) => {
+  const classes = [
+    'btn',
+    `btn-${variant}`,
+    `btn-${size}`,
+    fullWidth && 'btn-full',
+    isLoading && 'btn-loading',
+    className
+  ].filter(Boolean).join(' ');
+
   return (
     <button
-      className={`btn btn-${variant} btn-${size} ${className}`}
-      disabled={isLoading || props.disabled}
+      className={classes}
+      disabled={disabled || isLoading}
       {...props}
     >
-      {isLoading ? (
-        <span className="spinner" />
-      ) : (
-        children
-      )}
+      {children}
     </button>
   );
 };

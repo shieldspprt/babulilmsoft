@@ -4,26 +4,27 @@ import './Input.css';
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  helper?: string;
+  required?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className = '', label, error, id, ...props }, ref) => {
-    const inputId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
-    
+  ({ label, error, helper, required, className = '', ...props }, ref) => {
     return (
-      <div className="input-group">
+      <div className="input-wrapper">
         {label && (
-          <label htmlFor={inputId} className="input-label">
+          <label className="input-label">
             {label}
+            {required && <span className="input-required"> *</span>}
           </label>
         )}
         <input
-          id={inputId}
           ref={ref}
           className={`input-field ${error ? 'input-error' : ''} ${className}`}
           {...props}
         />
-        {error && <span className="error-text">{error}</span>}
+        {error && <span className="input-error-text">{error}</span>}
+        {helper && !error && <span className="input-helper">{helper}</span>}
       </div>
     );
   }
