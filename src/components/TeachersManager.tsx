@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Button } from './ui/Button';
-import { Input } from './ui/Input';
+// import { Button } from './ui/Button';
+// import { Input } from './ui/Input';
 import { Plus, Save, X, User, Phone, MapPin, GraduationCap, Wallet, Edit2, Trash2, Search } from 'lucide-react';
 import './TeachersManager.css';
 
