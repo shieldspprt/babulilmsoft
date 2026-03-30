@@ -1,6 +1,6 @@
-
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { CreditDisplay } from '../CreditGuard';
 import { Button } from '../ui/Button';
 import { LogOut, GraduationCap, LayoutDashboard } from 'lucide-react';
 import './Navbar.css';
@@ -31,7 +31,7 @@ export const Navbar = () => {
                     <img src={profile.logo_url} alt={`${profile.school_name} Logo`} className="nav-avatar" />
                   )}
                   <span className="nav-school-name">{profile.school_name}</span>
-                  <span className="credits-badge">{profile.total_credits} Credits</span>
+                  <CreditDisplay />
                 </div>
               )}
               <Button variant="ghost" className="nav-btn" onClick={() => navigate('/dashboard')} aria-label="Go to Dashboard">

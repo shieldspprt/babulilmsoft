@@ -1,59 +1,78 @@
-# ilmsoft
+# ilmsoft - School Management System with Credit System
 
-Modern School Management System for day-to-day administrative excellence.
+A multi-school SaaS platform with daily credit-based access control.
 
-ilmsoft is a premium, intuitive platform designed to streamline school operations, focusing on administrative efficiency rather than just education management. It empowers school administrators to handle complex daily tasks with ease and transparency.
+## Credit System
 
-## 🚀 Key Features
+### How it Works
+- **1 Credit = 1 Day** of system access
+- Schools purchase credits to activate their account
+- Credits expire after the purchased period ends
+- Dashboard is locked when credits run out
 
-- **Student Registration**: Digital onboarding with automated ID generation and comprehensive student records.
-- **Fee Collection**: Transparent tracking of payments, automated invoicing, and flexible fee structures.
-- **Teacher Management**: Efficient staff oversight, profile management, and coordination tools.
-- **Financial Reporting**: Real-time insights into income, expenses, and overall financial health with detailed reports.
-- **Admin Dashboard**: A centralized hub for managing all aspects of your institution at a glance.
+### Pricing Plans
 
-## 🛠️ Tech Stack
+| Plan | Credits | Duration | Price (PKR) | Per Day |
+|------|---------|----------|-------------|---------|
+| Monthly | 30 | 30 Days | Rs 2,000 | ~Rs 67 |
+| Quarterly+ | 100 | 100 Days | Rs 5,000 | Rs 50 (Save 17%) |
 
-- **Frontend**: React 19, TypeScript, Vite
-- **Styling**: Vanilla CSS with modern design principles (Glassmorphism, CSS Variables)
-- **Backend**: Supabase (PostgreSQL, Auth)
-- **Icons**: Lucide React
+### Credit Purchase Flow
 
-## 📦 Installation
+1. **School Admin**: Selects a plan and sends payment via JazzCash or Bank Transfer
+2. **School Admin**: Submits payment reference in the dashboard
+3. **System**: Creates a pending credit request
+4. **ilmsoft Admin**: Reviews and approves/rejects the request
+5. **On Approval**: Credits are added to the school's account immediately
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/your-repo/ilmsoft.git
-   cd ilmsoft
-   ```
+### Database Schema
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+#### Tables
+- `schools` - School profiles with `total_credits` and `credit_expires_at`
+- `credit_requests` - Pending/approved/rejected purchase requests
+- `admin_users` - ilmsoft administrators who can approve requests
 
-3. **Environment Setup**:
-   Create a `.env.local` file with your Supabase credentials:
-   ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
+#### Key Features
+- **CreditGuard Component**: Blocks dashboard access when credits expire
+- **Real-time Updates**: Credit status updates immediately on approval
+- **Expiry Tracking**: Automatic expiration date calculation
 
-4. **Run the development server**:
-   ```bash
-   npm run dev
-   ```
+## Admin Access
 
-## 🌐 Deployment
+To create an admin user:
 
-The application is optimized for deployment on Netlify or Vercel.
+1. Sign up normally at `/signup`
+2. Get the user ID from Supabase auth
+3. Insert into admin_users table:
 
-- **Netlify**: Connect your repository and it will automatically build using the provided `netlify.toml` configuration.
-- **Vite Build**:
-  ```bash
-  npm run build
-  ```
+```sql
+INSERT INTO public.admin_users (user_id, email) 
+VALUES ('user-uuid-here', 'admin@example.com');
+```
 
-## 📄 License
+4. Access admin panel at `/admin`
 
-This project is licensed under the MIT License.
+## Environment Variables
+
+```bash
+VITE_SUPABASE_URL=https://ntohwovclsoffwummuxj.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_jnjnfY4TcmD9HxRSo2sgkw_Qb3Se89G
+```
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+## Deployment
+
+The app is configured for static hosting on Netlify or similar platforms.
+
+### Payment Accounts (Update these!)
+
+**JazzCash**: 0300-1234567 (ilmsoft)  
+**Bank**: Meezan Bank, Account: ilmsoft, IBAN: PK12MEZN000123456789
+
+> **Important**: Update payment details in `src/pages/Dashboard.tsx` before going live!

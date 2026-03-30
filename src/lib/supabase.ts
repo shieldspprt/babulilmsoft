@@ -17,6 +17,7 @@ export type SchoolProfile = {
   email: string;
   logo_url: string;
   total_credits: number;
+  credit_expires_at: string | null;
   created_at: string;
 };
 
