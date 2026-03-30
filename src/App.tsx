@@ -37,6 +37,7 @@ import SupplierTransactions from "./pages/SupplierTransactions";
 import SupplierReports from "./pages/SupplierReports";
 import ManageBooks from "./pages/ManageBooks";
 import BookSales from "./pages/BookSales";
+import SchoolSettings from "./pages/SchoolSettings";
 
 import NotFound from "./pages/NotFound";
 
@@ -225,6 +226,14 @@ const App = () => (
             element={
               <ProtectedRoute requireAdmin>
                 <ClassPromotion />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/school-settings" 
+            element={
+              <ProtectedRoute requireAdmin>
+                <SchoolSettings />
               </ProtectedRoute>
             } 
           />

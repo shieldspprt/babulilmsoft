@@ -30,7 +30,9 @@ import {
   UserMinus,
   ArrowUpFromLine,
   User,
-  KeyRound
+  KeyRound,
+  School,
+  CreditCard
 } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import {
@@ -63,6 +65,7 @@ const Dashboard = () => {
   
   // User menu state
   const [userName, setUserName] = useState<string | null>(null);
+  const [schoolInfo, setSchoolInfo] = useState<{name?: string, logo_url?: string, address?: string, phone?: string, email?: string} | null>(null);
   const [isNameDialogOpen, setIsNameDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [editName, setEditName] = useState('');
@@ -86,6 +89,31 @@ const Dashboard = () => {
   const loadDashboardStats = async () => {
     setLoading(true);
     try {
+      if (user) {
+        const { data: schoolData } = await supabase
+          .from('schools')
+          .select('name, address, phone, email, logo_url')
+          .eq('owner_id', user.id)
+          .limit(1)
+          .single();
+          
+        if (schoolData) {
+          // Onboarding verification check
+          if (
+            !schoolData.name || 
+            schoolData.name === 'My School' || 
+            !schoolData.address || 
+            !schoolData.phone || 
+            !schoolData.email
+          ) {
+            toast.warning("Please complete your school profile to access the dashboard.");
+            navigate('/school-settings');
+            return;
+          }
+          setSchoolInfo(schoolData);
+        }
+      }
+
       const { count: totalStudents } = await supabase
         .from('students')
         .select('*', { count: 'exact', head: true });
@@ -387,6 +415,20 @@ const Dashboard = () => {
       route: '/student-passout',
       category: 'Settings',
     },
+    {
+      title: 'School Settings',
+      description: 'Update school details and logo',
+      icon: School,
+      route: '/school-settings',
+      category: 'Settings',
+    },
+    {
+      title: 'Billing & Credits',
+      description: 'Manage subscription and buy credits',
+      icon: CreditCard,
+      route: '/billing',
+      category: 'Settings',
+    },
   ];
 
   const statCards = [
@@ -427,11 +469,21 @@ const Dashboard = () => {
         {/* Header with Greeting and User Menu */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">
-              {getGreeting()}{userName ? `, ${userName}` : ''}!
+            <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+              {schoolInfo?.logo_url && (
+                <img 
+                  src={schoolInfo.logo_url} 
+                  alt="School Logo" 
+                  className="h-10 w-10 object-contain rounded-md bg-white p-1 border"
+                  onError={(e) => (e.currentTarget.style.display = 'none')}
+                />
+              )}
+              {schoolInfo?.name ? schoolInfo.name : `${getGreeting()}${userName ? `, ${userName}` : ''}!`}
             </h1>
             <p className="text-muted-foreground">
-              Here's an overview of your school management system.
+              {schoolInfo?.name 
+                ? `Welcome back, ${userName || 'Administrator'}. Here is your school's overview.`
+                : "Here's an overview of your school management system."}
             </p>
           </div>
           <DropdownMenu>
