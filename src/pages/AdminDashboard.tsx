@@ -50,23 +50,34 @@ export const AdminDashboard = () => {
   }, [requests, filter, search]);
 
   const checkAdminAccess = async () => {
+    console.log('Checking admin access for user:', user?.id);
     if (!user) {
+      console.log('No user found, redirecting to login');
       navigate('/login');
       return;
     }
 
-    const { data: admin } = await supabase
-      .from('admin_users')
-      .select('id')
-      .eq('user_id', user.id)
-      .single();
+    try {
+      const { data: admin, error } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+      
+      console.log('Admin query result:', { admin, error });
 
-    if (!admin) {
+      if (error || !admin) {
+        console.log('Not an admin, redirecting to dashboard', error);
+        navigate('/dashboard');
+        return;
+      }
+
+      console.log('Admin access granted');
+      loadData();
+    } catch (err) {
+      console.error('Error checking admin:', err);
       navigate('/dashboard');
-      return;
     }
-
-    loadData();
   };
 
   const loadData = async () => {
