@@ -27,10 +27,17 @@ export const Signup = () => {
     setLoading(true);
     setError('');
 
-    // 1. Sign up the user
+    // 1. Sign up the user with school details as metadata
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
+      options: {
+        data: {
+          school_name: formData.schoolName,
+          contact: formData.contact,
+          logo_url: formData.logoUrl || null
+        }
+      }
     });
 
     if (authError) {
@@ -40,22 +47,7 @@ export const Signup = () => {
     }
 
     if (authData.user) {
-      // 2. Insert school profile
-      const { error: profileError } = await supabase.from('schools').insert([{
-        user_id: authData.user.id,
-        school_name: formData.schoolName,
-        contact: formData.contact,
-        email: formData.email,
-        logo_url: formData.logoUrl || null,
-        total_credits: 0
-      }]);
-
-      if (profileError) {
-        setError('School profile creation failed: ' + profileError.message);
-        setLoading(false);
-        return;
-      }
-
+      // The school profile is now created automatically by the database trigger!
       navigate('/dashboard');
     }
   };
