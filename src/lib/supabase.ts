@@ -57,4 +57,35 @@ export type Teacher = {
   type: 'Teacher' | 'Staff';
 };
 
+export type Supplier = {
+  id: string;
+  school_id: string;
+  name: string;
+  business_name: string;
+  contact: string;
+  address: string;
+  opening_balance: number;
+  current_balance: number;
+  total_billed: number;
+  total_paid: number;
+  notes: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SupplierTransaction = {
+  id: string;
+  school_id: string;
+  supplier_id: string;
+  type: 'bill' | 'payment';
+  amount: number;
+  date: string;
+  description: string;
+  notes: string;
+  payment_method?: string;
+  bill_number?: string;
+  balance_after: number;
+  created_at: string;
+};
 
