@@ -45,7 +45,7 @@ export type Teacher = {
   school_id: string;
   name: string;
   cnic: string;
-  gender: string;
+  gender: 'Male' | 'Female';
   personal_contact: string;
   home_contact: string;
   address: string;
@@ -56,3 +56,5 @@ export type Teacher = {
   created_at: string;
   type: 'Teacher' | 'Staff';
 };
+
+

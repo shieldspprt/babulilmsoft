@@ -7,16 +7,17 @@ import { ClassesManager } from '../components/ClassesManager';
 import { TeachersManager } from '../components/TeachersManager';
 import { IncomeManager } from '../components/IncomeManager';
 import { ExpenseManager } from '../components/ExpenseManager';
+import { SuppliersManager } from '../components/SuppliersManager';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { CreditCard, Wallet, Banknote, History, CheckCircle, Clock, XCircle, AlertTriangle, Users, GraduationCap, DollarSign, TrendingDown } from 'lucide-react';
+import { CreditCard, Wallet, Banknote, History, CheckCircle, Clock, XCircle, AlertTriangle, Users, GraduationCap, DollarSign, Truck, Store } from 'lucide-react';
 import './Dashboard.css';
 
 export const Dashboard = () => {
   const { profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'history' | 'classes' | 'teachers' | 'income' | 'expense'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'history' | 'classes' | 'teachers' | 'income' | 'expense' | 'suppliers'>('overview');
   const [paymentMethod, setPaymentMethod] = useState<'JazzCash' | 'Bank'>('JazzCash');
   const [selectedPlan, setSelectedPlan] = useState<{credits: number, pkr: number} | null>(null);
   const [reference, setReference] = useState('');
@@ -98,7 +99,8 @@ export const Dashboard = () => {
             <button className={`nav-item ${activeTab==='classes'?'active':''}`} onClick={()=>setActiveTab('classes')}><Users size={20} /> Classes</button>
             <button className={`nav-item ${activeTab==='teachers'?'active':''}`} onClick={()=>setActiveTab('teachers')}><GraduationCap size={20} /> Teachers</button>
             <button className={`nav-item ${activeTab==='income'?'active':''}`} onClick={()=>setActiveTab('income')}><DollarSign size={20} /> Income</button>
-            <button className={`nav-item ${activeTab==='expense'?'active':''}`} onClick={()=>setActiveTab('expense')}><TrendingDown size={20} /> Expenses</button>
+            <button className={`nav-item ${activeTab==='expense'?'active':''}`} onClick={()=>setActiveTab('expense')}><Truck size={20} /> Expenses</button>
+            <button className={`nav-item ${activeTab==='suppliers'?'active':''}`} onClick={()=>setActiveTab('suppliers')}><Store size={20} /> Suppliers</button>
             <button className={`nav-item ${activeTab==='buy'?'active':''}`} onClick={()=>setActiveTab('buy')}><CreditCard size={20} /> Buy Credits</button>
             <button className={`nav-item ${activeTab==='history'?'active':''}`} onClick={()=>setActiveTab('history')}><History size={20} /> Transaction History</button>
           </nav>
@@ -112,7 +114,8 @@ export const Dashboard = () => {
                activeTab === 'teachers' ? 'Teacher Management' :
                activeTab === 'income' ? 'Income Management' :
                activeTab === 'buy' ? (creditExpired ? 'Reactivate Account' : 'Buy Credits') : 
-               activeTab === 'expense' ? 'Expense Management' : 
+               activeTab === 'expense' ? 'Expense Management' :
+               activeTab === 'suppliers' ? 'Supplier Management' :  
                'Transaction History'}
             </h2>
             {message.text && <div className={`status-message ${message.type}`}>{message.text}</div>}
@@ -145,6 +148,7 @@ export const Dashboard = () => {
           {activeTab === 'teachers' && profile && <div className="teachers-tab-content"><TeachersManager schoolId={profile.id} /></div>}
           {activeTab === 'income' && profile && <div className="income-tab-content"><IncomeManager schoolId={profile.id} /></div>}
           {activeTab === 'expense' && profile && <div className="expense-tab-content"><ExpenseManager schoolId={profile.id} /></div>}
+          {activeTab === 'suppliers' && profile && <div className="suppliers-tab-content"><SuppliersManager schoolId={profile.id} /></div>}
 
           {activeTab === 'buy' && (
             <div className="buy-section">
