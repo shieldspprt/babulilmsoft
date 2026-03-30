@@ -4,16 +4,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { CreditGuard } from '../components/CreditGuard';
 import { ClassesManager } from '../components/ClassesManager';
+import { TeachersManager } from '../components/TeachersManager';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { CreditCard, Wallet, Banknote, History, CheckCircle, Clock, XCircle, AlertTriangle, Users } from 'lucide-react';
+import { CreditCard, Wallet, Banknote, History, CheckCircle, Clock, XCircle, AlertTriangle, Users, GraduationCap } from 'lucide-react';
 import './Dashboard.css';
 
 export const Dashboard = () => {
   const { profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'history' | 'classes'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'history' | 'classes' | 'teachers'>('overview');
   const [paymentMethod, setPaymentMethod] = useState<'JazzCash' | 'Bank'>('JazzCash');
   const [selectedPlan, setSelectedPlan] = useState<{credits: number, pkr: number} | null>(null);
   const [reference, setReference] = useState('');
@@ -136,6 +137,12 @@ export const Dashboard = () => {
               <Users size={20} /> Classes
             </button>
             <button 
+              className={`nav-item ${activeTab==='teachers'?'active':''}`} 
+              onClick={()=>setActiveTab('teachers')}
+            >
+              <GraduationCap size={20} /> Teachers
+            </button>
+            <button 
               className={`nav-item ${activeTab==='buy'?'active':''}`} 
               onClick={()=>setActiveTab('buy')}
             >
@@ -155,6 +162,7 @@ export const Dashboard = () => {
             <h2>
               {activeTab === 'overview' ? 'Dashboard Overview' : 
                activeTab === 'classes' ? 'Class Management' :
+               activeTab === 'teachers' ? 'Teacher Management' :
                activeTab === 'buy' ? (creditExpired ? 'Reactivate Account' : 'Buy Credits') : 
                'Transaction History'}
             </h2>
@@ -204,6 +212,12 @@ export const Dashboard = () => {
           {activeTab === 'classes' && profile && (
             <div className="classes-tab-content">
               <ClassesManager schoolId={profile.id} />
+            </div>
+          )}
+
+          {activeTab === 'teachers' && profile && (
+            <div className="teachers-tab-content">
+              <TeachersManager schoolId={profile.id} />
             </div>
           )}
 

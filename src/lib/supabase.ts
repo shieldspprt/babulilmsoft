@@ -39,3 +39,19 @@ export type Class = {
   description: string;
   created_at: string;
 };
+
+export type Teacher = {
+  id: string;
+  school_id: string;
+  name: string;
+  cnic: string;
+  gender: string;
+  personal_contact: string;
+  home_contact: string;
+  address: string;
+  education: string;
+  salary: number;
+  notes: string;
+  is_active: boolean;
+  created_at: string;
+};
