@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, CreditCard, Search, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, CreditCard, Search } from 'lucide-react';
 import './IncomeManager.css';
 
 export type IncomeCategory = {
