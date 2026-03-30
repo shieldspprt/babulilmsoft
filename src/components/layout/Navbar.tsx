@@ -15,10 +15,10 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="navbar glass">
+    <nav className="navbar glass" aria-label="Main Navigation">
       <div className="nav-container">
-        <Link to="/" className="nav-logo">
-          <GraduationCap size={28} className="logo-icon" />
+        <Link to="/" className="nav-logo" aria-label="Babulilmsoft Home">
+          <GraduationCap size={28} className="logo-icon" aria-hidden="true" />
           <span>Babulilm<span className="logo-accent">soft</span></span>
         </Link>
         
@@ -28,17 +28,17 @@ export const Navbar = () => {
               {profile && (
                 <div className="nav-profile">
                   {profile.logo_url && (
-                    <img src={profile.logo_url} alt="School Logo" className="nav-avatar" />
+                    <img src={profile.logo_url} alt={`${profile.school_name} Logo`} className="nav-avatar" />
                   )}
                   <span className="nav-school-name">{profile.school_name}</span>
                   <span className="credits-badge">{profile.total_credits} Credits</span>
                 </div>
               )}
-              <Button variant="ghost" className="nav-btn" onClick={() => navigate('/dashboard')}>
-                <LayoutDashboard size={18} /> Dashboard
+              <Button variant="ghost" className="nav-btn" onClick={() => navigate('/dashboard')} aria-label="Go to Dashboard">
+                <LayoutDashboard size={18} aria-hidden="true" /> Dashboard
               </Button>
-              <Button variant="outline" className="nav-btn" onClick={handleLogout}>
-                <LogOut size={18} /> Logout
+              <Button variant="outline" className="nav-btn" onClick={handleLogout} aria-label="Logout">
+                <LogOut size={18} aria-hidden="true" /> Logout
               </Button>
             </>
           ) : (
