@@ -9,8 +9,8 @@ ADD COLUMN IF NOT EXISTS credit_expires_at TIMESTAMP WITH TIME ZONE;
 CREATE TABLE IF NOT EXISTS public.admin_users (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  email TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  email text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
   CONSTRAINT admin_users_pkey PRIMARY KEY (id),
   CONSTRAINT admin_users_user_id_key UNIQUE (user_id)
 );
@@ -18,92 +18,91 @@ CREATE TABLE IF NOT EXISTS public.admin_users (
 -- Enable RLS on admin_users
 ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
 
--- Only admins can view admin list
+-- Allow admins to view all admin users
 DROP POLICY IF EXISTS "Admins can view admin list" ON public.admin_users;
 CREATE POLICY "Admins can view admin list" 
 ON public.admin_users FOR SELECT 
-USING (auth.uid() IN (SELECT user_id FROM public.admin_users));
+TO authenticated 
+USING (true);
 
--- 3. Add trigger to automatically deduct credits daily
--- This function runs via a cron job or edge function
-CREATE OR REPLACE FUNCTION public.deduct_daily_credits()
-RETURNS void AS $$
+-- 3. Update the trigger function for new user signup (includes credit_expires_at)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
 BEGIN
-  UPDATE public.schools
-  SET total_credits = GREATEST(0, total_credits - 1)
-  WHERE credit_expires_at IS NULL 
-     OR credit_expires_at > now();
-     
-  UPDATE public.schools
-  SET credit_expires_at = NULL
-  WHERE total_credits = 0;
+  INSERT INTO public.schools (user_id, school_name, contact, email, logo_url, total_credits, credit_expires_at)
+  VALUES (
+    new.id,
+    COALESCE(new.raw_user_meta_data->>'school_name', 'My School'),
+    COALESCE(new.raw_user_meta_data->>'contact', ''),
+    new.email,
+    new.raw_user_meta_data->>'logo_url',
+    0,
+    NULL
+  );
+  RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 4. Create function to approve credits (for edge function)
+-- 4. Function for admin to approve credit requests and add credits
 CREATE OR REPLACE FUNCTION public.approve_credit_request(
   request_id uuid,
   admin_user_id uuid
 )
-RETURNS jsonb AS $$
+RETURNS boolean AS $$
 DECLARE
   req RECORD;
-  school_rec RECORD;
-  new_expiry TIMESTAMP WITH TIME ZONE;
-  now_time TIMESTAMP WITH TIME ZONE := now();
+  school RECORD;
+  new_credits INTEGER;
+  new_expires TIMESTAMP WITH TIME ZONE;
 BEGIN
-  -- Check if user is admin
-  IF NOT EXISTS (
-    SELECT 1 FROM public.admin_users WHERE user_id = admin_user_id
-  ) THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
-  END IF;
-
-  -- Get request
-  SELECT * INTO req FROM public.credit_requests WHERE id = request_id;
+  -- Get the request details
+  SELECT * INTO req FROM public.credit_requests WHERE id = request_id AND status = 'pending';
   IF NOT FOUND THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Request not found');
+    RETURN false;
   END IF;
   
-  IF req.status != 'pending' THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Request already processed');
+  -- Get the school
+  SELECT * INTO school FROM public.schools WHERE id = req.school_id;
+  IF NOT FOUND THEN
+    RETURN false;
   END IF;
-
-  -- Get school
-  SELECT * INTO school_rec FROM public.schools WHERE id = req.school_id;
   
-  -- Calculate new expiry
-  IF school_rec.credit_expires_at IS NOT NULL AND school_rec.credit_expires_at > now_time THEN
-    new_expiry := school_rec.credit_expires_at + (req.credits || ' days')::interval;
+  -- Calculate new credits and expiry
+  IF school.credit_expires_at IS NULL OR school.credit_expires_at < NOW() THEN
+    -- Credits expired or never had credits, start fresh
+    new_credits := req.credits;
+    new_expires := NOW() + (req.credits || ' days')::INTERVAL;
   ELSE
-    new_expiry := now_time + (req.credits || ' days')::interval;
+    -- Has active credits, add to them
+    new_credits := school.total_credits + req.credits;
+    new_expires := school.credit_expires_at + (req.credits || ' days')::INTERVAL;
   END IF;
-
-  -- Update request
+  
+  -- Update school credits
+  UPDATE public.schools 
+  SET total_credits = new_credits, 
+      credit_expires_at = new_expires
+  WHERE id = req.school_id;
+  
+  -- Mark request as approved
   UPDATE public.credit_requests 
   SET status = 'approved' 
   WHERE id = request_id;
-
-  -- Update school credits
-  UPDATE public.schools 
-  SET total_credits = COALESCE(total_credits, 0) + req.credits,
-      credit_expires_at = new_expiry
-  WHERE id = req.school_id;
-
-  RETURN jsonb_build_object(
-    'success', true,
-    'credits_added', req.credits,
-    'new_expiry', new_expiry
-  );
+  
+  RETURN true;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 5. Insert the ilmsoft admin user (replace with actual admin email after signup)
--- First, an admin needs to sign up normally, then run:
--- INSERT INTO public.admin_users (user_id, email) 
--- VALUES ('auth-user-uuid-here', 'admin@ilmsoft.com');
-
--- Comment: To make a user an admin after they sign up:
--- 1. Have them sign up at /signup
--- 2. Get their user_id from auth.users
--- 3. Run: INSERT INTO public.admin_users (user_id, email) VALUES ('their-uuid', 'their-email');
+-- 5. Function for admin to reject credit requests
+CREATE OR REPLACE FUNCTION public.reject_credit_request(
+  request_id uuid
+)
+RETURNS boolean AS $$
+BEGIN
+  UPDATE public.credit_requests 
+  SET status = 'rejected' 
+  WHERE id = request_id AND status = 'pending';
+  
+  RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
