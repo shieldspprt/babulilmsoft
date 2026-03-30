@@ -56,3 +56,44 @@ CREATE TRIGGER supplier_balance_trigger
 -- Create index for faster lookups
 CREATE INDEX IF NOT EXISTS idx_suppliers_school_id ON public.suppliers(school_id);
 CREATE INDEX IF NOT EXISTS idx_suppliers_active ON public.suppliers(is_active);
+
+-- Supplier Transactions Table
+CREATE TABLE IF NOT EXISTS public.supplier_transactions (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    supplier_id uuid NOT NULL REFERENCES public.suppliers(id) ON DELETE CASCADE,
+    school_id uuid NOT NULL REFERENCES public.schools(id) ON DELETE CASCADE,
+    type varchar(20) NOT NULL CHECK (type IN ('bill', 'payment')),
+    amount integer NOT NULL,
+    date date NOT NULL DEFAULT CURRENT_DATE,
+    bill_number varchar(100),
+    payment_method varchar(50),
+    description text NOT NULL,
+    notes text,
+    balance_after integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    created_by uuid REFERENCES auth.users(id)
+);
+
+-- Enable RLS on supplier_transactions
+ALTER TABLE public.supplier_transactions ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for supplier_transactions
+DROP POLICY IF EXISTS supplier_tx_select ON public.supplier_transactions;
+CREATE POLICY supplier_tx_select ON public.supplier_transactions
+    FOR SELECT USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS supplier_tx_insert ON public.supplier_transactions;
+CREATE POLICY supplier_tx_insert ON public.supplier_transactions
+    FOR INSERT WITH CHECK (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS supplier_tx_update ON public.supplier_transactions;
+CREATE POLICY supplier_tx_update ON public.supplier_transactions
+    FOR UPDATE USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS supplier_tx_delete ON public.supplier_transactions;
+CREATE POLICY supplier_tx_delete ON public.supplier_transactions
+    FOR DELETE USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
+
+-- Index for performance
+CREATE INDEX IF NOT EXISTS idx_supplier_transactions_school_id ON public.supplier_transactions(school_id);
+CREATE INDEX IF NOT EXISTS idx_supplier_transactions_supplier_id ON public.supplier_transactions(supplier_id);
