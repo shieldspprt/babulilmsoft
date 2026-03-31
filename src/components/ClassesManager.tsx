@@ -18,6 +18,7 @@ type Class = {
 
 export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
   const [classes, setClasses] = useState<Class[]>([]);
+  const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [flash, setFlash] = useState('');
   const [search, setSearch] = useState('');
@@ -30,16 +31,28 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
   const [editingClass, setEditingClass] = useState<Class | null>(null);
   const [editName, setEditName] = useState('');
   const [editFee, setEditFee] = useState('');
-  const [editStudents, setEditStudents] = useState('');
   const [editActive, setEditActive] = useState(true);
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from('classes').select('*')
-      .eq('school_id', schoolId)
-      .order('display_order', { ascending: true })
-      .order('name');
-    setClasses(data || []);
+    const [classRes, studentRes] = await Promise.all([
+      supabase.from('classes').select('*')
+        .eq('school_id', schoolId)
+        .order('display_order', { ascending: true })
+        .order('name'),
+      supabase.from('students').select('admission_class_id')
+        .eq('school_id', schoolId)
+        .eq('active', true)
+    ]);
+    setClasses(classRes.data || []);
+    // Count students per class
+    const counts: Record<string, number> = {};
+    (studentRes.data || []).forEach(s => {
+      if (s.admission_class_id) {
+        counts[s.admission_class_id] = (counts[s.admission_class_id] || 0) + 1;
+      }
+    });
+    setStudentCounts(counts);
     setLoading(false);
   };
 
@@ -75,7 +88,6 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
     const { error } = await supabase.from('classes').update({
       name: editName.trim(),
       monthly_fee: parseInt(editFee) || 0,
-      admission_fee: parseInt(editStudents) || 0,
       active: editActive
     }).eq('id', editingClass.id);
     setSaving(false);
@@ -105,7 +117,6 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
     setEditingClass(c);
     setEditName(c.name);
     setEditFee(c.monthly_fee.toString());
-    setEditStudents(c.admission_fee.toString());
     setEditActive(c.active);
   };
 
@@ -162,7 +173,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
                 <tr key={c.id} className={c.active ? '' : 'inactive'}>
                   <td><strong>{c.name}</strong></td>
                   <td>Rs {c.monthly_fee.toLocaleString()}</td>
-                  <td><Users size={14} style={{marginRight:4}}/>{c.admission_fee || 0}</td>
+                  <td><Users size={14} style={{marginRight:4}}/>{studentCounts[c.id] || 0}</td>
                   <td>
                     <span className={`status-badge ${c.active ? 'active' : 'inactive'}`}>
                       {c.active ? 'Active' : 'Inactive'}
@@ -226,9 +237,6 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
                 </div>
                 <div>
                   <Input label="Monthly Fee (Rs) *" inputMode="numeric" pattern="[0-9]*" value={editFee} onChange={e => setEditFee(e.target.value)} required />
-                </div>
-                <div>
-                  <Input label="# of Students" inputMode="numeric" pattern="[0-9]*" value={editStudents} onChange={e => setEditStudents(e.target.value)} />
                 </div>
                 <div className="span-2">
                   <label className="form-label">Status</label>
