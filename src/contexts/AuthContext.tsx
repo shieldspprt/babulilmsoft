@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { SchoolProfile } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
@@ -27,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<SchoolProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const userIdRef = useRef<string | null>(null);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -51,21 +52,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        userIdRef.current = session.user.id;
         fetchProfile(session.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        if (event === 'SIGNED_IN') {
+        if (userIdRef.current !== session.user.id) {
           setLoading(true);
+          userIdRef.current = session.user.id;
         }
         fetchProfile(session.user.id).finally(() => setLoading(false));
       } else {
+        userIdRef.current = null;
         setProfile(null);
         setLoading(false);
       }
