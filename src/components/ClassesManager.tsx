@@ -1,180 +1,112 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, X, GraduationCap } from 'lucide-react';
+import { Plus, X, BookOpen, Search } from 'lucide-react';
 import { Button } from './ui/Button';
-import { Input } from './ui/Input';
-import './ClassesManager.css';
+import { Input }  from './ui/Input';
+import '../components/managers.css';
 
-type Class = {
-  id: string;
-  school_id: string;
-  name: string;
-  display_order: number;
-};
-
-const DEFAULT_CLASSES = [
-  'Playgroup', 'Nursery', 'Prep',
-  'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight',
-  'Pre-Nine', 'Nine', 'Tenth', 'Pass-out'
-];
+type Class = { id: string; school_id: string; name: string; description: string; created_at: string };
 
 export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newClassName, setNewClassName] = useState('');
-  const [message, setMessage] = useState('');
+  const [name, setName]         = useState('');
+  const [desc, setDesc]         = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [flash, setFlash]       = useState('');
+  const [search, setSearch]     = useState('');
 
-  useEffect(() => {
-    loadClasses();
-  }, [schoolId]);
+  useEffect(() => { load(); }, [schoolId]);
 
-  const loadClasses = async () => {
-    const { data, error } = await supabase
-      .from('classes')
-      .select('*')
-      .eq('school_id', schoolId)
-      .order('display_order', { ascending: true });
-
-    if (error) {
-      console.error('Error loading classes:', error);
-      setLoading(false);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      // Create default classes
-      const defaultClasses = DEFAULT_CLASSES.map((name, index) => ({
-        school_id: schoolId,
-        name,
-        display_order: index
-      }));
-      await supabase.from('classes').insert(defaultClasses);
-      const { data: newData } = await supabase
-        .from('classes')
-        .select('*')
-        .eq('school_id', schoolId)
-        .order('display_order', { ascending: true });
-      setClasses(newData || []);
-    } else {
-      setClasses(data);
-    }
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('classes').select('*').eq('school_id', schoolId).order('name');
+    setClasses(data || []);
     setLoading(false);
   };
 
-  const handleAddClass = async () => {
-    if (!newClassName.trim()) return;
-    
-    const { error } = await supabase.from('classes').insert({
-      school_id: schoolId,
-      name: newClassName.trim(),
-      display_order: classes.length
-    });
-
-    if (error) {
-      setMessage('Error adding class. Please try again.');
-    } else {
-      setNewClassName('');
-      setShowAddForm(false);
-      setMessage('Class added successfully!');
-      setTimeout(() => setMessage(''), 2000);
-      loadClasses();
-    }
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    const { error } = await supabase.from('classes').insert({ school_id: schoolId, name: name.trim(), description: desc.trim() });
+    setSaving(false);
+    if (error) { setFlash('Error: ' + error.message); }
+    else       { setFlash('Class added!'); setName(''); setDesc(''); load(); }
+    setTimeout(() => setFlash(''), 3000);
   };
 
-  const handleDeleteClass = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this class?')) return;
-    
+  const handleDelete = async (id: string) => {
     await supabase.from('classes').delete().eq('id', id);
-    loadClasses();
+    load();
   };
 
-  if (loading) {
-    return (
-      <div className="loading">
-        <div className="spinner" />
-        <span>Loading classes...</span>
-      </div>
-    );
-  }
+  const filtered = search.trim()
+    ? classes.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
+    : classes;
+
+  if (loading) return <div className="manager-loading"><div className="spinner" /><span>Loading…</span></div>;
 
   return (
-    <div className="classes-manager">
+    <div className="manager">
       {/* Header */}
-      <div className="manager-header">
+      <div className="manager-toolbar">
         <div className="manager-title">
-          <GraduationCap size={28} />
+          <BookOpen size={24} />
           <div>
             <h3>Classes</h3>
-            <p>{classes.length} classes total</p>
+            <p>{classes.length} class{classes.length !== 1 ? 'es' : ''} registered</p>
           </div>
         </div>
-        <Button onClick={() => setShowAddForm(true)} size="lg">
-          <Plus size={20} /> Add New Class
+        {classes.length > 4 && (
+          <div className="manager-search-bar">
+            <Search size={16} />
+            <input placeholder="Search classes…" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+        )}
+      </div>
+
+      {flash && <div className={`flash ${flash.startsWith('Error') ? 'error' : 'success'}`}>{flash}</div>}
+
+      {/* Inline Add */}
+      <form className="inline-add-row" onSubmit={handleAdd}>
+        <Input
+          label="Class Name"
+          placeholder="e.g. Class 5, Grade 8-A, Nursery"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          required
+        />
+        <Input
+          label="Description (optional)"
+          placeholder="e.g. Morning shift"
+          value={desc}
+          onChange={e => setDesc(e.target.value)}
+        />
+        <Button type="submit" isLoading={saving} style={{ marginTop: '22px' }}>
+          <Plus size={18} /> Add Class
         </Button>
-      </div>
+      </form>
 
-      {/* Message */}
-      {message && (
-        <div className={`manager-message ${message.includes('Error') ? 'error' : 'success'}`}>
-          {message}
-        </div>
-      )}
-
-      {/* Add Form */}
-      {showAddForm && (
-        <div className="form-card animate-fade-in">
-          <div className="form-header">
-            <h4>Add New Class</h4>
-            <button className="btn-close" onClick={() => setShowAddForm(false)}>
-              <X size={20} />
-            </button>
-          </div>
-          <div className="form-row">
-            <Input
-              label="Class Name"
-              placeholder="Enter class name (e.g., Eleventh)"
-              value={newClassName}
-              onChange={(e) => setNewClassName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddClass()}
-              autoFocus
-            />
-          </div>
-          <div className="form-actions">
-            <Button variant="secondary" onClick={() => setShowAddForm(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddClass} disabled={!newClassName.trim()}>
-              <Plus size={18} /> Add Class
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Classes Grid */}
-      <div className="classes-grid">
-        {classes.map((cls, index) => (
-          <div key={cls.id} className="class-card">
-            <div className="class-number">{index + 1}</div>
-            <div className="class-name">{cls.name}</div>
-            <button
-              className="btn-delete"
-              onClick={() => handleDeleteClass(cls.id)}
-              title="Delete class"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {classes.length === 0 && (
+      {/* Classes List */}
+      {filtered.length === 0 ? (
         <div className="empty-state">
-          <GraduationCap size={48} />
-          <p>No classes added yet</p>
-          <Button onClick={() => setShowAddForm(true)}>
-            <Plus size={18} /> Add First Class
-          </Button>
+          <BookOpen size={52} />
+          <p>{classes.length === 0 ? 'No classes yet' : 'No results found'}</p>
+          <small>{classes.length === 0 ? 'Add your first class using the form above' : 'Try a different search'}</small>
+        </div>
+      ) : (
+        <div className="classes-list">
+          {filtered.map(c => (
+            <div key={c.id} className="class-chip">
+              <BookOpen size={14} color="var(--primary)" />
+              <span>{c.name}</span>
+              {c.description && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>— {c.description}</span>}
+              <button className="class-chip-del" title="Remove class" onClick={() => handleDelete(c.id)}>
+                <X size={13} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>

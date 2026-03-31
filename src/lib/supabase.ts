@@ -89,3 +89,21 @@ export type SupplierTransaction = {
   created_at: string;
 };
 
+export type Parent = {
+  id: string;
+  school_id: string;
+  name: string;
+  relation: 'Father' | 'Mother' | 'Guardian';
+  gender: string;
+  cnic: string;
+  contact: string;
+  whatsapp: string;
+  email: string;
+  address: string;
+  occupation: string;
+  notes: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+

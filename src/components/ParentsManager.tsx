@@ -1,43 +1,48 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import {
-  Plus, X, GraduationCap, Briefcase, Phone,
-  MapPin, Search, Trash2
-} from 'lucide-react';
+import { Plus, X, Users, Phone, Mail, MapPin, Search, Trash2, Briefcase, UserCheck, Heart, User } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
 import '../components/managers.css';
 
-type Teacher = {
+type Parent = {
   id: string; school_id: string; name: string;
-  type: 'Teacher' | 'Staff'; cnic: string; gender: string;
-  personal_contact: string; home_contact: string; address: string;
-  education: string; salary: number; notes: string;
+  relation: 'Father' | 'Mother' | 'Guardian';
+  gender: string; cnic: string; contact: string;
+  whatsapp: string; email: string; address: string;
+  occupation: string; notes: string;
 };
 
 const EMPTY = {
-  name: '', type: 'Teacher' as 'Teacher' | 'Staff', gender: 'Male',
-  cnic: '', personal_contact: '', home_contact: '',
-  address: '', education: '', salary: '', notes: '',
+  name: '', relation: 'Father' as 'Father'|'Mother'|'Guardian',
+  gender: 'Male', cnic: '', contact: '', whatsapp: '',
+  email: '', address: '', occupation: '', notes: '',
 };
 
-export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
-  const [records, setRecords]       = useState<Teacher[]>([]);
+const RELATIONS: { value: Parent['relation']; icon: typeof User; label: string }[] = [
+  { value: 'Father',   icon: User,      label: 'Father'   },
+  { value: 'Mother',   icon: Heart,     label: 'Mother'   },
+  { value: 'Guardian', icon: UserCheck, label: 'Guardian' },
+];
+
+export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
+  const [records, setRecords]       = useState<Parent[]>([]);
   const [loading, setLoading]       = useState(true);
   const [showModal, setShowModal]   = useState(false);
   const [form, setForm]             = useState({ ...EMPTY });
   const [saving, setSaving]         = useState(false);
   const [flash, setFlash]           = useState('');
   const [search, setSearch]         = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<Teacher | null>(null);
+  const [filter, setFilter]         = useState<'All'|'Father'|'Mother'|'Guardian'>('All');
+  const [deleteTarget, setDeleteTarget] = useState<Parent | null>(null);
   const [deleting, setDeleting]     = useState(false);
 
   useEffect(() => { load(); }, [schoolId]);
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from('teachers').select('*')
-      .eq('school_id', schoolId).eq('is_active', true).order('type').order('name');
+    const { data } = await supabase.from('parents').select('*')
+      .eq('school_id', schoolId).eq('is_active', true).order('relation').order('name');
     setRecords(data || []);
     setLoading(false);
   };
@@ -45,32 +50,36 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.personal_contact.trim()) return;
+    if (!form.name.trim() || !form.contact.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from('teachers').insert({
-      school_id: schoolId, is_active: true,
-      ...form, salary: parseInt(form.salary) || 0,
-    });
+    const { error } = await supabase.from('parents').insert({ school_id: schoolId, is_active: true, ...form });
     setSaving(false);
     if (error) { setFlash('Error: ' + error.message); }
-    else       { setFlash(`${form.type} "${form.name}" added!`); setShowModal(false); setForm({ ...EMPTY }); load(); }
+    else       { setFlash(`${form.relation} "${form.name}" added!`); setShowModal(false); setForm({ ...EMPTY }); load(); }
     setTimeout(() => setFlash(''), 4000);
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    await supabase.from('teachers').update({ is_active: false }).eq('id', deleteTarget.id);
+    await supabase.from('parents').update({ is_active: false }).eq('id', deleteTarget.id);
     setDeleting(false); setDeleteTarget(null); load();
   };
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return records;
-    const q = search.toLowerCase();
-    return records.filter(r => r.name.toLowerCase().includes(q) || r.personal_contact?.includes(q));
-  }, [records, search]);
+    let list = filter === 'All' ? records : records.filter(r => r.relation === filter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(r => r.name.toLowerCase().includes(q) || r.contact?.includes(q) || r.email?.toLowerCase().includes(q));
+    }
+    return list;
+  }, [records, filter, search]);
 
-  const counts = { Teacher: records.filter(r => r.type === 'Teacher').length, Staff: records.filter(r => r.type === 'Staff').length };
+  const counts = {
+    Father: records.filter(r => r.relation === 'Father').length,
+    Mother: records.filter(r => r.relation === 'Mother').length,
+    Guardian: records.filter(r => r.relation === 'Guardian').length,
+  };
 
   if (loading) return <div className="manager-loading"><div className="spinner" /><span>Loading…</span></div>;
 
@@ -78,32 +87,41 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
     <div className="manager">
       <div className="manager-toolbar">
         <div className="manager-title">
-          <GraduationCap size={24} />
+          <Users size={24} />
           <div>
-            <h3>Teachers &amp; Staff</h3>
-            <p>{counts.Teacher} Teachers · {counts.Staff} Staff</p>
+            <h3>Parents &amp; Guardians</h3>
+            <p>{counts.Father} Fathers · {counts.Mother} Mothers · {counts.Guardian} Guardians</p>
           </div>
         </div>
         <div style={{ display:'flex', gap:'0.75rem', alignItems:'center', flexWrap:'wrap' }}>
           <div className="manager-search-bar">
             <Search size={16} />
-            <input placeholder="Search by name…" value={search} onChange={e => setSearch(e.target.value)} />
+            <input placeholder="Search…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <Button onClick={() => { setForm({ ...EMPTY }); setShowModal(true); }}>
-            <Plus size={18} /> Add Person
+            <Plus size={18} /> Add Parent
           </Button>
         </div>
       </div>
 
       {flash && <div className={`flash ${flash.startsWith('Error') ? 'error' : 'success'}`}>{flash}</div>}
 
+      {/* Filter tabs */}
+      <div className="type-pills">
+        {(['All','Father','Mother','Guardian'] as const).map(f => (
+          <button key={f} type="button" className={`type-pill${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>
+            {f}{f !== 'All' ? ` (${counts[f]})` : ` (${records.length})`}
+          </button>
+        ))}
+      </div>
+
       {/* List */}
       {filtered.length === 0 ? (
         <div className="empty-state">
-          <GraduationCap size={52} />
-          <p>{records.length === 0 ? 'No teachers or staff yet' : 'No results found'}</p>
-          <small>{records.length === 0 ? 'Click "Add Person" to register your first teacher or staff member' : ''}</small>
-          {records.length === 0 && <Button onClick={() => setShowModal(true)}><Plus size={18} /> Add First Person</Button>}
+          <Users size={52} />
+          <p>{records.length === 0 ? 'No parents added yet' : 'No results found'}</p>
+          <small>{records.length === 0 ? 'Click "Add Parent" to register the first parent or guardian' : ''}</small>
+          {records.length === 0 && <Button onClick={() => setShowModal(true)}><Plus size={18} /> Add First Parent</Button>}
         </div>
       ) : (
         <div className="card-grid">
@@ -113,14 +131,13 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
               <div className="record-info">
                 <div className="record-name-row">
                   <h4>{r.name}</h4>
-                  <span className={`rec-badge ${r.type.toLowerCase()}`}>{r.type}</span>
+                  <span className={`rec-badge ${r.relation.toLowerCase()}`}>{r.relation}</span>
                 </div>
                 <div className="record-meta">
-                  <span><Phone size={12} /> {r.personal_contact}</span>
-                  {r.cnic      && <span>CNIC: {r.cnic}</span>}
-                  {r.education && <span><GraduationCap size={12} /> {r.education}</span>}
-                  {r.salary > 0 && <span>Rs {r.salary.toLocaleString()}/mo</span>}
-                  {r.address   && <span><MapPin size={12} /> {r.address}</span>}
+                  <span><Phone size={12} /> {r.contact}</span>
+                  {r.email      && <span><Mail size={12} /> {r.email}</span>}
+                  {r.occupation && <span><Briefcase size={12} /> {r.occupation}</span>}
+                  {r.address    && <span><MapPin size={12} /> {r.address}</span>}
                 </div>
               </div>
               <button className="record-delete" title="Remove" onClick={() => setDeleteTarget(r)}>
@@ -136,49 +153,47 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
         <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal-box">
             <div className="modal-head">
-              <h3>Add Teacher / Staff</h3>
+              <h3>Add Parent / Guardian</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              {/* Type */}
+              {/* Relation */}
               <div>
-                <div className="form-section-label">Type *</div>
+                <div className="form-section-label">Relation *</div>
                 <div className="type-pills" style={{ marginTop:'0.625rem' }}>
-                  {(['Teacher','Staff'] as const).map(t => (
-                    <button key={t} type="button"
-                      className={`type-pill${form.type === t ? ' active' : ''}`}
-                      onClick={() => set('type', t)}>
-                      {t === 'Teacher' ? <GraduationCap size={14} /> : <Briefcase size={14} />} {t}
+                  {RELATIONS.map(({ value, icon: Icon, label }) => (
+                    <button key={value} type="button"
+                      className={`type-pill${form.relation === value ? ' active' : ''}`}
+                      onClick={() => set('relation', value)}>
+                      <Icon size={14} /> {label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Required */}
               <div className="form-section-label">Basic Information</div>
               <div className="form-grid">
                 <div className="span-2">
                   <Input label="Full Name *" placeholder="Enter full name" value={form.name} onChange={e => set('name', e.target.value)} required />
                 </div>
-                <Input label="Contact Number *" placeholder="03XX-XXXXXXX" value={form.personal_contact} onChange={e => set('personal_contact', e.target.value)} required />
-                <Input label="Home Contact" placeholder="03XX-XXXXXXX" value={form.home_contact} onChange={e => set('home_contact', e.target.value)} />
+                <Input label="Contact Number *" placeholder="03XX-XXXXXXX" value={form.contact} onChange={e => set('contact', e.target.value)} required />
+                <Input label="WhatsApp" placeholder="03XX-XXXXXXX" value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)} />
               </div>
 
-              {/* Optional */}
-              <div className="form-section-label">Additional Details</div>
+              <div className="form-section-label">Additional Details (Optional)</div>
               <div className="form-grid">
+                <Input label="Email" type="email" placeholder="parent@email.com" value={form.email} onChange={e => set('email', e.target.value)} />
+                <Input label="Occupation" placeholder="e.g. Engineer, Business" value={form.occupation} onChange={e => set('occupation', e.target.value)} />
+                <Input label="CNIC" placeholder="XXXXX-XXXXXXX-X" value={form.cnic} onChange={e => set('cnic', e.target.value)} />
                 <div>
                   <label className="form-label">Gender</label>
                   <select className="form-select" value={form.gender} onChange={e => set('gender', e.target.value)}>
                     <option>Male</option><option>Female</option>
                   </select>
                 </div>
-                <Input label="CNIC" placeholder="XXXXX-XXXXXXX-X" value={form.cnic} onChange={e => set('cnic', e.target.value)} />
-                <Input label="Education" placeholder="e.g. BA, BEd, MSc" value={form.education} onChange={e => set('education', e.target.value)} />
-                <Input label="Monthly Salary (Rs)" type="number" placeholder="e.g. 25000" value={form.salary} onChange={e => set('salary', e.target.value)} />
                 <div className="span-2">
                   <label className="form-label">Address</label>
-                  <textarea className="form-textarea" rows={2} placeholder="Full address" value={form.address} onChange={e => set('address', e.target.value)} />
+                  <textarea className="form-textarea" rows={2} placeholder="Home address" value={form.address} onChange={e => set('address', e.target.value)} />
                 </div>
                 <div className="span-2">
                   <label className="form-label">Notes</label>
@@ -188,8 +203,8 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
             </div>
             <div className="modal-foot">
               <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-              <Button onClick={handleSave} isLoading={saving} disabled={!form.name.trim() || !form.personal_contact.trim()}>
-                <Plus size={18} /> Save {form.type}
+              <Button onClick={handleSave} isLoading={saving} disabled={!form.name.trim() || !form.contact.trim()}>
+                <Plus size={18} /> Save {form.relation}
               </Button>
             </div>
           </div>
@@ -201,7 +216,7 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
         <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setDeleteTarget(null)}>
           <div className="confirm-box">
             <Trash2 size={40} color="var(--danger)" />
-            <h3>Remove {deleteTarget.type}?</h3>
+            <h3>Remove Parent?</h3>
             <p>This will remove <strong>{deleteTarget.name}</strong> from your records.</p>
             <div className="confirm-box-btns">
               <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancel</Button>

@@ -1,17 +1,18 @@
+/* ─── App Shell ─────────────────────────────────────────────────────── */
+
 .app-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
+/* Public pages: navbar + content */
 .main-content {
   flex: 1;
-  padding-top: 80px; /* Space for fixed navbar */
+  padding-top: 68px; /* height of fixed navbar */
 }
 
-/* Admin page takes full width without navbar spacing */
+/* Dashboard & Admin: no top navbar, full viewport */
 .main-content.admin-page {
   padding-top: 0;
-  padding: 0;
-  max-width: 100%;
 }

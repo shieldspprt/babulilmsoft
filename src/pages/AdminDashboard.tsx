@@ -3,253 +3,347 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
-import { 
-  CheckCircle, XCircle, Clock, Users, CreditCard, 
-  TrendingUp, AlertCircle, Search, Filter, RefreshCw,
-  LogOut, School, Building2, Wallet, Landmark, Phone, Mail, Calendar
+import {
+  CheckCircle, XCircle, Clock, Users, CreditCard, TrendingUp,
+  AlertCircle, Search, RefreshCw, LogOut, GraduationCap,
+  Building2, Wallet, Landmark, Phone, Mail, Calendar, Filter
 } from 'lucide-react';
 import './AdminDashboard.css';
 
-type CreditRequestWithSchool = {
-  id: string;
-  school_id: string;
-  school_name: string;
-  school_email: string;
-  contact: string;
-  credits: number;
-  amount_pkr: number;
-  payment_method: string;
-  payment_reference: string;
-  status: 'pending' | 'approved' | 'rejected';
-  created_at: string;
+type Request = {
+  id: string; school_id: string; school_name: string; school_email: string;
+  contact: string; credits: number; amount_pkr: number;
+  payment_method: string; payment_reference: string;
+  status: 'pending' | 'approved' | 'rejected'; created_at: string;
 };
 
-type DashboardStats = {
-  totalSchools: number;
-  pendingRequests: number;
-  totalRevenue: number;
-  activeCredits: number;
+type School = {
+  id: string; school_name: string; contact: string; email: string;
+  total_credits: number; credit_expires_at: string | null; created_at: string;
 };
 
-type SchoolWithDetails = {
-  id: string;
-  school_name: string;
-  contact: string;
-  email: string;
-  total_credits: number;
-  credit_expires_at: string | null;
-  created_at: string;
-};
+type Stats = { totalSchools: number; pendingRequests: number; totalRevenue: number; activeSchools: number };
 
 export const AdminDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'requests' | 'schools' | 'payments'>('requests');
-  const [requests, setRequests] = useState<CreditRequestWithSchool[]>([]);
-  const [filteredRequests, setFilteredRequests] = useState<CreditRequestWithSchool[]>([]);
-  const [schools, setSchools] = useState<SchoolWithDetails[]>([]);
-  const [filteredSchools, setFilteredSchools] = useState<SchoolWithDetails[]>([]);
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [search, setSearch] = useState('');
-  const [schoolSearch, setSchoolSearch] = useState('');
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [paymentSettings, setPaymentSettings] = useState({
-    jazzcash_number: '0300-1234567',
-    jazzcash_name: 'ilmsoft',
-    bank_name: 'Meezan Bank',
-    bank_account_title: 'ilmsoft',
-    bank_iban: 'PK12MEZN000123456789'
+
+  const [tab, setTab]                     = useState<'requests' | 'schools' | 'payments'>('requests');
+  const [requests, setRequests]           = useState<Request[]>([]);
+  const [schools, setSchools]             = useState<School[]>([]);
+  const [stats, setStats]                 = useState<Stats | null>(null);
+  const [loading, setLoading]             = useState(true);
+  const [statusFilter, setStatusFilter]   = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [search, setSearch]               = useState('');
+  const [schoolSearch, setSchoolSearch]   = useState('');
+  const [processingId, setProcessingId]   = useState<string | null>(null);
+  const [paySettings, setPaySettings]     = useState({
+    jazzcash_number: '0300-1234567', jazzcash_name: 'ilmsoft',
+    bank_name: 'Meezan Bank', bank_account_title: 'ilmsoft', bank_iban: 'PK12MEZN000123456789',
   });
 
-  useEffect(() => { checkAdminAccess(); }, [user]);
-  useEffect(() => { applyFilters(); }, [requests, filter, search]);
-  useEffect(() => { filterSchools(); }, [schools, schoolSearch]);
+  useEffect(() => { checkAdmin(); }, [user]);
 
-  const checkAdminAccess = async () => {
+  const checkAdmin = async () => {
     if (!user) { navigate('/login'); return; }
-    try {
-      const { data: admin, error } = await supabase.from('admin_users').select('id').eq('user_id', user.id).single();
-      if (error || !admin) { navigate('/dashboard'); return; }
-      loadData();
-    } catch { navigate('/dashboard'); }
+    const { data, error } = await supabase.from('admin_users').select('id').eq('user_id', user.id).single();
+    if (error || !data) { navigate('/dashboard'); return; }
+    loadAll();
   };
 
-  const loadData = async () => {
+  const loadAll = async () => {
     setLoading(true);
-    await Promise.all([loadRequests(), loadStats(), loadSchools()]);
+    await Promise.all([loadRequests(), loadSchools(), loadStats()]);
     setLoading(false);
   };
 
   const loadRequests = async () => {
-    const { data } = await supabase.from('credit_requests').select('*, schools:school_id (school_name, email, contact)').order('created_at', { ascending: false });
-    setRequests((data || []).map((r: any) => ({ id: r.id, school_id: r.school_id, school_name: r.schools?.school_name || 'Unknown', school_email: r.schools?.email || '', contact: r.schools?.contact || '', credits: r.credits, amount_pkr: r.amount_pkr, payment_method: r.payment_method, payment_reference: r.payment_reference, status: r.status, created_at: r.created_at })));
+    const { data } = await supabase
+      .from('credit_requests')
+      .select('*, schools:school_id(school_name, email, contact)')
+      .order('created_at', { ascending: false });
+    setRequests((data || []).map((r: any) => ({
+      id: r.id, school_id: r.school_id,
+      school_name: r.schools?.school_name || 'Unknown',
+      school_email: r.schools?.email || '',
+      contact: r.schools?.contact || '',
+      credits: r.credits, amount_pkr: r.amount_pkr,
+      payment_method: r.payment_method, payment_reference: r.payment_reference,
+      status: r.status, created_at: r.created_at,
+    })));
   };
 
   const loadSchools = async () => {
-    const { data } = await supabase.from('schools').select('id, school_name, contact, email, total_credits, credit_expires_at, created_at').order('created_at', { ascending: false });
+    const { data } = await supabase.from('schools')
+      .select('id,school_name,contact,email,total_credits,credit_expires_at,created_at')
+      .order('created_at', { ascending: false });
     setSchools(data || []);
   };
 
   const loadStats = async () => {
-    const { data: schools } = await supabase.from('schools').select('total_credits, credit_expires_at');
-    const { data: pending } = await supabase.from('credit_requests').select('id').eq('status', 'pending');
-    const { data: approved } = await supabase.from('credit_requests').select('amount_pkr').eq('status', 'approved');
+    const { data: sc }  = await supabase.from('schools').select('total_credits,credit_expires_at');
+    const { data: pend } = await supabase.from('credit_requests').select('id').eq('status', 'pending');
+    const { data: appr } = await supabase.from('credit_requests').select('amount_pkr').eq('status', 'approved');
     const now = new Date();
-    const active = (schools || []).filter(s => s.total_credits > 0 && (!s.credit_expires_at || new Date(s.credit_expires_at) > now)).length;
-    setStats({ totalSchools: schools?.length || 0, pendingRequests: pending?.length || 0, totalRevenue: (approved || []).reduce((sum, r) => sum + r.amount_pkr, 0), activeCredits: active });
+    const active = (sc || []).filter(s => s.total_credits > 0 && (!s.credit_expires_at || new Date(s.credit_expires_at) > now)).length;
+    setStats({
+      totalSchools: sc?.length || 0,
+      pendingRequests: pend?.length || 0,
+      totalRevenue: (appr || []).reduce((sum, r) => sum + r.amount_pkr, 0),
+      activeSchools: active,
+    });
   };
 
-  const applyFilters = () => {
-    let filtered = [...requests];
-    if (filter !== 'all') filtered = filtered.filter(r => r.status === filter);
-    if (search) { const q = search.toLowerCase(); filtered = filtered.filter(r => r.school_name.toLowerCase().includes(q) || r.school_email.toLowerCase().includes(q)); }
-    setFilteredRequests(filtered);
-  };
-
-  const filterSchools = () => {
-    let filtered = [...schools];
-    if (schoolSearch) { const q = schoolSearch.toLowerCase(); filtered = filtered.filter(s => s.school_name.toLowerCase().includes(q) || s.email.toLowerCase().includes(q)); }
-    setFilteredSchools(filtered);
-  };
-
-  const getSchoolStatus = (school: SchoolWithDetails) => {
-    if (!school.total_credits) return { label: 'No Credits', class: 'expired' };
-    if (!school.credit_expires_at) return { label: `${school.total_credits} Credits`, class: 'active' };
-    const daysLeft = Math.ceil((new Date(school.credit_expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    if (daysLeft < 0) return { label: 'Expired', class: 'expired' };
-    if (daysLeft <= 7) return { label: `${daysLeft} days`, class: 'warning' };
-    return { label: `${daysLeft} days`, class: 'active' };
-  };
-
-  const handleApprove = async (request: CreditRequestWithSchool) => {
-    setProcessingId(request.id);
+  const handleApprove = async (req: Request) => {
+    setProcessingId(req.id);
     const now = new Date();
-    const expiresAt = new Date(now); expiresAt.setDate(expiresAt.getDate() + request.credits);
-    await supabase.from('credit_requests').update({ status: 'approved' }).eq('id', request.id);
-    const { data: school } = await supabase.from('schools').select('total_credits, credit_expires_at').eq('id', request.school_id).single();
-    const currentExpiry = school?.credit_expires_at ? new Date(school.credit_expires_at) : null;
-    const currentCredits = school?.total_credits || 0;
-    let newExpiry: Date;
-    if (currentExpiry && currentExpiry > now) { newExpiry = new Date(currentExpiry); newExpiry.setDate(newExpiry.getDate() + request.credits); }
-    else { newExpiry = expiresAt; }
-    await supabase.from('schools').update({ total_credits: currentCredits + request.credits, credit_expires_at: newExpiry.toISOString() }).eq('id', request.school_id);
-    setProcessingId(null); loadData();
+    await supabase.from('credit_requests').update({ status: 'approved' }).eq('id', req.id);
+    const { data: school } = await supabase.from('schools').select('total_credits,credit_expires_at').eq('id', req.school_id).single();
+    const curExp = school?.credit_expires_at ? new Date(school.credit_expires_at) : null;
+    let newExp = new Date(now);
+    if (curExp && curExp > now) newExp = new Date(curExp);
+    newExp.setDate(newExp.getDate() + req.credits);
+    await supabase.from('schools').update({
+      total_credits: (school?.total_credits || 0) + req.credits,
+      credit_expires_at: newExp.toISOString(),
+    }).eq('id', req.school_id);
+    setProcessingId(null);
+    loadAll();
   };
 
-  const handleReject = async (requestId: string) => {
+  const handleReject = async (id: string) => {
     if (!confirm('Reject this request?')) return;
-    setProcessingId(requestId);
-    await supabase.from('credit_requests').update({ status: 'rejected' }).eq('id', requestId);
-    setProcessingId(null); loadData();
+    setProcessingId(id);
+    await supabase.from('credit_requests').update({ status: 'rejected' }).eq('id', id);
+    setProcessingId(null);
+    loadAll();
   };
 
-  const handleLogout = async () => { await signOut(); navigate('/'); };
+  const getSchoolStatus = (s: School) => {
+    if (!s.total_credits) return { label: 'No Credits', cls: 'expired' };
+    if (!s.credit_expires_at) return { label: `${s.total_credits} credits`, cls: 'active' };
+    const d = Math.ceil((new Date(s.credit_expires_at).getTime() - Date.now()) / 86400000);
+    if (d < 0) return { label: 'Expired', cls: 'expired' };
+    if (d <= 7) return { label: `${d} days left`, cls: 'warning' };
+    return { label: `${d} days left`, cls: 'active' };
+  };
 
-  if (loading) { return <div className="admin-loading"><div className="spinner" /><span>Loading admin dashboard...</span></div>; }
+  const filteredRequests = requests.filter(r => {
+    if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+    if (search) { const q = search.toLowerCase(); return r.school_name.toLowerCase().includes(q) || r.school_email.toLowerCase().includes(q); }
+    return true;
+  });
+
+  const filteredSchools = schoolSearch
+    ? schools.filter(s => s.school_name.toLowerCase().includes(schoolSearch.toLowerCase()) || s.email?.toLowerCase().includes(schoolSearch.toLowerCase()))
+    : schools;
+
+  if (loading) return (
+    <div className="admin-loading">
+      <div className="spinner" />
+      <span>Loading admin dashboard…</span>
+    </div>
+  );
 
   return (
-    <div className="admin-dashboard">
-      <header className="admin-header glass">
-        <div className="admin-header-content">
-          <div className="admin-brand"><School size={28} /><span>ilmsoft <span className="admin-label">Admin</span></span></div>
-          <div className="admin-actions">
-            <Button variant="ghost" onClick={loadData}><RefreshCw size={18} /></Button>
-            <Button variant="outline" onClick={handleLogout}><LogOut size={18} /> Logout</Button>
-          </div>
+    <div className="admin-shell">
+      {/* Header */}
+      <header className="admin-header">
+        <div className="admin-logo">
+          <div className="admin-logo-icon"><GraduationCap size={20} /></div>
+          <span className="admin-logo-text">ilm<em>soft</em></span>
+        </div>
+        <span className="admin-badge">Admin</span>
+        <div className="admin-header-right">
+          <Button variant="ghost" size="sm" onClick={loadAll} style={{ color: '#94a3b8' }}>
+            <RefreshCw size={16} />
+          </Button>
+          <Button variant="secondary" size="sm" onClick={async () => { await signOut(); navigate('/'); }}
+            style={{ background:'rgba(255,255,255,0.08)', borderColor:'rgba(255,255,255,0.12)', color:'#94a3b8' }}>
+            <LogOut size={15} /> Logout
+          </Button>
         </div>
       </header>
 
-      <main className="admin-content">
-        <div className="stats-grid">
-          <div className="stat-card glass"><div className="stat-icon-wrap primary"><Users size={24} /></div><div className="stat-info"><span className="stat-number">{stats?.totalSchools || 0}</span><span className="stat-label">Total Schools</span></div></div>
-          <div className="stat-card glass"><div className="stat-icon-wrap warning"><AlertCircle size={24} /></div><div className="stat-info"><span className="stat-number">{stats?.pendingRequests || 0}</span><span className="stat-label">Pending Requests</span></div></div>
-          <div className="stat-card glass"><div className="stat-icon-wrap success"><CreditCard size={24} /></div><div className="stat-info"><span className="stat-number">{stats?.activeCredits || 0}</span><span className="stat-label">Active Credits</span></div></div>
-          <div className="stat-card glass"><div className="stat-icon-wrap accent"><TrendingUp size={24} /></div><div className="stat-info"><span className="stat-number">Rs {stats?.totalRevenue?.toLocaleString() || 0}</span><span className="stat-label">Total Revenue</span></div></div>
-        </div>
-
-        <div className="admin-tabs glass">
-          <button className={`admin-tab ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => setActiveTab('requests')}><CreditCard size={18} /> Credit Requests</button>
-          <button className={`admin-tab ${activeTab === 'schools' ? 'active' : ''}`} onClick={() => setActiveTab('schools')}><Building2 size={18} /> All Schools</button>
-          <button className={`admin-tab ${activeTab === 'payments' ? 'active' : ''}`} onClick={() => setActiveTab('payments')}><Wallet size={18} /> Payment Settings</button>
-        </div>
-
-        {activeTab === 'requests' && (
-          <div className="admin-section glass">
-            <div className="section-header">
-              <h2>Credit Purchase Requests</h2>
-              <div className="filter-bar">
-                <div className="search-box"><Search size={18} /><input type="text" placeholder="Search schools..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
-                <div className="filter-tabs">{(['all', 'pending', 'approved', 'rejected'] as const).map(f => <button key={f} className={`filter-tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>)}</div>
+      <div className="admin-body">
+        {/* Stats */}
+        <div className="admin-stats">
+          {[
+            { icon: Users,       color: 'blue',   label: 'Total Schools',    value: stats?.totalSchools || 0 },
+            { icon: AlertCircle, color: 'amber',  label: 'Pending Requests', value: stats?.pendingRequests || 0 },
+            { icon: CreditCard,  color: 'green',  label: 'Active Schools',   value: stats?.activeSchools || 0 },
+            { icon: TrendingUp,  color: 'purple', label: 'Total Revenue',    value: `Rs ${(stats?.totalRevenue || 0).toLocaleString()}` },
+          ].map(s => (
+            <div key={s.label} className="admin-stat">
+              <div className={`admin-stat-icon ${s.color}`}><s.icon size={20} /></div>
+              <div>
+                <div className="admin-stat-number">{s.value}</div>
+                <div className="admin-stat-label">{s.label}</div>
               </div>
             </div>
-            <div className="requests-table-wrap">
-              <table className="requests-table">
-                <thead><tr><th>School</th><th>Plan</th><th>Amount</th><th>Payment</th><th>Reference</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {filteredRequests.length === 0 ? <tr><td colSpan={7} className="empty-cell"><div className="empty-state"><Filter size={48} /><p>No requests found</p></div></td></tr> :
-                    filteredRequests.map(req => (
-                      <tr key={req.id} className={req.status}>
-                        <td><div className="school-cell"><span className="school-name">{req.school_name}</span><span className="school-email">{req.school_email}</span></div></td>
-                        <td>{req.credits} Credits</td><td>Rs {req.amount_pkr.toLocaleString()}</td><td>{req.payment_method}</td><td className="reference-cell">{req.payment_reference}</td>
-                        <td><span className={`status-badge ${req.status}`}>{req.status === 'approved' ? <CheckCircle size={14} /> : req.status === 'rejected' ? <XCircle size={14} /> : <Clock size={14} />}{req.status}</span></td>
-                        <td>{req.status === 'pending' && <div className="action-btns"><Button size="sm" onClick={() => handleApprove(req)} isLoading={processingId === req.id}><CheckCircle size={14} /></Button><Button size="sm" variant="danger" onClick={() => handleReject(req.id)} disabled={processingId === req.id}><XCircle size={14} /></Button></div>}</td>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <div className="admin-tabs">
+          {[
+            { id: 'requests' as const, icon: CreditCard,  label: 'Credit Requests' },
+            { id: 'schools'  as const, icon: Building2,   label: 'All Schools'     },
+            { id: 'payments' as const, icon: Wallet,      label: 'Payment Info'    },
+          ].map(t => (
+            <button
+              key={t.id}
+              className={`admin-tab${tab === t.id ? ' active' : ''}`}
+              onClick={() => setTab(t.id)}
+            >
+              <t.icon size={16} /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Requests */}
+        {tab === 'requests' && (
+          <div className="admin-panel">
+            <div className="admin-panel-header">
+              <h2>Credit Purchase Requests</h2>
+              <div className="admin-filter-bar">
+                <div className="admin-search">
+                  <Search size={15} />
+                  <input placeholder="Search school or email…" value={search} onChange={e => setSearch(e.target.value)} />
+                </div>
+                <div className="filter-chips">
+                  {(['all','pending','approved','rejected'] as const).map(f => (
+                    <button key={f} className={`filter-chip${statusFilter === f ? ' active' : ''}`} onClick={() => setStatusFilter(f)}>
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {filteredRequests.length === 0 ? (
+              <div className="admin-empty"><Filter size={48} /><p>No requests found</p></div>
+            ) : (
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>School</th><th>Credits</th><th>Amount</th>
+                      <th>Method</th><th>Reference</th><th>Date</th><th>Status</th><th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRequests.map(r => (
+                      <tr key={r.id}>
+                        <td>
+                          <div className="school-cell">
+                            <strong>{r.school_name}</strong>
+                            <span>{r.school_email}</span>
+                          </div>
+                        </td>
+                        <td style={{ fontWeight: 700 }}>{r.credits} Credits</td>
+                        <td style={{ fontWeight: 700 }}>Rs {r.amount_pkr.toLocaleString()}</td>
+                        <td>{r.payment_method}</td>
+                        <td><span className="ref-cell">{r.payment_reference}</span></td>
+                        <td>{new Date(r.created_at).toLocaleDateString('en-PK')}</td>
+                        <td>
+                          <span className={`status-pill ${r.status}`}>
+                            {r.status === 'approved' ? <CheckCircle size={11} /> : r.status === 'rejected' ? <XCircle size={11} /> : <Clock size={11} />}
+                            {r.status}
+                          </span>
+                        </td>
+                        <td>
+                          {r.status === 'pending' && (
+                            <div className="action-btns">
+                              <Button size="sm" onClick={() => handleApprove(r)} isLoading={processingId === r.id}>
+                                <CheckCircle size={13} /> Approve
+                              </Button>
+                              <Button size="sm" variant="danger" onClick={() => handleReject(r.id)} disabled={processingId === r.id}>
+                                <XCircle size={13} />
+                              </Button>
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     ))}
-                </tbody>
-              </table>
-            </div>
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
-        {activeTab === 'schools' && (
-          <div className="admin-section glass">
-            <div className="section-header"><h2>All Registered Schools</h2><div className="search-box"><Search size={18} /><input type="text" placeholder="Search by name or email..." value={schoolSearch} onChange={(e) => setSchoolSearch(e.target.value)} /></div></div>
-            <div className="schools-grid">
-              {filteredSchools.length === 0 ? <div className="empty-state"><Building2 size={48} /><p>No schools found</p></div> :
-                filteredSchools.map(school => {
-                  const status = getSchoolStatus(school);
+        {/* Schools */}
+        {tab === 'schools' && (
+          <div className="admin-panel">
+            <div className="admin-panel-header">
+              <h2>All Registered Schools</h2>
+              <div className="admin-search">
+                <Search size={15} />
+                <input placeholder="Search by name or email…" value={schoolSearch} onChange={e => setSchoolSearch(e.target.value)} />
+              </div>
+            </div>
+            {filteredSchools.length === 0 ? (
+              <div className="admin-empty"><Building2 size={48} /><p>No schools found</p></div>
+            ) : (
+              <div className="schools-grid">
+                {filteredSchools.map(s => {
+                  const st = getSchoolStatus(s);
                   return (
-                    <div key={school.id} className="school-card">
-                      <div className="school-card-header"><Building2 size={24} /><h3>{school.school_name}</h3></div>
-                      <div className="school-card-body">
-                        <div className="school-detail"><Mail size={14} /><span>{school.email}</span></div>
-                        <div className="school-detail"><Phone size={14} /><span>{school.contact || 'N/A'}</span></div>
-                        <div className="school-detail"><Calendar size={14} /><span>Joined: {new Date(school.created_at).toLocaleDateString()}</span></div>
+                    <div key={s.id} className="school-card">
+                      <div className="school-card-top">
+                        <div className="school-avatar">{s.school_name.charAt(0).toUpperCase()}</div>
+                        <div>
+                          <h3>{s.school_name}</h3>
+                          <div className="school-card-details">
+                            <div className="school-detail"><Mail size={12} />{s.email}</div>
+                            {s.contact && <div className="school-detail"><Phone size={12} />{s.contact}</div>}
+                            <div className="school-detail"><Calendar size={12} />Joined {new Date(s.created_at).toLocaleDateString('en-PK')}</div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="school-card-footer"><div className={`credit-pill ${status.class}`}><CreditCard size={14} /><span>{status.label}</span></div><span className="credits-count">{school.total_credits || 0} credits</span></div>
+                      <div className="school-card-footer">
+                        <span className={`credit-pill ${st.cls}`}><CreditCard size={12} /> {st.label}</span>
+                        <span style={{ fontSize:'var(--font-xs)', color:'var(--text-muted)' }}>{s.total_credits} total credits</span>
+                      </div>
                     </div>
                   );
                 })}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
-        {activeTab === 'payments' && (
-          <div className="admin-section glass">
-            <div className="section-header"><h2>Payment Settings</h2><p>Configure payment details shown to schools when purchasing credits</p></div>
-            <div className="payment-settings-grid">
-              <div className="payment-card">
-                <div className="payment-card-header"><Wallet size={24} /><h3>JazzCash</h3></div>
-                <div className="payment-form">
-                  <label>Account Number<input type="text" value={paymentSettings.jazzcash_number} onChange={e => setPaymentSettings({...paymentSettings, jazzcash_number: e.target.value})} /></label>
-                  <label>Account Name<input type="text" value={paymentSettings.jazzcash_name} onChange={e => setPaymentSettings({...paymentSettings, jazzcash_name: e.target.value})} /></label>
+        {/* Payment Settings */}
+        {tab === 'payments' && (
+          <div className="admin-panel">
+            <div className="admin-panel-header">
+              <h2>Payment Information</h2>
+              <p style={{ color:'var(--text-muted)', fontSize:'var(--font-sm)', margin:0 }}>Shown to schools when they purchase credits</p>
+            </div>
+            <div className="pay-settings-grid">
+              <div className="pay-settings-card">
+                <h3><Wallet size={18} color="var(--primary)" /> JazzCash</h3>
+                <div className="pay-settings-form">
+                  <label>Account Number<input value={paySettings.jazzcash_number} onChange={e => setPaySettings({ ...paySettings, jazzcash_number: e.target.value })} /></label>
+                  <label>Account Name<input value={paySettings.jazzcash_name} onChange={e => setPaySettings({ ...paySettings, jazzcash_name: e.target.value })} /></label>
                 </div>
               </div>
-              <div className="payment-card">
-                <div className="payment-card-header"><Landmark size={24} /><h3>Bank Transfer</h3></div>
-                <div className="payment-form">
-                  <label>Bank Name<input type="text" value={paymentSettings.bank_name} onChange={e => setPaymentSettings({...paymentSettings, bank_name: e.target.value})} /></label>
-                  <label>Account Title<input type="text" value={paymentSettings.bank_account_title} onChange={e => setPaymentSettings({...paymentSettings, bank_account_title: e.target.value})} /></label>
-                  <label>IBAN<input type="text" value={paymentSettings.bank_iban} onChange={e => setPaymentSettings({...paymentSettings, bank_iban: e.target.value})} /></label>
+              <div className="pay-settings-card">
+                <h3><Landmark size={18} color="var(--primary)" /> Bank Transfer</h3>
+                <div className="pay-settings-form">
+                  <label>Bank Name<input value={paySettings.bank_name} onChange={e => setPaySettings({ ...paySettings, bank_name: e.target.value })} /></label>
+                  <label>Account Title<input value={paySettings.bank_account_title} onChange={e => setPaySettings({ ...paySettings, bank_account_title: e.target.value })} /></label>
+                  <label>IBAN<input value={paySettings.bank_iban} onChange={e => setPaySettings({ ...paySettings, bank_iban: e.target.value })} /></label>
                 </div>
               </div>
             </div>
-            <div className="payment-actions"><Button size="lg">Save Payment Settings (Demo)</Button></div>
+            <div className="pay-settings-actions">
+              <Button size="lg">Save Settings (Demo)</Button>
+            </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 };

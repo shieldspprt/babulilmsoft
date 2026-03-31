@@ -1,111 +1,73 @@
-.credit-guard-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  gap: 1rem;
-  color: var(--text-muted);
+/* ─── CreditGuard ───────────────────────────────────────────────────── */
+
+.cg-loading {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.75rem; height: 100%; min-height: 200px;
+  color: var(--text-muted); font-size: var(--font-base);
 }
 
 .spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
+  width: 22px; height: 22px;
+  border: 3px solid var(--border);
   border-top-color: var(--primary);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.credit-block-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
+/* Expired full-page block */
+.cg-block {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(241, 245, 249, 0.95);
   backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 2rem;
 }
 
-.credit-block-card {
-  background: var(--bg-surface);
+.cg-card {
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 3rem;
-  max-width: 420px;
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
+  padding: 3rem 2.5rem;
   text-align: center;
+  max-width: 420px;
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
 }
 
-.block-icon {
-  width: 80px;
-  height: 80px;
+.cg-icon {
+  width: 80px; height: 80px;
+  background: var(--danger-light);
   border-radius: 50%;
-  background: rgba(239, 68, 68, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.5rem;
+  display: flex; align-items: center; justify-content: center;
   color: var(--danger);
+  margin-bottom: 0.5rem;
 }
 
-.block-icon svg {
-  color: var(--danger);
+.cg-card h2 {
+  font-size: var(--font-2xl); font-weight: 800;
+  color: var(--text); letter-spacing: -0.03em; margin: 0;
 }
 
-.credit-block-card h2 {
-  margin: 0 0 1rem;
-  font-size: 1.75rem;
-  color: var(--text-main);
+.cg-card p {
+  color: var(--text-muted); font-size: var(--font-base);
+  line-height: 1.6; margin: 0;
 }
 
-.credit-block-card p {
-  color: var(--text-muted);
-  margin-bottom: 2rem;
-  line-height: 1.6;
-}
-
-.block-actions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-}
-
-/* Credit badge styles */
+/* CreditDisplay badge used in Navbar */
 .credits-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.75rem;
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--success);
-  border-radius: var(--radius-xl);
-  font-size: 0.85rem;
-  font-weight: 600;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 99px;
+  font-size: var(--font-xs); font-weight: 700;
+  background: var(--primary-light); color: var(--primary);
 }
 
 .credits-badge.warning {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
-  border-color: rgba(245, 158, 11, 0.3);
+  background: var(--warning-light); color: var(--warning);
 }
 
 .credits-badge.expired {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--danger);
-  border-color: rgba(239, 68, 68, 0.3);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  background: var(--danger-light); color: var(--danger);
 }

@@ -15,39 +15,38 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="navbar glass" aria-label="Main Navigation">
+    <nav className="navbar" aria-label="Main Navigation">
       <div className="nav-container">
         <Link to="/" className="nav-logo" aria-label="ilmsoft Home">
-          <GraduationCap size={28} className="logo-icon" aria-hidden="true" />
-          <span>ilm<span className="logo-accent">soft</span></span>
+          <div className="nav-logo-icon">
+            <GraduationCap size={22} />
+          </div>
+          <span className="nav-logo-text">ilm<em>soft</em></span>
         </Link>
-        
+
         <div className="nav-actions">
           {session ? (
             <>
               {profile && (
-                <div className="nav-profile">
-                  {profile.logo_url && (
-                    <img src={profile.logo_url} alt={`${profile.school_name} Logo`} className="nav-avatar" />
-                  )}
+                <div className="nav-school-info">
                   <span className="nav-school-name">{profile.school_name}</span>
                   <CreditDisplay />
                 </div>
               )}
-              <Button variant="ghost" className="nav-btn" onClick={() => navigate('/dashboard')} aria-label="Go to Dashboard">
-                <LayoutDashboard size={18} aria-hidden="true" /> Dashboard
+              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
+                <LayoutDashboard size={16} /> Dashboard
               </Button>
-              <Button variant="outline" className="nav-btn" onClick={handleLogout} aria-label="Logout">
-                <LogOut size={18} aria-hidden="true" /> Logout
+              <Button variant="secondary" size="sm" onClick={handleLogout}>
+                <LogOut size={16} /> Logout
               </Button>
             </>
           ) : (
             <>
               <Link to="/login">
-                <Button variant="ghost">Login</Button>
+                <Button variant="ghost" size="sm">Login</Button>
               </Link>
               <Link to="/signup">
-                <Button variant="primary">Get Started</Button>
+                <Button size="sm">Get Started</Button>
               </Link>
             </>
           )}

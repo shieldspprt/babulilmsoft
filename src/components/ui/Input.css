@@ -1,40 +1,40 @@
-/* Input - Accessible Form Controls */
+/* ─── Input System ──────────────────────────────────────────────────── */
 
 .input-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 6px;
   width: 100%;
 }
 
 .input-label {
-  font-size: var(--font-size-base);
-  font-weight: 500;
+  font-size: var(--font-sm);
+  font-weight: 600;
   color: var(--text-secondary);
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 4px;
+  letter-spacing: 0.01em;
 }
 
-.input-required {
-  color: var(--danger);
-}
+.input-required { color: var(--danger); }
 
 .input-field {
-  padding: 0.875rem 1rem;
-  background: var(--bg-color);
-  border: 2px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-main);
-  font-size: var(--font-size-base);
-  min-height: var(--touch-min);
   width: 100%;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  padding: 0.625rem 0.875rem;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--font-base);
+  min-height: var(--touch-min);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  line-height: 1.5;
 }
 
-.input-field:hover {
-  border-color: var(--bg-surface-hover);
-}
+.input-field::placeholder { color: var(--text-placeholder); }
+
+.input-field:hover:not(:disabled) { border-color: #94a3b8; }
 
 .input-field:focus {
   outline: none;
@@ -43,45 +43,21 @@
 }
 
 .input-field:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: var(--bg-surface);
-}
-
-.input-field::placeholder {
+  background: var(--bg);
   color: var(--text-muted);
-  opacity: 0.7;
+  cursor: not-allowed;
 }
 
-.input-error {
-  border-color: var(--danger);
-}
+.input-field.input-error { border-color: var(--danger); }
+.input-field.input-error:focus { box-shadow: 0 0 0 3px var(--danger-light); }
 
-.input-error:focus {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 3px var(--danger-light);
+.input-error-text {
+  font-size: var(--font-xs);
+  color: var(--danger);
+  font-weight: 500;
 }
 
 .input-helper {
-  font-size: 0.85rem;
+  font-size: var(--font-xs);
   color: var(--text-muted);
-}
-
-.input-error-text {
-  font-size: 0.85rem;
-  color: var(--danger);
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-/* Sizes */
-.input-sm {
-  padding: 0.625rem 0.875rem;
-  font-size: 0.9rem;
-}
-
-.input-lg {
-  padding: 1rem 1.25rem;
-  font-size: var(--font-size-lg);
 }

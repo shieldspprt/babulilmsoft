@@ -2,226 +2,368 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { CreditGuard } from '../components/CreditGuard';
-import { ClassesManager } from '../components/ClassesManager';
-import { TeachersManager } from '../components/TeachersManager';
-import { IncomeManager } from '../components/IncomeManager';
-import { ExpenseManager } from '../components/ExpenseManager';
+import { ClassesManager }   from '../components/ClassesManager';
+import { TeachersManager }  from '../components/TeachersManager';
+import { IncomeManager }    from '../components/IncomeManager';
+import { ExpenseManager }   from '../components/ExpenseManager';
 import { SuppliersManager } from '../components/SuppliersManager';
+import { ParentsManager }   from '../components/ParentsManager';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { CreditCard, Wallet, Banknote, History, CheckCircle, Clock, XCircle, AlertTriangle, Users, GraduationCap, DollarSign, Truck, Store } from 'lucide-react';
+import { Input }  from '../components/ui/Input';
+import {
+  LayoutDashboard, Users, GraduationCap, DollarSign, Truck, Store,
+  Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
+  CheckCircle, XCircle, Banknote, BookOpen
+} from 'lucide-react';
 import './Dashboard.css';
 
+type Tab = 'overview' | 'classes' | 'teachers' | 'income' | 'expense' | 'suppliers' | 'parents' | 'buy' | 'history';
+
+const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: string }[] = [
+  { id: 'overview',   label: 'Overview',       icon: LayoutDashboard, section: 'MAIN' },
+  { id: 'classes',    label: 'Classes',         icon: BookOpen },
+  { id: 'teachers',   label: 'Teachers',        icon: GraduationCap },
+  { id: 'parents',    label: 'Parents',         icon: Users2 },
+  { id: 'income',     label: 'Income',          icon: DollarSign },
+  { id: 'expense',    label: 'Expenses',        icon: Truck },
+  { id: 'suppliers',  label: 'Suppliers',       icon: Store },
+  { id: 'buy',        label: 'Buy Credits',     icon: CreditCard,  section: 'ACCOUNT' },
+  { id: 'history',    label: 'Payment History', icon: History },
+];
+
+const PAGE_TITLES: Record<Tab, string> = {
+  overview:  'Dashboard Overview',
+  classes:   'Classes',
+  teachers:  'Teachers & Staff',
+  parents:   'Parents & Guardians',
+  income:    'Income',
+  expense:   'Expenses',
+  suppliers: 'Suppliers',
+  buy:       'Buy Credits',
+  history:   'Payment History',
+};
+
 export const Dashboard = () => {
-  const { profile, refreshProfile } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'overview' | 'buy' | 'history' | 'classes' | 'teachers' | 'income' | 'expense' | 'suppliers'>('overview');
-  const [paymentMethod, setPaymentMethod] = useState<'JazzCash' | 'Bank'>('JazzCash');
-  const [selectedPlan, setSelectedPlan] = useState<{credits: number, pkr: number} | null>(null);
-  const [reference, setReference] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ text: '', type: '' });
-  const [history, setHistory] = useState<any[]>([]);
+  const { profile, refreshProfile, signOut } = useAuth();
+  const navigate  = useNavigate();
+  const location  = useLocation();
+
+  const [tab, setTab]               = useState<Tab>('overview');
+  const [payMethod, setPayMethod]   = useState<'JazzCash' | 'Bank'>('JazzCash');
+  const [plan, setPlan]             = useState<{ credits: number; pkr: number } | null>(null);
+  const [reference, setReference]   = useState('');
+  const [buying, setBuying]         = useState(false);
+  const [msg, setMsg]               = useState<{ text: string; type: string }>({ text: '', type: '' });
+  const [history, setHistory]       = useState<any[]>([]);
   const [creditExpired, setCreditExpired] = useState(false);
-  const [daysRemaining, setDaysRemaining] = useState(0);
+  const [daysLeft, setDaysLeft]     = useState(0);
 
+  useEffect(() => { if (profile) checkCredits(); }, [profile]);
+  useEffect(() => { if (tab === 'history' && profile) loadHistory(); }, [tab, profile]);
   useEffect(() => {
-    if (profile) checkCreditStatus();
-  }, [profile]);
-
-  useEffect(() => {
-    if (activeTab === 'history' && profile) loadHistory();
-  }, [activeTab, profile]);
-
-  useEffect(() => {
-    const state = location.state as { showBuyCredits?: boolean };
-    if (state?.showBuyCredits) {
-      setActiveTab('buy');
-      navigate('/dashboard', { replace: true, state: {} });
-    }
+    const s = location.state as { showBuyCredits?: boolean };
+    if (s?.showBuyCredits) { setTab('buy'); navigate('/dashboard', { replace: true, state: {} }); }
   }, [location, navigate]);
 
-  const checkCreditStatus = () => {
+  const checkCredits = () => {
     if (!profile) return;
     const now = new Date();
-    const expiresAt = profile.credit_expires_at ? new Date(profile.credit_expires_at) : null;
-    const expired = !!expiresAt && expiresAt <= now;
-    const remaining = expiresAt ? Math.max(0, Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : profile.total_credits;
+    const exp = profile.credit_expires_at ? new Date(profile.credit_expires_at) : null;
+    const expired = !!exp && exp <= now;
+    const days = exp ? Math.max(0, Math.ceil((exp.getTime() - now.getTime()) / 86400000)) : profile.total_credits;
     setCreditExpired(expired || profile.total_credits <= 0);
-    setDaysRemaining(remaining);
-    if (expired || profile.total_credits <= 0) setActiveTab('buy');
+    setDaysLeft(days);
+    if (expired || profile.total_credits <= 0) setTab('buy');
   };
 
   const loadHistory = async () => {
     if (!profile) return;
     const { data } = await supabase.from('credit_requests').select('*').eq('school_id', profile.id).order('created_at', { ascending: false });
-    if (data) setHistory(data);
+    setHistory(data || []);
   };
 
-  const handlePurchase = async (e: React.FormEvent) => {
+  const handleBuy = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || !selectedPlan || !reference) return;
-    setLoading(true);
-    setMessage({ text: '', type: '' });
+    if (!profile || !plan || !reference) return;
+    setBuying(true); setMsg({ text: '', type: '' });
     const { error } = await supabase.from('credit_requests').insert({
-      school_id: profile.id, credits: selectedPlan.credits, amount_pkr: selectedPlan.pkr,
-      payment_method: paymentMethod, payment_reference: reference, status: 'pending'
+      school_id: profile.id, credits: plan.credits, amount_pkr: plan.pkr,
+      payment_method: payMethod, payment_reference: reference, status: 'pending'
     });
-    setLoading(false);
-    if (error) setMessage({ text: `Error: ${error.message}`, type: 'error' });
+    setBuying(false);
+    if (error) setMsg({ text: `Error: ${error.message}`, type: 'error' });
     else {
-      setMessage({ text: 'Purchase request submitted successfully! Awaiting admin approval.', type: 'success' });
-      setReference(''); setSelectedPlan(null); refreshProfile();
+      setMsg({ text: 'Request submitted! Admin will approve within 24 hours.', type: 'success' });
+      setReference(''); setPlan(null); refreshProfile();
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch(status) { case 'approved': return <CheckCircle className="text-success" size={18} />; case 'rejected': return <XCircle className="text-danger" size={18} />; default: return <Clock className="text-muted" size={18} />; }
+  const handleLogout = async () => { await signOut(); navigate('/'); };
+
+  const creditColor = () => {
+    if (creditExpired || profile!.total_credits <= 0) return 'danger';
+    if (daysLeft <= 7) return 'warning';
+    return 'blue';
   };
 
-  if (!profile) return <div className="loading">Loading Dashboard...</div>;
-
-  const getStatCardClass = () => {
-    if (creditExpired || profile.total_credits <= 0) return 'stat-card glass expired';
-    if (daysRemaining <= 7) return 'stat-card glass warning';
-    return 'stat-card glass primary-gradient';
-  };
+  if (!profile) return (
+    <div className="dash-loading">
+      <div className="spinner" />
+      <span>Loading dashboard…</span>
+    </div>
+  );
 
   return (
-    <CreditGuard>
-      <div className="dashboard-container">
-        <div className="sidebar glass">
-          <div className="sidebar-header"><h3>Admin Panel</h3></div>
-          <nav className="sidebar-nav">
-            <button className={`nav-item ${activeTab==='overview'?'active':''}`} onClick={()=>setActiveTab('overview')}><Wallet size={20} /> Overview</button>
-            <button className={`nav-item ${activeTab==='classes'?'active':''}`} onClick={()=>setActiveTab('classes')}><Users size={20} /> Classes</button>
-            <button className={`nav-item ${activeTab==='teachers'?'active':''}`} onClick={()=>setActiveTab('teachers')}><GraduationCap size={20} /> Teachers</button>
-            <button className={`nav-item ${activeTab==='income'?'active':''}`} onClick={()=>setActiveTab('income')}><DollarSign size={20} /> Income</button>
-            <button className={`nav-item ${activeTab==='expense'?'active':''}`} onClick={()=>setActiveTab('expense')}><Truck size={20} /> Expenses</button>
-            <button className={`nav-item ${activeTab==='suppliers'?'active':''}`} onClick={()=>setActiveTab('suppliers')}><Store size={20} /> Suppliers</button>
-            <button className={`nav-item ${activeTab==='buy'?'active':''}`} onClick={()=>setActiveTab('buy')}><CreditCard size={20} /> Buy Credits</button>
-            <button className={`nav-item ${activeTab==='history'?'active':''}`} onClick={()=>setActiveTab('history')}><History size={20} /> Transaction History</button>
-          </nav>
+    <div className="dash-shell">
+      {/* ─── Sidebar ─── */}
+      <aside className="dash-sidebar">
+        <div className="sidebar-logo">
+          <div className="sidebar-logo-icon"><GraduationCap size={20} /></div>
+          <span className="sidebar-logo-text">ilm<em>soft</em></span>
         </div>
 
-        <div className="dashboard-content animate-fade-in">
-          <header className="content-header">
-            <h2>
-              {activeTab === 'overview' ? 'Dashboard Overview' : 
-               activeTab === 'classes' ? 'Class Management' :
-               activeTab === 'teachers' ? 'Teacher Management' :
-               activeTab === 'income' ? 'Income Management' :
-               activeTab === 'buy' ? (creditExpired ? 'Reactivate Account' : 'Buy Credits') : 
-               activeTab === 'expense' ? 'Expense Management' :
-               activeTab === 'suppliers' ? 'Supplier Management' :  
-               'Transaction History'}
-            </h2>
-            {message.text && <div className={`status-message ${message.type}`}>{message.text}</div>}
-          </header>
+        {/* Credit pill */}
+        <div className="sidebar-credit-pill">
+          <div className="scp-label">Credits</div>
+          <div className={`scp-value ${creditExpired ? 'expired' : ''}`}>
+            {creditExpired ? 'Expired' : `${profile.total_credits}`}
+          </div>
+          <div className={`scp-sub ${creditExpired ? 'expired' : daysLeft <= 7 ? 'warning' : ''}`}>
+            {creditExpired ? 'Buy credits to continue' : `${daysLeft} days left`}
+          </div>
+        </div>
 
-          {activeTab === 'overview' && (
-            <div className="overview-grid">
-              <div className={getStatCardClass()}>
-                <div className="stat-icon">{creditExpired ? <AlertTriangle size={32} /> : <Wallet size={32} />}</div>
-                <div className="stat-info">
-                  <span className="stat-label">{creditExpired ? 'Account Expired' : 'Available Balance'}</span>
-                  <span className={`stat-value ${creditExpired ? 'expired' : ''}`}>{creditExpired ? '0' : profile.total_credits} Credits</span>
-                  <span className={`stat-sub ${creditExpired ? 'expired' : daysRemaining <= 7 ? 'warning' : ''}`}>
-                    {creditExpired ? 'Purchase credits to reactivate' : `${daysRemaining} Days remaining`}
-                  </span>
+        {/* Nav */}
+        <nav className="sidebar-nav">
+          {NAV.map((item, i) => {
+            const prevSection = i > 0 ? NAV[i - 1].section : undefined;
+            const showLabel   = item.section && item.section !== prevSection;
+            return (
+              <React.Fragment key={item.id}>
+                {showLabel && <div className="sidebar-section-label">{item.section}</div>}
+                <button
+                  className={`sidebar-nav-item${tab === item.id ? ' active' : ''}`}
+                  onClick={() => setTab(item.id)}
+                >
+                  <item.icon size={18} />
+                  {item.label}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </nav>
+
+        {/* Bottom */}
+        <div className="sidebar-bottom">
+          <div className="sidebar-school-name">{profile.school_name}</div>
+          <button className="sidebar-logout" onClick={handleLogout}>
+            <LogOut size={16} /> Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* ─── Main ─── */}
+      <div className="dash-main">
+        {/* Top bar */}
+        <div className="dash-topbar">
+          <span className="dash-topbar-title">{PAGE_TITLES[tab]}</span>
+          <div className="dash-topbar-actions">
+            {msg.text && (
+              <span style={{
+                fontSize: 'var(--font-sm)', fontWeight: 600, padding: '4px 12px',
+                borderRadius: '99px',
+                background: msg.type === 'success' ? 'var(--success-light)' : 'var(--danger-light)',
+                color:       msg.type === 'success' ? 'var(--success)'       : 'var(--danger)',
+              }}>
+                {msg.text}
+              </span>
+            )}
+            {tab !== 'buy' && (
+              <Button size="sm" variant="outline" onClick={() => setTab('buy')}>
+                <CreditCard size={14} /> {creditExpired ? 'Reactivate' : 'Buy Credits'}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Content ─── */}
+        <div className="dash-content">
+
+          {/* Overview */}
+          {tab === 'overview' && (
+            <div className="animate-fade-up">
+              <div className="overview-welcome">
+                <h2>Welcome, {profile.school_name} 👋</h2>
+                <p>{profile.email} · {profile.contact}</p>
+              </div>
+
+              <div className="overview-stats">
+                <div className={`ov-stat-card ${creditColor()}`}>
+                  <div className="ov-stat-icon">
+                    {creditExpired ? <AlertTriangle size={20} /> : <CreditCard size={20} />}
+                  </div>
+                  <div className="ov-stat-label">{creditExpired ? 'Account Status' : 'Credits'}</div>
+                  <div className="ov-stat-value">{creditExpired ? 'Expired' : profile.total_credits}</div>
+                  <div className="ov-stat-sub">{creditExpired ? 'Buy credits to continue' : `${daysLeft} days remaining`}</div>
                 </div>
               </div>
-              <div className="info-card glass">
-                <h3>Welcome, {profile.school_name}</h3>
-                <p>Email: {profile.email}</p>
-                <p>Contact: {profile.contact}</p>
-                <div className="card-actions mt-4">
-                  <Button onClick={() => setActiveTab('buy')}>{creditExpired ? 'Reactivate Account' : 'Recharge Now'}</Button>
+
+              <div className="overview-section-title">Quick Actions</div>
+              <div className="quick-actions">
+                {[
+                  { id: 'classes'   as Tab, icon: BookOpen,      color: 'blue',   label: 'Add Class',    sub: 'Manage classes' },
+                  { id: 'teachers'  as Tab, icon: GraduationCap, color: 'green',  label: 'Add Teacher',  sub: 'Staff records' },
+                  { id: 'parents'   as Tab, icon: Users2,        color: 'purple', label: 'Add Parent',   sub: 'Guardian info' },
+                  { id: 'income'    as Tab, icon: DollarSign,    color: 'cyan',   label: 'Record Income', sub: 'Fee & income' },
+                  { id: 'expense'   as Tab, icon: Truck,         color: 'amber',  label: 'Add Expense',  sub: 'Track spending' },
+                  { id: 'suppliers' as Tab, icon: Store,         color: 'rose',   label: 'Suppliers',    sub: 'Vendor ledger' },
+                ].map(qa => (
+                  <div key={qa.id} className="qa-card" onClick={() => setTab(qa.id)}>
+                    <div className={`qa-icon ${qa.color}`}><qa.icon size={22} /></div>
+                    <div>
+                      <div className="qa-label">{qa.label}</div>
+                      <div className="qa-sub">{qa.sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="school-info-card">
+                <div className="school-info-avatar">{profile.school_name.charAt(0).toUpperCase()}</div>
+                <div className="school-info-details">
+                  <h3>{profile.school_name}</h3>
+                  <p>{profile.email}</p>
+                  <p>{profile.contact}</p>
                 </div>
               </div>
             </div>
           )}
 
-          {activeTab === 'classes' && profile && <div className="classes-tab-content"><ClassesManager schoolId={profile.id} /></div>}
-          {activeTab === 'teachers' && profile && <div className="teachers-tab-content"><TeachersManager schoolId={profile.id} /></div>}
-          {activeTab === 'income' && profile && <div className="income-tab-content"><IncomeManager schoolId={profile.id} /></div>}
-          {activeTab === 'expense' && profile && <div className="expense-tab-content"><ExpenseManager schoolId={profile.id} /></div>}
-          {activeTab === 'suppliers' && profile && <div className="suppliers-tab-content"><SuppliersManager schoolId={profile.id} /></div>}
+          {/* Feature tabs */}
+          {tab === 'classes'   && <ClassesManager   schoolId={profile.id} />}
+          {tab === 'teachers'  && <TeachersManager  schoolId={profile.id} />}
+          {tab === 'parents'   && <ParentsManager   schoolId={profile.id} />}
+          {tab === 'income'    && <IncomeManager    schoolId={profile.id} />}
+          {tab === 'expense'   && <ExpenseManager   schoolId={profile.id} />}
+          {tab === 'suppliers' && <SuppliersManager schoolId={profile.id} />}
 
-          {activeTab === 'buy' && (
-            <div className="buy-section">
+          {/* Buy Credits */}
+          {tab === 'buy' && (
+            <div className="buy-section animate-fade-up">
               {creditExpired && (
-                <div className="expiry-notice glass">
-                  <AlertTriangle size={24} />
-                  <div><strong>Account Suspended</strong><p>Your account has expired. Select a plan below to reactivate.</p></div>
+                <div className="alert-banner">
+                  <AlertTriangle size={22} />
+                  <div>
+                    <strong>Account Suspended</strong>
+                    <p>Your credits have expired. Purchase a plan below to reactivate your account.</p>
+                  </div>
                 </div>
               )}
+
               <div className="pricing-grid">
-                <div className={`pricing-card glass ${selectedPlan?.credits === 30 ? 'selected' : ''}`} onClick={() => setSelectedPlan({credits: 30, pkr: 2000})}>
-                  <div className="plan-name">Monthly Plan</div>
-                  <div className="plan-price">Rs 2,000</div>
-                  <div className="plan-credits">30 Credits</div>
-                  <div className="plan-radio"><div className={`radio-inner ${selectedPlan?.credits === 30 ? 'active' : ''}`}></div></div>
-                </div>
-                <div className={`pricing-card glass border-accent ${selectedPlan?.credits === 100 ? 'selected' : ''}`} onClick={() => setSelectedPlan({credits: 100, pkr: 5000})}>
-                  <div className="popular-badge">Best Value</div>
-                  <div className="plan-name">Quarterly+ Plan</div>
-                  <div className="plan-price">Rs 5,000</div>
-                  <div className="plan-credits">100 Credits</div>
-                  <div className="plan-radio"><div className={`radio-inner ${selectedPlan?.credits === 100 ? 'active' : ''}`}></div></div>
-                </div>
+                {[
+                  { credits: 30,  pkr: 2000, name: 'Monthly Plan',    popular: false },
+                  { credits: 100, pkr: 5000, name: 'Quarterly+ Plan', popular: true  },
+                ].map(p => (
+                  <div
+                    key={p.credits}
+                    className={`pricing-card${plan?.credits === p.credits ? ' selected' : ''}`}
+                    onClick={() => setPlan({ credits: p.credits, pkr: p.pkr })}
+                  >
+                    {p.popular && <div className="popular-badge">Best Value</div>}
+                    <div className="plan-name">{p.name}</div>
+                    <div className="plan-price">Rs {p.pkr.toLocaleString()}</div>
+                    <div className="plan-credits">{p.credits} Credits</div>
+                    <div className="plan-duration">{p.credits} days access</div>
+                    <div className="plan-check" />
+                  </div>
+                ))}
               </div>
-              {selectedPlan && (
-                <div className="checkout-card glass animate-fade-in">
-                  <h3>Complete Purchase</h3>
-                  <div className="purchase-summary">
-                    <div className="summary-row"><span>Plan</span><span>{selectedPlan.credits} Credits</span></div>
-                    <div className="summary-row"><span>Duration</span><span>{selectedPlan.credits} Days</span></div>
-                    <div className="summary-row total"><span>Total</span><span>Rs {selectedPlan.pkr.toLocaleString()}</span></div>
+
+              {plan && (
+                <div className="checkout-card animate-fade-up">
+                  <h3>Complete Your Purchase</h3>
+                  <table className="summary-table">
+                    <tbody>
+                      <tr><td>Plan</td><td>{plan.credits} Credits ({plan.credits} days)</td></tr>
+                      <tr><td>Total</td><td>Rs {plan.pkr.toLocaleString()}</td></tr>
+                    </tbody>
+                  </table>
+
+                  <div className="pay-method-row">
+                    <button className={`pay-method-btn${payMethod === 'JazzCash' ? ' active' : ''}`} onClick={() => setPayMethod('JazzCash')}>JazzCash</button>
+                    <button className={`pay-method-btn${payMethod === 'Bank' ? ' active' : ''}`} onClick={() => setPayMethod('Bank')}>Bank Transfer</button>
                   </div>
-                  <div className="payment-methods">
-                    <button className={`pay-btn ${paymentMethod === 'JazzCash' ? 'active' : ''}`} onClick={() => setPaymentMethod('JazzCash')}>JazzCash</button>
-                    <button className={`pay-btn ${paymentMethod === 'Bank' ? 'active' : ''}`} onClick={() => setPaymentMethod('Bank')}>Bank Transfer</button>
+
+                  <div className="pay-instructions">
+                    Send <strong>Rs {plan.pkr.toLocaleString()}</strong> via{' '}
+                    {payMethod === 'JazzCash'
+                      ? <><strong>JazzCash to 0300-1234567</strong> (ilmsoft)</>
+                      : <><strong>Meezan Bank — IBAN: PK12MEZN000123456789</strong> (ilmsoft)</>
+                    }
+                    <br />After payment, enter your transaction reference number below.
                   </div>
-                  <div className="payment-instructions">
-                    <p>Send <strong>Rs {selectedPlan.pkr.toLocaleString()}</strong> via {paymentMethod === 'JazzCash' ? 'JazzCash to 0300-1234567' : 'Bank Transfer to Meezan Bank'}</p>
-                    <p className="instruction-note">After payment, enter your transaction reference below.</p>
-                  </div>
-                  <form onSubmit={handlePurchase} className="purchase-form">
-                    <Input label="Payment Reference" placeholder="e.g. 0300XXXXX or TID:12345" value={reference} onChange={(e) => setReference(e.target.value)} required />
-                    <Button type="submit" size="lg" className="full-width mt-4" isLoading={loading}><Banknote size={18} /> Request Credits</Button>
+
+                  <form onSubmit={handleBuy} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <Input
+                      label="Transaction Reference Number"
+                      placeholder="e.g. TXN-123456 or JazzCash ID"
+                      value={reference}
+                      onChange={e => setReference(e.target.value)}
+                      required
+                    />
+                    <Button type="submit" size="lg" fullWidth isLoading={buying}>
+                      <Banknote size={18} /> Submit Payment Request
+                    </Button>
                   </form>
                 </div>
               )}
             </div>
           )}
 
-          {activeTab === 'history' && (
-            <div className="history-section glass">
-              {history.length === 0 ? <div className="empty-state"><History size={48} /><p>No transaction history.</p></div> : (
-                <div className="table-wrapper">
-                  <table className="history-table">
-                    <thead><tr><th>Date</th><th>Plan</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
-                    <tbody>
-                      {history.map(item => (
-                        <tr key={item.id}>
-                          <td>{new Date(item.created_at).toLocaleDateString()}</td>
-                          <td>{item.credits} Credits</td>
-                          <td>Rs {item.amount_pkr}</td>
-                          <td>{item.payment_method}</td>
-                          <td className="status-cell">{getStatusIcon(item.status)}<span className={`status-badge ${item.status}`}>{item.status}</span></td>
+          {/* History */}
+          {tab === 'history' && (
+            <div className="animate-fade-up">
+              {history.length === 0 ? (
+                <div className="section-empty">
+                  <History size={48} />
+                  <p>No payment history yet</p>
+                </div>
+              ) : (
+                <div className="history-card">
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th><th>Plan</th><th>Amount</th><th>Method</th><th>Reference</th><th>Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {history.map(item => (
+                          <tr key={item.id}>
+                            <td>{new Date(item.created_at).toLocaleDateString('en-PK')}</td>
+                            <td>{item.credits} Credits</td>
+                            <td style={{ fontWeight: 600 }}>Rs {item.amount_pkr.toLocaleString()}</td>
+                            <td>{item.payment_method}</td>
+                            <td style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>{item.payment_reference}</td>
+                            <td>
+                              <div className="status-cell">
+                                {item.status === 'approved' ? <CheckCircle size={14} color="var(--success)" /> : item.status === 'rejected' ? <XCircle size={14} color="var(--danger)" /> : <Clock size={14} color="var(--warning)" />}
+                                <span className={`status-pill ${item.status}`}>{item.status}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
           )}
+
         </div>
       </div>
-    </CreditGuard>
+    </div>
   );
 };
