@@ -125,17 +125,6 @@ export const Dashboard = () => {
           <span className="sidebar-logo-text">ilm<em>soft</em></span>
         </div>
 
-        {/* Credit pill */}
-        <div className="sidebar-credit-pill">
-          <div className="scp-label">Credits</div>
-          <div className={`scp-value ${creditExpired ? 'expired' : ''}`}>
-            {creditExpired ? 'Expired' : `${profile.total_credits}`}
-          </div>
-          <div className={`scp-sub ${creditExpired ? 'expired' : daysLeft <= 7 ? 'warning' : ''}`}>
-            {creditExpired ? 'Buy credits to continue' : `${daysLeft} days left`}
-          </div>
-        </div>
-
         {/* Nav */}
         <nav className="sidebar-nav">
           {NAV.map((item, i) => {
@@ -183,7 +172,7 @@ export const Dashboard = () => {
             )}
             {tab !== 'buy' && (
               <Button size="sm" variant="outline" onClick={() => setTab('buy')}>
-                <CreditCard size={14} /> {creditExpired ? 'Reactivate' : 'Buy Credits'}
+                <CreditCard size={14} /> {creditExpired ? 'Reactivate' : `${profile.total_credits} credits · ${daysLeft}d left`}
               </Button>
             )}
           </div>
