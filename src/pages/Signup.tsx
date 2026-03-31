@@ -10,6 +10,7 @@ export const Signup = () => {
   const [formData, setFormData] = useState({ schoolName: '', email: '', contact: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -25,7 +26,14 @@ export const Signup = () => {
       options: { data: { school_name: formData.schoolName, contact: formData.contact } }
     });
     if (authError) { setError(authError.message); setLoading(false); return; }
-    if (data.user) navigate('/dashboard');
+    if (data.session) {
+      // Email confirmation not required — session is active
+      navigate('/dashboard');
+    } else if (data.user) {
+      // Email confirmation required — session not yet active
+      setSuccessMsg('Account created! Please check your email to verify your account, then log in.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,6 +72,14 @@ export const Signup = () => {
           </div>
 
           {error && <div className="auth-error">{error}</div>}
+          {successMsg && (
+            <div className="auth-success" style={{ padding: '0.75rem 1rem', borderRadius: 8, background: 'var(--success-light)', color: 'var(--success)', marginBottom: '1rem', fontSize: 'var(--font-sm)' }}>
+              {successMsg}
+              <div style={{ marginTop: '0.5rem' }}>
+                <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600 }}>Go to Login</Link>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSignup} className="auth-form">
             <div className="auth-form-grid">
