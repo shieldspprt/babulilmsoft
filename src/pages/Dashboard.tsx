@@ -8,6 +8,7 @@ import { IncomeManager }    from '../components/IncomeManager';
 import { ExpenseManager }   from '../components/ExpenseManager';
 import { SuppliersManager } from '../components/SuppliersManager';
 import { ParentsManager }   from '../components/ParentsManager';
+import { StudentsManager }  from '../components/StudentsManager';
 import { Button } from '../components/ui/Button';
 import { Input }  from '../components/ui/Input';
 import {
@@ -17,13 +18,14 @@ import {
 } from 'lucide-react';
 import './Dashboard.css';
 
-type Tab = 'overview' | 'classes' | 'teachers' | 'income' | 'expense' | 'suppliers' | 'parents' | 'buy' | 'history';
+type Tab = 'overview' | 'classes' | 'teachers' | 'parents' | 'students' | 'income' | 'expense' | 'suppliers' | 'buy' | 'history';
 
 const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: string }[] = [
   { id: 'overview',   label: 'Overview',       icon: LayoutDashboard, section: 'MAIN' },
   { id: 'classes',    label: 'Classes',         icon: BookOpen },
   { id: 'teachers',   label: 'Teachers',        icon: GraduationCap },
   { id: 'parents',    label: 'Parents',         icon: Users2 },
+  { id: 'students',  label: 'Students',        icon: GraduationCap },
   { id: 'income',     label: 'Income',          icon: DollarSign },
   { id: 'expense',    label: 'Expenses',        icon: Truck },
   { id: 'suppliers',  label: 'Suppliers',       icon: Store },
@@ -39,6 +41,7 @@ const PAGE_TITLES: Record<Tab, string> = {
   income:    'Income',
   expense:   'Expenses',
   suppliers: 'Suppliers',
+  students:  'Students',
   buy:       'Buy Credits',
   history:   'Payment History',
 };
@@ -243,6 +246,7 @@ export const Dashboard = () => {
           {tab === 'classes'   && <ClassesManager   schoolId={profile.id} />}
           {tab === 'teachers'  && <TeachersManager  schoolId={profile.id} />}
           {tab === 'parents'   && <ParentsManager   schoolId={profile.id} />}
+          {tab === 'students'  && <StudentsManager  schoolId={profile.id} />}
           {tab === 'income'    && <IncomeManager    schoolId={profile.id} />}
           {tab === 'expense'   && <ExpenseManager   schoolId={profile.id} />}
           {tab === 'suppliers' && <SuppliersManager schoolId={profile.id} />}
