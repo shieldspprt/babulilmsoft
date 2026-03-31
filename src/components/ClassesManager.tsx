@@ -159,7 +159,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
             </thead>
             <tbody>
               {filtered.map(c => (
-                <tr key={c.id}>
+                <tr key={c.id} className={c.active ? '' : 'inactive'}>
                   <td><strong>{c.name}</strong></td>
                   <td>Rs {c.monthly_fee.toLocaleString()}</td>
                   <td><Users size={14} style={{marginRight:4}}/>{c.admission_fee || 0}</td>
