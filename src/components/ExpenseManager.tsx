@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
-import { Plus, Trash2, Edit2, Save, X, DollarSign, FileText, CreditCard, Search, User, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, DollarSign, FileText, CreditCard, Search, User, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import './ExpenseManager.css';
 import './managers.css';
 
@@ -38,6 +38,7 @@ const PAGE_SIZE = 25;
 export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
   const { flash, showFlash } = useFlashMessage(4000);
   const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +116,13 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
     };
 
     if (editingId) {
-      await supabase.from('expenses').update(expenseData).eq('id', editingId);
+      setProcessingId(editingId);
+      const { error: updateError } = await supabase.from('expenses').update(expenseData).eq('id', editingId);
+      setProcessingId(null);
+      if (updateError) {
+        showFlash('Error updating expense: ' + updateError.message);
+        return;
+      }
     } else {
       await supabase.from('expenses').insert(expenseData);
     }
@@ -156,8 +163,14 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
     setConfirmAction({
       message: 'Delete this expense record?',
       onConfirm: async () => {
-        await supabase.from('expenses').delete().eq('id', id);
-        loadExpenses();
+        setProcessingId(id);
+        const { error } = await supabase.from('expenses').delete().eq('id', id);
+        if (error) {
+          showFlash('Error deleting expense: ' + error.message);
+        } else {
+          loadExpenses();
+        }
+        setProcessingId(null);
         setConfirmAction(null);
       }
     });
@@ -433,8 +446,10 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
                   <td>{expense.payment_method}</td>
                   <td className="notes-cell">{expense.additional_notes || '-'}</td>
                   <td className="actions-cell">
-                    <button onClick={() => handleEdit(expense)}><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(expense.id)}><Trash2 size={16} /></button>
+                    <button onClick={() => handleEdit(expense)} disabled={processingId === expense.id}><Edit2 size={16} /></button>
+                    <button onClick={() => handleDelete(expense.id)} disabled={processingId === expense.id}>
+                      {processingId === expense.id ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
+                    </button>
                   </td>
                 </tr>
               ))

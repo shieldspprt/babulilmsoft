@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
-import { Plus, X, BookOpen, Search, Edit2, Trash2, Users } from 'lucide-react';
+import { Plus, X, BookOpen, Search, Edit2, Trash2, Users, Loader2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
 import '../components/managers.css';
@@ -23,6 +23,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
   const [loading, setLoading] = useState(true);
   const { flash, showFlash } = useFlashMessage(3000);
   const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   
   const [showAddModal, setShowAddModal] = useState(false);
@@ -105,6 +106,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
     setConfirmAction({
       message: 'Delete this class?',
       onConfirm: async () => {
+        setDeletingId(id);
         const { error } = await supabase.from('classes').delete().eq('id', id);
         if (error) {
           showFlash('Error: ' + error.message);
@@ -112,6 +114,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
           showFlash('Class deleted!');
           load();
         }
+        setDeletingId(null);
         setConfirmAction(null);
       }
     });
@@ -188,8 +191,8 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
                       <button className="action-btn edit" title="Edit" onClick={() => openEdit(c)}>
                         <Edit2 size={14} />
                       </button>
-                      <button className="action-btn delete" title="Delete" onClick={() => handleDelete(c.id)}>
-                        <Trash2 size={14} />
+                      <button className="action-btn delete" title="Delete" onClick={() => handleDelete(c.id)} disabled={deletingId === c.id}>
+                        {deletingId === c.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
                       </button>
                     </div>
                   </td>

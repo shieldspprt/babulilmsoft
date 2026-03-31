@@ -293,9 +293,14 @@
   border-radius: 4px;
 }
 
-.actions-cell button:hover {
+.actions-cell button:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-main);
+}
+
+.actions-cell button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .empty-cell {
