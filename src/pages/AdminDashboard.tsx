@@ -96,19 +96,16 @@ export const AdminDashboard = () => {
 
 
   const handleApprove = async (req: Request) => {
+    if (!user) return;
     setProcessingId(req.id);
-    const now = new Date();
-    await supabase.from('credit_requests').update({ status: 'approved' }).eq('id', req.id);
-    const { data: school } = await supabase.from('schools').select('total_credits,credit_expires_at').eq('id', req.school_id).single();
-    const curExp = school?.credit_expires_at ? new Date(school.credit_expires_at) : null;
-    let newExp = new Date(now);
-    if (curExp && curExp > now) newExp = new Date(curExp);
-    newExp.setDate(newExp.getDate() + req.credits);
-    await supabase.from('schools').update({
-      total_credits: (school?.total_credits || 0) + req.credits,
-      credit_expires_at: newExp.toISOString(),
-    }).eq('id', req.school_id);
+    const { data: success, error } = await supabase.rpc('approve_credit_request', {
+      request_id: req.id,
+      admin_user_id: user.id,
+    });
     setProcessingId(null);
+    if (error || !success) {
+      alert('Approval failed: ' + (error?.message || 'Request may no longer be pending'));
+    }
     loadAll();
   };
 
