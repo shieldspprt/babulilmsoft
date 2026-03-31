@@ -175,44 +175,59 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     const [billsRes, paymentsRes, childrenRes] = await Promise.all([
       supabase.from('fee_bills').select('*').eq('parent_id', parent.id).eq('school_id', schoolId).order('billing_month'),
       supabase.from('fee_payments').select('*').eq('parent_id', parent.id).eq('school_id', schoolId).order('created_at', { ascending: false }),
-      supabase.from('students').select('*, classes:admission_class_id(name, monthly_fee)').eq('parent_id', parent.id).eq('school_id', schoolId).eq('active', true),
+      supabase.from('students').select('id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, admission_class_id').eq('parent_id', parent.id).eq('school_id', schoolId).eq('active', true),
     ]);
 
     const bList = (billsRes.data || []) as FeeBill[];
-    setBills(bList);
     setPayments(paymentsRes.data || []);
     setChildren((childrenRes.data || []) as StudentWithClass[]);
 
-    // Ensure bills exist for the 7-month window
-    await ensureBillsForWindow(parent.id, bList);
+    // Generate / refresh bills for the 7-month window
+    await generateBills(parent.id, bList);
   }, [schoolId]);
 
-  /* ── Ensure bills exist for month window ──────────────────── */
+  /* ── Generate bills for month window ───────────────────────── */
 
-  const ensureBillsForWindow = async (parentId: string, existingBills: FeeBill[]) => {
-    const existingMap: Record<string, FeeBill> = {};
-    existingBills.forEach(b => { existingMap[b.billing_month] = b; });
+  const generateBills = async (parentId: string, existingBills: FeeBill[]) => {
+    // Keep non-pending bills (paid/partial/overpaid) untouched
+    const lockedBills = existingBills.filter(b => b.status !== 'pending');
+    const lockedMap: Record<string, FeeBill> = {};
+    lockedBills.forEach(b => { lockedMap[b.billing_month] = b; });
 
-    // Months that need bills: missing entirely OR pending (stale data from before students existed)
-    const monthsToProcess = monthWindow.filter(m => {
-      const existing = existingMap[m];
-      return !existing || existing.status === 'pending';
-    });
+    // Delete ALL pending bills for this parent so we can recreate fresh
+    const pendingIds = existingBills.filter(b => b.status === 'pending').map(b => b.id);
+    if (pendingIds.length > 0) {
+      const { error: delErr } = await supabase
+        .from('fee_bills')
+        .delete()
+        .in('id', pendingIds);
+      if (delErr) {
+        showFlash('Error cleaning up bills: ' + delErr.message);
+        setBills(existingBills);
+        return;
+      }
+    }
 
-    // Fetch all active students for this parent
-    const { data: allStudents } = await supabase
+    // Fetch students
+    const { data: allStudents, error: stuErr } = await supabase
       .from('students')
-      .select('id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, admission_class_id, school_id, parent_id')
+      .select('id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, admission_class_id')
       .eq('parent_id', parentId)
       .eq('school_id', schoolId)
       .eq('active', true);
 
+    if (stuErr) {
+      showFlash('Error loading students: ' + stuErr.message);
+      setBills(lockedBills);
+      return;
+    }
+
     const students = allStudents || [];
 
-    // Fetch class info for fee display
+    // Fetch class info
     const classIds = [...new Set(students.map((s: any) => s.admission_class_id).filter(Boolean))];
-    let classNameMap: Record<string, string> = {};
-    let classFeeMap: Record<string, number> = {};
+    const classNameMap: Record<string, string> = {};
+    const classFeeMap: Record<string, number> = {};
     if (classIds.length > 0) {
       const { data: classRows } = await supabase
         .from('classes').select('id, name, monthly_fee').in('id', classIds);
@@ -222,87 +237,72 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       });
     }
 
-    // Sort months chronologically so carried_forward chains correctly
-    const sorted = [...monthsToProcess].sort();
+    // Build bills for the 7-month window (sorted chronologically for carried_forward)
+    const sortedMonths = [...monthWindow].sort();
+    const newBills: any[] = [];
 
-    for (const month of sorted) {
-      const existing = existingMap[month];
+    for (const month of sortedMonths) {
+      // Skip if there's a locked (paid/partial/overpaid) bill for this month
+      if (lockedMap[month]) continue;
 
-      // Filter students admitted on or before this month (YYYY-MM string compare)
+      // Which students are admitted by this month?
       const admitted = students.filter((s: any) => {
         if (!s.date_of_admission) return true;
-        const admMonth = s.date_of_admission.slice(0, 7);
+        const admMonth = s.date_of_admission.slice(0, 7); // "YYYY-MM"
         return admMonth <= month;
       });
 
       if (admitted.length === 0) {
-        const emptyPayload = {
-          school_id: schoolId,
-          parent_id: parentId,
-          billing_month: month,
-          children_data: [],
-          total_fee: 0,
-          carried_forward: 0,
-          amount_paid: 0,
-          balance: 0,
-          status: 'pending' as const,
-        };
-        if (existing) {
-          const { error } = await supabase.from('fee_bills').update(emptyPayload).eq('id', existing.id);
-          if (error) console.error('Bill update failed:', month, error);
-        } else {
-          const { error } = await supabase.from('fee_bills').insert(emptyPayload);
-          if (error) console.error('Bill insert failed:', month, error);
-        }
+        // No children yet — skip, don't create empty bills
         continue;
       }
 
-      // Build children_data — always use Number() to handle Supabase numeric/decimal string returns
-      const childrenData = admitted.map((s: any) => {
-        const studentFee = Number(s.monthly_fee) || 0;
-        const classFee = classFeeMap[s.admission_class_id] || 0;
-        return {
-          student_id: s.id,
-          name: `${s.first_name} ${s.last_name}`,
-          class_name: classNameMap[s.admission_class_id] || '—',
-          date_of_admission: s.date_of_admission || '',
-          original_fee: classFee,
-          discount_type: s.discount_type || null,
-          discount_value: Number(s.discount_value) || null,
-          monthly_fee: studentFee,
-        };
-      });
+      // Build children snapshot
+      const childrenData = admitted.map((s: any) => ({
+        student_id: s.id,
+        name: `${s.first_name} ${s.last_name}`,
+        class_name: classNameMap[s.admission_class_id] || '—',
+        date_of_admission: s.date_of_admission || '',
+        original_fee: classFeeMap[s.admission_class_id] || 0,
+        discount_type: s.discount_type || null,
+        discount_value: Number(s.discount_value) || null,
+        monthly_fee: Number(s.monthly_fee) || 0,
+      }));
 
-      // Sum monthly fees — Number() prevents string concatenation ("0" + "3000" = "03000")
       const totalFee = admitted.reduce((sum, s: any) => sum + (Number(s.monthly_fee) || 0), 0);
 
-      // Compute carried_forward from previous month's bill (use existingMap for already-refreshed bills)
+      // Carry forward from previous month's balance (check locked + newly built)
       const pm = prevMonth(month);
-      const prevBill = existingMap[pm];
-      const cf = (prevBill && Number(prevBill.balance)) || 0;
+      const prevBill = lockedMap[pm] || newBills.find((b: any) => b.billing_month === pm);
+      const cf = prevBill ? Number(prevBill.balance) || 0 : 0;
 
-      const billPayload = {
+      newBills.push({
         school_id: schoolId,
         parent_id: parentId,
         billing_month: month,
         children_data: childrenData,
         total_fee: totalFee,
         carried_forward: cf,
-        amount_paid: existing ? Number(existing.amount_paid) || 0 : 0,
+        amount_paid: 0,
         balance: totalFee + cf,
-        status: 'pending' as const,
-      };
+        status: 'pending',
+      });
+    }
 
-      if (existing) {
-        const { error } = await supabase.from('fee_bills').update(billPayload).eq('id', existing.id);
-        if (error) console.error('Bill update failed:', month, error);
-      } else {
-        const { error } = await supabase.from('fee_bills').insert(billPayload);
-        if (error) console.error('Bill insert failed:', month, error);
+    // Insert all new bills
+    if (newBills.length > 0) {
+      const { error: insErr } = await supabase
+        .from('fee_bills')
+        .insert(newBills);
+      if (insErr) {
+        showFlash('Error creating bills: ' + insErr.message);
+        // Still show whatever we have
+        setBills(lockedBills);
+        return;
       }
     }
 
-    // Reload bills after generating/updating
+    // Reload everything
     const { data: freshBills } = await supabase
       .from('fee_bills').select('*')
       .eq('parent_id', parentId)
@@ -412,8 +412,8 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       // Ensure all bills exist
       for (const month of sorted) {
         if (!billsByMonth[month]) {
-          await ensureBillsForWindow(selectedParent!.id, bills);
-          break; // ensureBillsForWindow will regenerate all, reload below
+          await generateBills(selectedParent!.id, bills);
+          break; // generateBills will regenerate all, reload below
         }
       }
 
