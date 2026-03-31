@@ -375,7 +375,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
             <div className="form-field">
               <label>Opening Balance (if any)</label>
               <input
-                type="number" step="1"
+                type="text" inputMode="numeric" pattern="[0-9]*"
                 value={newSupplier.opening_balance}
                 onChange={e => setNewSupplier({...newSupplier, opening_balance: parseInt(e.target.value) || 0})}
                 placeholder="0"
@@ -438,7 +438,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
             <div className="form-field required">
               <label>Amount Paid (Rs) *</label>
               <input
-                type="number" step="1"
+                type="text" inputMode="numeric" pattern="[0-9]*"
                 value={paymentForm.amount}
                 onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})}
                 placeholder="Enter amount"
@@ -517,7 +517,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
             <div className="form-field required">
               <label>Bill Amount (Rs) *</label>
               <input
-                type="number" step="1"
+                type="text" inputMode="numeric" pattern="[0-9]*"
                 value={billForm.amount}
                 onChange={e => setBillForm({...billForm, amount: e.target.value})}
                 placeholder="Enter bill amount"
