@@ -15,6 +15,8 @@ type Student = {
   date_of_birth: string | null;
   date_of_admission: string | null;
   admission_class_id: string | null;
+  discount_type: string | null;
+  discount_value: number | null;
   monthly_fee: number;
   active: boolean;
   created_at: string;
