@@ -60,6 +60,7 @@ export const Dashboard = () => {
   const [history, setHistory]       = useState<any[]>([]);
   const [creditExpired, setCreditExpired] = useState(false);
   const [daysLeft, setDaysLeft]     = useState(0);
+  const [overviewStats, setOverviewStats] = useState({ parents: 0, students: 0, classes: 0 });
 
   const checkCredits = () => {
     if (!profile) return;
@@ -72,13 +73,27 @@ export const Dashboard = () => {
     if (expired || profile.total_credits <= 0) setTab('buy');
   };
 
+  const loadOverviewStats = async () => {
+    if (!profile) return;
+    const [parentsRes, studentsRes, classesRes] = await Promise.all([
+      supabase.from('parents').select('id', { count: 'exact', head: true }).eq('school_id', profile.id),
+      supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', profile.id),
+      supabase.from('classes').select('id', { count: 'exact', head: true }).eq('school_id', profile.id),
+    ]);
+    setOverviewStats({
+      parents: parentsRes.count || 0,
+      students: studentsRes.count || 0,
+      classes: classesRes.count || 0,
+    });
+  };
+
   const loadHistory = async () => {
     if (!profile) return;
     const { data } = await supabase.from('credit_requests').select('*').eq('school_id', profile.id).order('created_at', { ascending: false });
     setHistory(data || []);
   };
 
-  useEffect(() => { if (profile) checkCredits(); }, [profile]);
+  useEffect(() => { if (profile) { checkCredits(); loadOverviewStats(); } }, [profile]);
   useEffect(() => { if (tab === 'history' && profile) loadHistory(); }, [tab, profile]);
   useEffect(() => {
     const s = location.state as { showBuyCredits?: boolean };
@@ -102,12 +117,6 @@ export const Dashboard = () => {
   };
 
   const handleLogout = async () => { await signOut(); navigate('/'); };
-
-  const creditColor = () => {
-    if (creditExpired || profile!.total_credits <= 0) return 'danger';
-    if (daysLeft <= 7) return 'warning';
-    return 'blue';
-  };
 
   if (!profile) return (
     <div className="dash-loading">
@@ -186,29 +195,36 @@ export const Dashboard = () => {
             <div className="animate-fade-up">
               <div className="overview-welcome">
                 <h2>Welcome, {profile.school_name} 👋</h2>
-                <p>{profile.email} · {profile.contact}</p>
               </div>
 
               <div className="overview-stats">
-                <div className={`ov-stat-card ${creditColor()}`}>
-                  <div className="ov-stat-icon">
-                    {creditExpired ? <AlertTriangle size={20} /> : <CreditCard size={20} />}
-                  </div>
-                  <div className="ov-stat-label">{creditExpired ? 'Account Status' : 'Credits'}</div>
-                  <div className="ov-stat-value">{creditExpired ? 'Expired' : profile.total_credits}</div>
-                  <div className="ov-stat-sub">{creditExpired ? 'Buy credits to continue' : `${daysLeft} days remaining`}</div>
+                <div className="ov-stat-card blue">
+                  <div className="ov-stat-icon"><Users2 size={20} /></div>
+                  <div className="ov-stat-label">Parents</div>
+                  <div className="ov-stat-value">{overviewStats.parents}</div>
+                  <div className="ov-stat-sub">Registered guardians</div>
+                </div>
+                <div className="ov-stat-card green">
+                  <div className="ov-stat-icon"><GraduationCap size={20} /></div>
+                  <div className="ov-stat-label">Students</div>
+                  <div className="ov-stat-value">{overviewStats.students}</div>
+                  <div className="ov-stat-sub">Enrolled students</div>
+                </div>
+                <div className="ov-stat-card purple">
+                  <div className="ov-stat-icon"><BookOpen size={20} /></div>
+                  <div className="ov-stat-label">Classes</div>
+                  <div className="ov-stat-value">{overviewStats.classes}</div>
+                  <div className="ov-stat-sub">Active classes</div>
                 </div>
               </div>
 
               <div className="overview-section-title">Quick Actions</div>
               <div className="quick-actions">
                 {[
-                  { id: 'classes'   as Tab, icon: BookOpen,      color: 'blue',   label: 'Add Class',    sub: 'Manage classes' },
-                  { id: 'teachers'  as Tab, icon: GraduationCap, color: 'green',  label: 'Add Teacher',  sub: 'Staff records' },
-                  { id: 'parents'   as Tab, icon: Users2,        color: 'purple', label: 'Add Parent',   sub: 'Guardian info' },
-                  { id: 'income'    as Tab, icon: DollarSign,    color: 'cyan',   label: 'Record Income', sub: 'Fee & income' },
-                  { id: 'expense'   as Tab, icon: Truck,         color: 'amber',  label: 'Add Expense',  sub: 'Track spending' },
-                  { id: 'suppliers' as Tab, icon: Store,         color: 'rose',   label: 'Suppliers',    sub: 'Vendor ledger' },
+                  { id: 'parents'   as Tab, icon: Users2,        color: 'purple', label: 'Add Parent',    sub: 'Register guardian' },
+                  { id: 'students'  as Tab, icon: GraduationCap, color: 'green',  label: 'Add Student',   sub: 'Enroll a student' },
+                  { id: 'income'    as Tab, icon: DollarSign,    color: 'cyan',   label: 'Record Income', sub: 'Fee & payments' },
+                  { id: 'expense'   as Tab, icon: Truck,         color: 'amber',  label: 'Add Expense',   sub: 'Track spending' },
                 ].map(qa => (
                   <div key={qa.id} className="qa-card" onClick={() => setTab(qa.id)}>
                     <div className={`qa-icon ${qa.color}`}><qa.icon size={22} /></div>
@@ -218,15 +234,6 @@ export const Dashboard = () => {
                     </div>
                   </div>
                 ))}
-              </div>
-
-              <div className="school-info-card">
-                <div className="school-info-avatar">{profile.school_name.charAt(0).toUpperCase()}</div>
-                <div className="school-info-details">
-                  <h3>{profile.school_name}</h3>
-                  <p>{profile.email}</p>
-                  <p>{profile.contact}</p>
-                </div>
               </div>
             </div>
           )}

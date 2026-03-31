@@ -243,6 +243,8 @@
 .ov-stat-card.danger  { border-color: var(--danger);  background: var(--danger-light); }
 .ov-stat-card.warning { border-color: var(--warning); background: var(--warning-light); }
 .ov-stat-card.blue    { border-color: var(--primary); background: var(--primary-muted); }
+.ov-stat-card.green   { border-color: #059669; background: #d1fae5; }
+.ov-stat-card.purple  { border-color: #7c3aed; background: #f3e8ff; }
 
 .ov-stat-icon {
   width: 40px; height: 40px;
@@ -254,6 +256,8 @@
 
 .ov-stat-card.danger  .ov-stat-icon { background: var(--danger-light);  color: var(--danger); }
 .ov-stat-card.warning .ov-stat-icon { background: var(--warning-light); color: var(--warning); }
+.ov-stat-card.green   .ov-stat-icon { background: #d1fae5; color: #059669; }
+.ov-stat-card.purple  .ov-stat-icon { background: #f3e8ff; color: #7c3aed; }
 
 .ov-stat-label {
   font-size: var(--font-xs);
