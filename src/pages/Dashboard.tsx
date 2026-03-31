@@ -11,7 +11,7 @@ import { ParentsManager }   from '../components/ParentsManager';
 import { Button } from '../components/ui/Button';
 import { Input }  from '../components/ui/Input';
 import {
-  LayoutDashboard, Users, GraduationCap, DollarSign, Truck, Store,
+  LayoutDashboard, GraduationCap, DollarSign, Truck, Store,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
   CheckCircle, XCircle, Banknote, BookOpen
 } from 'lucide-react';
