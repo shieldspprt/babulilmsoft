@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar, Tag, Percent, Banknote } from 'lucide-react';
+import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
 import '../components/managers.css';
