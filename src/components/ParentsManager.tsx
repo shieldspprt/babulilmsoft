@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar } from 'lucide-react';
+import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar, Tag, Percent, Banknote } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
 import '../components/managers.css';
@@ -18,10 +18,11 @@ type Parent = {
 };
 
 type Class = { id: string; name: string; monthly_fee: number; };
+type Discount = { id: string; name: string; type: 'percentage' | 'amount'; value: number; };
 const EMPTY = {
   first_name: '', last_name: '', cnic: '', contact: '', address: '',
 };
-const EMPTY_STUDENT = { first_name: '', last_name: '', cnic: '', date_of_birth: '', date_of_admission: new Date().toISOString().split('T')[0], admission_class_id: '', monthly_fee: 0, };
+const EMPTY_STUDENT = { first_name: '', last_name: '', cnic: '', date_of_birth: '', date_of_admission: new Date().toISOString().split('T')[0], admission_class_id: '', monthly_fee: 0, discount_id: '', discount_type: '' as 'percentage' | 'amount' | '', discount_value: 0, };
 
 const PAGE_SIZE = 25;
 
@@ -43,6 +44,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const [selectedParentForChild, setSelectedParentForChild] = useState<Parent | null>(null);
   const [childForm, setChildForm] = useState({ ...EMPTY_STUDENT });
   const [classes, setClasses] = useState<Class[]>([]);
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [savingChild, setSavingChild] = useState(false);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
 
@@ -64,8 +66,12 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   };
 
   const loadClasses = async () => {
-    const { data } = await supabase.from('classes').select('id, name, monthly_fee').eq('school_id', schoolId).eq('active', true).order('name');
-    setClasses(data || []);
+    const [classesRes, discountsRes] = await Promise.all([
+      supabase.from('classes').select('id, name, monthly_fee').eq('school_id', schoolId).eq('active', true).order('name'),
+      supabase.from('discounts').select('id, name, type, value').eq('school_id', schoolId).eq('is_active', true).order('name'),
+    ]);
+    setClasses(classesRes.data || []);
+    setDiscounts(discountsRes.data || []);
   };
 
   useEffect(() => { load(); }, [schoolId]);
@@ -80,8 +86,29 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
     if (k === 'admission_class_id') {
       const cls = classes.find(c => c.id === v);
       newForm.monthly_fee = cls ? cls.monthly_fee : 0;
+      newForm.discount_id = '';
+      newForm.discount_type = '';
+      newForm.discount_value = 0;
+    }
+    if (k === 'discount_id') {
+      const disc = discounts.find(d => d.id === v);
+      if (disc) {
+        newForm.discount_type = disc.type;
+        newForm.discount_value = disc.value;
+      } else {
+        newForm.discount_type = '';
+        newForm.discount_value = 0;
+      }
     }
     setChildForm(newForm);
+  };
+
+  const getFinalFee = () => {
+    if (!childForm.discount_type || !childForm.discount_value) return childForm.monthly_fee;
+    if (childForm.discount_type === 'percentage') {
+      return Math.round(childForm.monthly_fee * (1 - childForm.discount_value / 100));
+    }
+    return Math.max(0, childForm.monthly_fee - childForm.discount_value);
   };
 
   const validateCnic = async (cnic: string, excludeId?: string): Promise<boolean> => {
@@ -212,7 +239,10 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
       date_of_birth: childForm.date_of_birth || null,
       date_of_admission: childForm.date_of_admission || null,
       admission_class_id: childForm.admission_class_id || null,
-      monthly_fee: childForm.monthly_fee || 0,
+      monthly_fee: getFinalFee(),
+      discount_id: childForm.discount_id || null,
+      discount_type: childForm.discount_type || null,
+      discount_value: childForm.discount_value || null,
       active: true,
     });
     setSavingChild(false);
@@ -489,9 +519,22 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                   <input type="date" className="form-input" value={childForm.date_of_admission} onChange={e => setChild('date_of_admission', e.target.value)} />
                 </div>
                 <div>
-                  <label className="form-label">Monthly Fee (Rs)</label>
-                  <input type="number" className="form-input" value={childForm.monthly_fee} onChange={e => setChild('monthly_fee', parseInt(e.target.value) || 0)} />
-                  <small style={{color:'var(--text-muted)', fontSize:'0.7rem'}}>Auto-filled from class. Edit if needed.</small>
+                  <label className="form-label">Discount</label>
+                  <select className="form-select" value={childForm.discount_id} onChange={e => setChild('discount_id', e.target.value)}>
+                    <option value="">No discount</option>
+                    {discounts.map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.type === 'percentage' ? d.value + '%' : 'Rs ' + d.value.toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Final Monthly Fee (Rs)</label>
+                  <div style={{padding: '0.625rem 0.875rem', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontWeight: 600, color: childForm.discount_value ? 'var(--success)' : 'var(--text)'}}>
+                    Rs {getFinalFee().toLocaleString()}
+                    {childForm.discount_value > 0 && <span style={{fontSize: '0.75rem', marginLeft: 8, color: 'var(--text-muted)'}}>(was Rs {childForm.monthly_fee.toLocaleString()})</span>}
+                  </div>
                 </div>
               </div>
             </div>
