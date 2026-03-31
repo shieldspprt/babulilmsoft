@@ -72,9 +72,6 @@ npm run dev
 
 The app is configured for static hosting on Netlify or similar platforms.
 
-### Payment Accounts (Update these!)
+### Payment Accounts
 
-**JazzCash**: 0300-1234567 (ilmsoft)  
-**Bank**: Meezan Bank, Account: ilmsoft, IBAN: PK12MEZN000123456789
-
-> **Important**: Update payment details in `src/pages/Dashboard.tsx` before going live!
+Payment details are configured in `src/pages/Dashboard.tsx`. Update the JazzCash number and bank IBAN with your actual accounts before going live.
