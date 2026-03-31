@@ -13,7 +13,6 @@ type Parent = {
   cnic: string;
   contact: string;
   address: string | null;
-  is_active: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -37,7 +36,8 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const load = async () => {
     setLoading(true);
     const { data } = await supabase.from('parents').select('*')
-      .eq('school_id', schoolId).eq('is_active', true).order('created_at', { ascending: false });
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false });
     setRecords(data || []);
     setLoading(false);
   };
@@ -55,7 +55,6 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
       .select('id')
       .eq('school_id', schoolId)
       .eq('cnic', cnic)
-      .eq('is_active', true)
       .maybeSingle();
     return data === null;
   };
@@ -81,11 +80,10 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
       cnic: form.cnic.trim(),
       contact: form.contact.trim(),
       address: form.address.trim() || null,
-      is_active: true,
     });
     setSaving(false);
     if (error) {
-      if (error.message.includes('unique')) {
+      if (error.message.includes('unique') || error.message.includes('duplicate')) {
         setCnicError('A parent with this CNIC already exists');
       } else {
         setFlash('Error: ' + error.message);
@@ -104,7 +102,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    await supabase.from('parents').update({ is_active: false }).eq('id', deleteTarget.id);
+    await supabase.from('parents').delete().eq('id', deleteTarget.id);
     setDeleting(false); setDeleteTarget(null); load();
   };
 
@@ -162,7 +160,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                 </div>
                 <div className="record-meta">
                   <span><Phone size={12} /> {r.contact}</span>
-                  {r.cnic && <span title="CNIC">🆔 {r.cnic}</span>}
+                  <span title="CNIC">🆔 {r.cnic}</span>
                   {r.address && <span><MapPin size={12} /> {r.address}</span>}
                 </div>
               </div>
@@ -174,7 +172,6 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
         </div>
       )}
 
-      {/* Add Modal */}
       {showModal && (
         <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal-box">
@@ -215,7 +212,6 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
         </div>
       )}
 
-      {/* Delete confirm */}
       {deleteTarget && (
         <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setDeleteTarget(null)}>
           <div className="confirm-box">
