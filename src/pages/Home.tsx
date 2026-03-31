@@ -1,18 +1,18 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import {
-  Users, GraduationCap, DollarSign, Truck, BookOpen,
-  UserCheck, CheckCircle, ArrowRight, Star
+  LayoutGrid, GraduationCap, TrendingUp, Receipt, Store,
+  UsersRound, CheckCircle, ArrowRight, Sparkles
 } from 'lucide-react';
 import './Home.css';
 
 const features = [
-  { icon: Users,         color: 'blue',   title: 'Class Management',    desc: 'Organize your school into classes effortlessly. Add, view, and manage all classes in one place.' },
+  { icon: LayoutGrid,    color: 'blue',   title: 'Class Management',    desc: 'Organize your school into classes effortlessly. Add, view, and manage all classes in one place.' },
   { icon: GraduationCap, color: 'green',  title: 'Teacher & Staff',     desc: 'Maintain complete records of teachers and staff — contacts, salaries, CNIC and more.' },
-  { icon: UserCheck,     color: 'purple', title: 'Parent Records',       desc: 'Keep parent and guardian contact details handy for every student in your school.' },
-  { icon: DollarSign,    color: 'cyan',   title: 'Income Tracking',      desc: 'Record fee payments and all income sources. Know exactly what money is coming in.' },
-  { icon: Truck,         color: 'amber',  title: 'Expense Management',   desc: 'Track every expense. Get a clear picture of your school\'s spending at any time.' },
-  { icon: BookOpen,      color: 'rose',   title: 'Supplier Ledger',      desc: 'Manage vendor accounts, bills, and payments. Never lose track of what you owe.' },
+  { icon: UsersRound,    color: 'purple', title: 'Parent Records',       desc: 'Keep parent and guardian contact details handy for every student in your school.' },
+  { icon: TrendingUp,    color: 'cyan',   title: 'Income Tracking',      desc: 'Record fee payments and all income sources. Know exactly what money is coming in.' },
+  { icon: Receipt,       color: 'amber',  title: 'Expense Management',   desc: 'Track every expense. Get a clear picture of your school\'s spending at any time.' },
+  { icon: Store,         color: 'rose',   title: 'Supplier Ledger',      desc: 'Manage vendor accounts, bills, and payments. Never lose track of what you owe.' },
 ];
 
 export const Home = () => {
@@ -22,7 +22,7 @@ export const Home = () => {
       <section className="hero-section" aria-labelledby="hero-heading">
         <div className="hero-left animate-fade-up">
           <div className="hero-eyebrow">
-            <Star size={14} fill="currentColor" /> School Management Made Simple
+            <Sparkles size={14} fill="currentColor" /> School Management Made Simple
           </div>
           <h1 id="hero-heading" className="hero-title">
             Manage Your School<br /><span>The Smart Way</span>
@@ -48,25 +48,63 @@ export const Home = () => {
           </div>
         </div>
 
-        {/* Visual preview card */}
+        {/* Dashboard Preview — abstract UI mockup, no fake data */}
         <div className="hero-visual animate-fade-up" style={{ animationDelay: '0.1s' }}>
-          <div className="hero-vis-header">
-            <div className="hero-vis-avatar">S</div>
-            <div className="hero-vis-school">
-              <strong>Springfield High School</strong>
-              <span>Admin Dashboard</span>
+          <div className="preview-browser-bar">
+            <div className="preview-dots">
+              <span /><span /><span />
             </div>
-            <div className="hero-vis-badge">Active</div>
+            <div className="preview-url">ilmsoft.netlify.app/dashboard</div>
           </div>
-          <div className="hero-vis-stats">
-            <div className="hero-vis-stat"><strong>42</strong><span>Teachers</span></div>
-            <div className="hero-vis-stat"><strong>380</strong><span>Students</span></div>
-            <div className="hero-vis-stat"><strong>Rs 1.2L</strong><span>This Month</span></div>
-            <div className="hero-vis-stat"><strong>28 days</strong><span>Remaining</span></div>
+
+          <div className="preview-body">
+            {/* Mini sidebar */}
+            <div className="preview-sidebar">
+              <div className="preview-sidebar-logo">
+                <GraduationCap size={12} />
+                <span>ilm<em>soft</em></span>
+              </div>
+              {['Overview', 'Classes', 'Teachers', 'Parents', 'Students', 'Income', 'Expenses'].map((label, i) => (
+                <div key={label} className={`preview-sidebar-item${i === 0 ? ' active' : ''}`}>
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            {/* Mini content */}
+            <div className="preview-content">
+              <div className="preview-content-bar">
+                <div className="preview-skeleton-text title" />
+                <div className="preview-skeleton-text subtitle" />
+              </div>
+
+              <div className="preview-stat-row">
+                {[
+                  { label: 'Parents', color: 'blue' },
+                  { label: 'Students', color: 'green' },
+                  { label: 'Classes', color: 'purple' },
+                ].map(s => (
+                  <div key={s.label} className={`preview-stat-block ${s.color}`}>
+                    <div className="preview-stat-block-label">{s.label}</div>
+                    <div className="preview-stat-block-bar" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="preview-table-area">
+                <div className="preview-table-label">Quick Actions</div>
+                <div className="preview-table-rows">
+                  {['Add Parent', 'Record Income', 'Add Expense'].map(row => (
+                    <div key={row} className="preview-table-row">
+                      <div className="preview-skeleton-dot" />
+                      <div className="preview-skeleton-text short" />
+                      <div className="preview-skeleton-text shorter" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="hero-vis-row"><div className="hero-vis-dot green"/><span className="hero-vis-row-label">Fee Collection — June</span><span className="hero-vis-row-val">Rs 85,000</span></div>
-          <div className="hero-vis-row"><div className="hero-vis-dot blue"/><span className="hero-vis-row-label">Teacher Salaries</span><span className="hero-vis-row-val">Rs 42,000</span></div>
-          <div className="hero-vis-row"><div className="hero-vis-dot amber"/><span className="hero-vis-row-label">Misc Expenses</span><span className="hero-vis-row-val">Rs 8,500</span></div>
         </div>
       </section>
 
