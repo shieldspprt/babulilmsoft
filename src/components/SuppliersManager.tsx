@@ -6,16 +6,13 @@ import './SuppliersManager.css';
 
 type Supplier = {
   id: string;
-  name: string;
+  supplier_name: string;
   business_name: string;
-  contact: string;
+  contact_number: string;
   address: string;
   opening_balance: number;
   current_balance: number;
-  total_billed: number;
-  total_paid: number;
   notes: string;
-  is_active: boolean;
 };
 
 type SupplierTransaction = {
@@ -42,9 +39,9 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
 
   // Form states
   const [newSupplier, setNewSupplier] = useState({
-    name: '',
+    supplier_name: '',
     business_name: '',
-    contact: '',
+    contact_number: '',
     address: '',
     opening_balance: 0,
     notes: ''
@@ -69,8 +66,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
       .from('suppliers')
       .select('*')
       .eq('school_id', schoolId)
-      .eq('is_active', true)
-      .order('name');
+      .order('supplier_name');
     
     if (error) console.error('Error loading suppliers:', error);
     setSuppliers(data || []);
@@ -104,16 +100,13 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     
     const { error } = await supabase.from('suppliers').insert({
       school_id: schoolId,
-      name: newSupplier.name,
+      supplier_name: newSupplier.supplier_name,
       business_name: newSupplier.business_name,
-      contact: newSupplier.contact,
+      contact_number: newSupplier.contact_number,
       address: newSupplier.address,
       opening_balance: newSupplier.opening_balance,
       current_balance: newSupplier.opening_balance,
-      total_billed: 0,
-      total_paid: 0,
-      notes: newSupplier.notes,
-      is_active: true
+      notes: newSupplier.notes
     });
 
     if (error) {
@@ -122,9 +115,9 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     }
 
     setNewSupplier({
-      name: '',
+      supplier_name: '',
       business_name: '',
-      contact: '',
+      contact_number: '',
       address: '',
       opening_balance: 0,
       notes: ''
@@ -162,8 +155,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     const { error: supError } = await supabase
       .from('suppliers')
       .update({
-        current_balance: newBalance,
-        total_paid: selectedSupplier.total_paid + amount
+        current_balance: newBalance
       })
       .eq('id', selectedSupplier.id)
       .eq('school_id', schoolId); // Extra safety
@@ -214,8 +206,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     const { error: supError } = await supabase
       .from('suppliers')
       .update({
-        current_balance: newBalance,
-        total_billed: selectedSupplier.total_billed + amount
+        current_balance: newBalance
       })
       .eq('id', selectedSupplier.id)
       .eq('school_id', schoolId); // Extra safety
@@ -243,7 +234,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
 
     const { error } = await supabase
       .from('suppliers')
-      .update({ is_active: false })
+      .delete()
       .eq('id', id)
       .eq('school_id', schoolId); // Extra safety
 
@@ -299,9 +290,9 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
               return (
                 <div key={supplier.id} className="supplier-card">
                   <div className="supplier-info">
-                    <h3>{supplier.name}</h3>
+                    <h3>{supplier.supplier_name}</h3>
                     {supplier.business_name && <p className="business">{supplier.business_name}</p>}
-                    <p className="contact"><Phone size={14} /> {supplier.contact || 'No contact'}</p>
+                    <p className="contact"><Phone size={14} /> {supplier.contact_number || 'No contact'}</p>
                     {supplier.address && <p className="address"><MapPin size={14} /> {supplier.address}</p>}
                   </div>
 
@@ -310,10 +301,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
                       <span className="balance-label">{status.text}</span>
                       <span className="balance-amount">Rs {Math.abs(supplier.current_balance).toLocaleString()}</span>
                     </div>
-                    <div className="totals">
-                      <span>Total Billed: Rs {supplier.total_billed.toLocaleString()}</span>
-                      <span>Total Paid: Rs {supplier.total_paid.toLocaleString()}</span>
-                    </div>
+
                   </div>
 
                   <div className="supplier-actions">
@@ -356,8 +344,8 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
               <label>Owner Name *</label>
               <input
                 type="text"
-                value={newSupplier.name}
-                onChange={e => setNewSupplier({...newSupplier, name: e.target.value})}
+                value={newSupplier.supplier_name}
+                onChange={e => setNewSupplier({...newSupplier, supplier_name: e.target.value})}
                 placeholder="e.g., Ahmed Khan"
                 required
               />
@@ -378,8 +366,8 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
               <label>Contact Number *</label>
               <input
                 type="tel"
-                value={newSupplier.contact}
-                onChange={e => setNewSupplier({...newSupplier, contact: e.target.value})}
+                value={newSupplier.contact_number}
+                onChange={e => setNewSupplier({...newSupplier, contact_number: e.target.value})}
                 placeholder="03XX-XXXXXXX"
                 required
               />
@@ -441,7 +429,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
         </div>
 
         <div className="supplier-info-bar">
-          <h3>{selectedSupplier.name}</h3>
+          <h3>{selectedSupplier.supplier_name}</h3>
           <p>Current Balance: <strong>Rs {selectedSupplier.current_balance.toLocaleString()}</strong></p>
         </div>
 
@@ -520,7 +508,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
         </div>
 
         <div className="supplier-info-bar">
-          <h3>{selectedSupplier.name}</h3>
+          <h3>{selectedSupplier.supplier_name}</h3>
           <p>Current Balance: <strong>Rs {selectedSupplier.current_balance.toLocaleString()}</strong></p>
         </div>
 
@@ -590,21 +578,13 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
           <Button variant="ghost" onClick={goBack}>
             <ArrowLeft size={18} /> Back to Suppliers
           </Button>
-          <h2><BookOpen size={20} /> Ledger: {selectedSupplier.name}</h2>
+          <h2><BookOpen size={20} /> Ledger: {selectedSupplier.supplier_name}</h2>
         </div>
 
         <div className="ledger-summary">
           <div className="summary-card">
             <span>Current Balance</span>
             <strong>Rs {selectedSupplier.current_balance.toLocaleString()}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Total Billed</span>
-            <strong>Rs {selectedSupplier.total_billed.toLocaleString()}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Total Paid</span>
-            <strong>Rs {selectedSupplier.total_paid.toLocaleString()}</strong>
           </div>
         </div>
 
