@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Plus, X, BookOpen, Search, Edit2, Trash2, Users } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
@@ -20,7 +21,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [flash, setFlash] = useState('');
+  const { flash, showFlash } = useFlashMessage(3000);
   const [search, setSearch] = useState('');
   
   const [showAddModal, setShowAddModal] = useState(false);
@@ -71,15 +72,14 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
     });
     setSaving(false);
     if (error) {
-      setFlash('Error: ' + error.message);
+      showFlash('Error: ' + error.message);
     } else {
-      setFlash('Class added!');
+      showFlash('Class added!');
       setNewName('');
       setNewFee('');
       setShowAddModal(false);
       load();
     }
-    setTimeout(() => setFlash(''), 3000);
   };
 
   const handleEdit = async () => {
@@ -92,25 +92,23 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
     }).eq('id', editingClass.id);
     setSaving(false);
     if (error) {
-      setFlash('Error: ' + error.message);
+      showFlash('Error: ' + error.message);
     } else {
-      setFlash('Class updated!');
+      showFlash('Class updated!');
       setEditingClass(null);
       load();
     }
-    setTimeout(() => setFlash(''), 3000);
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this class?')) return;
     const { error } = await supabase.from('classes').delete().eq('id', id);
     if (error) {
-      setFlash('Error: ' + error.message);
+      showFlash('Error: ' + error.message);
     } else {
-      setFlash('Class deleted!');
+      showFlash('Class deleted!');
       load();
     }
-    setTimeout(() => setFlash(''), 3000);
   };
 
   const openEdit = (c: Class) => {

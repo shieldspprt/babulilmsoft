@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Plus, X, Search, Trash2, Edit2, ChevronLeft, ChevronRight, GraduationCap, BookOpen } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -53,7 +54,7 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [form, setForm]               = useState({ ...EMPTY_FORM });
   const [saving, setSaving]           = useState(false);
-  const [flash, setFlash]             = useState('');
+  const { flash, showFlash }             = useFlashMessage(4000);
   const [search, setSearch]           = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
   const [deleting, setDeleting]       = useState(false);
@@ -103,8 +104,7 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
 
   const handleSave = async () => {
     if (!form.parent_id || !form.first_name.trim() || !form.last_name.trim()) {
-      setFlash('Error: Parent, first name and last name are required');
-      setTimeout(() => setFlash(''), 4000);
+      showFlash('Error: Parent, first name and last name are required');
       return;
     }
     setSaving(true);
@@ -130,12 +130,10 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
     }
     setSaving(false);
     if (error) {
-      setFlash('Error: ' + error.message);
-      setTimeout(() => setFlash(''), 4000);
+      showFlash('Error: ' + error.message);
     } else {
-      setFlash(`Student "${form.first_name} ${form.last_name}" ${editStudent ? 'updated' : 'added'}!`);
+      showFlash(`Student "${form.first_name} ${form.last_name}" ${editStudent ? 'updated' : 'added'}!`);
       setShowModal(false); setForm({ ...EMPTY_FORM }); setEditStudent(null); load();
-      setTimeout(() => setFlash(''), 4000);
     }
   };
 

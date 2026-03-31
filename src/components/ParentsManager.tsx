@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
@@ -32,7 +33,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const [showModal, setShowModal]   = useState(false);
   const [form, setForm]             = useState({ ...EMPTY });
   const [saving, setSaving]         = useState(false);
-  const [flash, setFlash]           = useState('');
+  const { flash, showFlash }         = useFlashMessage(4000);
   const [search, setSearch]         = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Parent | null>(null);
   const [deleting, setDeleting]     = useState(false);
@@ -120,8 +121,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
 
   const handleSave = async () => {
     if (!form.first_name.trim() || !form.last_name.trim() || !form.contact.trim() || !form.cnic.trim()) {
-      setFlash('Error: First name, last name, CNIC and contact are required');
-      setTimeout(() => setFlash(''), 4000);
+      showFlash('Error: First name, last name, CNIC and contact are required');
       return;
     }
     const cnicValid = await validateCnic(form.cnic);
@@ -143,16 +143,14 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
       if (error.message.includes('unique') || error.message.includes('duplicate')) {
         setCnicError('A parent with this CNIC already exists');
       } else {
-        setFlash('Error: ' + error.message);
-        setTimeout(() => setFlash(''), 4000);
+        showFlash('Error: ' + error.message);
       }
     } else {
-      setFlash('Parent "' + form.first_name + ' ' + form.last_name + '" added!');
+      showFlash('Parent "' + form.first_name + ' ' + form.last_name + '" added!');
       setShowModal(false);
       setForm({ ...EMPTY });
       setCnicError('');
       load();
-      setTimeout(() => setFlash(''), 4000);
     }
   };
 
@@ -172,8 +170,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const handleEdit = async () => {
     if (!editTarget) return;
     if (!form.first_name.trim() || !form.last_name.trim() || !form.contact.trim() || !form.cnic.trim()) {
-      setFlash('Error: All fields are required');
-      setTimeout(() => setFlash(''), 4000);
+      showFlash('Error: All fields are required');
       return;
     }
     const cnicValid = await validateCnic(form.cnic, editTarget.id);
@@ -194,17 +191,15 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
       if (error.message.includes('unique') || error.message.includes('duplicate')) {
         setCnicError('A parent with this CNIC already exists');
       } else {
-        setFlash('Error: ' + error.message);
-        setTimeout(() => setFlash(''), 4000);
+        showFlash('Error: ' + error.message);
       }
     } else {
-      setFlash('Parent "' + form.first_name + ' ' + form.last_name + '" updated!');
+      showFlash('Parent "' + form.first_name + ' ' + form.last_name + '" updated!');
       setShowEditModal(false);
       setEditTarget(null);
       setForm({ ...EMPTY });
       setCnicError('');
       load();
-      setTimeout(() => setFlash(''), 4000);
     }
   };
 
@@ -224,8 +219,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
 
   const handleSaveChild = async () => {
     if (!selectedParentForChild || !childForm.first_name.trim() || !childForm.last_name.trim()) {
-      setFlash('Error: First name and last name are required');
-      setTimeout(() => setFlash(''), 4000);
+      showFlash('Error: First name and last name are required');
       return;
     }
     setSavingChild(true);
@@ -245,14 +239,12 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
     });
     setSavingChild(false);
     if (error) {
-      setFlash('Error: ' + error.message);
-      setTimeout(() => setFlash(''), 4000);
+      showFlash('Error: ' + error.message);
     } else {
-      setFlash('Student "' + childForm.first_name + ' ' + childForm.last_name + '" added for ' + selectedParentForChild.first_name + '!');
+      showFlash('Student "' + childForm.first_name + ' ' + childForm.last_name + '" added for ' + selectedParentForChild.first_name + '!');
       setShowChildModal(false);
       setChildForm({ ...EMPTY_STUDENT });
       setSelectedParentForChild(null);
-      setTimeout(() => setFlash(''), 4000);
     }
   };
 

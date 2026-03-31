@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { useFlashMessage } from '../hooks/useFlashMessage';
 import {
   Plus, X, GraduationCap, Briefcase, Phone,
   MapPin, Search, Trash2
@@ -27,7 +28,7 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
   const [showModal, setShowModal]   = useState(false);
   const [form, setForm]             = useState({ ...EMPTY });
   const [saving, setSaving]         = useState(false);
-  const [flash, setFlash]           = useState('');
+  const { flash, showFlash }         = useFlashMessage(4000);
   const [search, setSearch]         = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Teacher | null>(null);
   const [deleting, setDeleting]     = useState(false);
@@ -52,9 +53,8 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
       ...form, salary: parseInt(form.salary) || 0,
     });
     setSaving(false);
-    if (error) { setFlash('Error: ' + error.message); }
-    else       { setFlash(`${form.type} "${form.name}" added!`); setShowModal(false); setForm({ ...EMPTY }); load(); }
-    setTimeout(() => setFlash(''), 4000);
+    if (error) { showFlash('Error: ' + error.message); }
+    else       { showFlash(`${form.type} "${form.name}" added!`); setShowModal(false); setForm({ ...EMPTY }); load(); }
   };
 
   const handleDelete = async () => {
