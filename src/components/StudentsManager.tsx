@@ -243,16 +243,16 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
                       </span>
                     </td>
                     <td>
-                      {s.discount_type
+                      {s.discount_type && s.discount_value !== null
                         ? <span>Rs {(s.discount_type === 'percentage' 
-                            ? Math.round(s.monthly_fee * (100 - s.discount_value) / 100) 
-                            : s.monthly_fee - s.discount_value).toLocaleString()}</span>
+                            ? Math.round(s.monthly_fee * (100 - (s.discount_value ?? 0)) / 100) 
+                            : s.monthly_fee - (s.discount_value ?? 0)).toLocaleString()}</span>
                         : <span>Rs {s.monthly_fee.toLocaleString()}</span>
                       }
                     </td>
                     <td>
-                      {s.discount_type === 'percentage' && <span style={{color:'var(--success)', fontWeight:600}}>{s.discount_value}%</span>}
-                      {s.discount_type === 'amount' && <span style={{color:'var(--success)', fontWeight:600}}>Rs {s.discount_value.toLocaleString()}</span>}
+                      {s.discount_type === 'percentage' && s.discount_value !== null && <span style={{color:'var(--success)', fontWeight:600}}>{s.discount_value}%</span>}
+                      {s.discount_type === 'amount' && s.discount_value !== null && <span style={{color:'var(--success)', fontWeight:600}}>Rs {(s.discount_value ?? 0).toLocaleString()}</span>}
                       {!s.discount_type && <span style={{color:'var(--text-muted)'}}>—</span>}
                     </td>
                     <td>
