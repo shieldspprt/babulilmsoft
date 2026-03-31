@@ -23,5 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 *.env*
+!.env.example
 run_sql.js
 .env.production

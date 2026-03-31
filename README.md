@@ -55,9 +55,11 @@ VALUES ('user-uuid-here', 'admin@example.com');
 ## Environment Variables
 
 ```bash
-VITE_SUPABASE_URL=https://ntohwovclsoffwummuxj.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_jnjnfY4TcmD9HxRSo2sgkw_Qb3Se89G
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
 ```
+
+> Copy `.env.example` to `.env.local` and fill in your Supabase credentials.
 
 ## Development
 
