@@ -364,9 +364,9 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
                 )}
                 <div>
                   <label className="form-label">Final Monthly Fee (Rs)</label>
-                  <div style={{padding: '0.625rem 0.875rem', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontWeight: 600, color: (form as any).discount_value ? 'var(--success)' : 'var(--text)'}}>
+                  <div className={`fee-display${(form as any).discount_value ? ' discounted' : ''}`}>
                     Rs {getFinalFee().toLocaleString()}
-                    {(form as any).discount_value > 0 && <span style={{fontSize: '0.75rem', marginLeft: 8, color: 'var(--text-muted)'}}>(was Rs {((form as any).monthly_fee || 0).toLocaleString()})</span>}
+                    {(form as any).discount_value > 0 && <span className="fee-original">(was Rs {((form as any).monthly_fee || 0).toLocaleString()})</span>}
                   </div>
                 </div>
               </div>

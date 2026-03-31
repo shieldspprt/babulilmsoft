@@ -529,9 +529,9 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                 )}
                 <div>
                   <label className="form-label">Final Monthly Fee (Rs)</label>
-                  <div style={{padding: '0.625rem 0.875rem', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontWeight: 600, color: childForm.discount_value ? 'var(--success)' : 'var(--text)'}}>
+                  <div className="fee-display{childForm.discount_value ? ' discounted' : ''}">
                     Rs {getFinalFee().toLocaleString()}
-                    {childForm.discount_value > 0 && <span style={{fontSize: '0.75rem', marginLeft: 8, color: 'var(--text-muted)'}}>(was Rs {childForm.monthly_fee.toLocaleString()})</span>}
+                    {childForm.discount_value > 0 && <span className="fee-original">(was Rs {childForm.monthly_fee.toLocaleString()})</span>}
                   </div>
                 </div>
               </div>
