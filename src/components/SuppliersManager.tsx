@@ -132,9 +132,8 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     if (!selectedSupplier) return;
 
     const amount = parseInt(paymentForm.amount);
-    const newBalance = selectedSupplier.current_balance - amount;
 
-    // Insert transaction with school_id
+    // Insert transaction — DB trigger handles balance calculation
     const { error: txError } = await supabase.from('supplier_transactions').insert({
       supplier_id: selectedSupplier.id,
       school_id: schoolId,
@@ -143,25 +142,11 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
       date: paymentForm.date,
       description: paymentForm.description,
       payment_method: paymentForm.payment_method,
-      balance_after: newBalance
+      balance_after: 0 // DB trigger overwrites this
     });
 
     if (txError) {
       alert('Error recording payment: ' + txError.message);
-      return;
-    }
-
-    // Update supplier
-    const { error: supError } = await supabase
-      .from('suppliers')
-      .update({
-        current_balance: newBalance
-      })
-      .eq('id', selectedSupplier.id)
-      .eq('school_id', schoolId); // Extra safety
-
-    if (supError) {
-      alert('Error updating supplier: ' + supError.message);
       return;
     }
 
@@ -183,9 +168,8 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     if (!selectedSupplier) return;
 
     const amount = parseInt(billForm.amount);
-    const newBalance = selectedSupplier.current_balance + amount;
 
-    // Insert transaction with school_id
+    // Insert transaction — DB trigger handles balance calculation
     const { error: txError } = await supabase.from('supplier_transactions').insert({
       supplier_id: selectedSupplier.id,
       school_id: schoolId,
@@ -194,25 +178,11 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
       date: billForm.date,
       bill_number: billForm.bill_number,
       description: billForm.description,
-      balance_after: newBalance
+      balance_after: 0 // DB trigger overwrites this
     });
 
     if (txError) {
       alert('Error recording bill: ' + txError.message);
-      return;
-    }
-
-    // Update supplier
-    const { error: supError } = await supabase
-      .from('suppliers')
-      .update({
-        current_balance: newBalance
-      })
-      .eq('id', selectedSupplier.id)
-      .eq('school_id', schoolId); // Extra safety
-
-    if (supError) {
-      alert('Error updating supplier: ' + supError.message);
       return;
     }
 
