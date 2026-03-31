@@ -5,13 +5,21 @@ import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
 import '../components/managers.css';
 
-type Class = { id: string; school_id: string; name: string; description: string; created_at: string };
+type Class = {
+  id: string;
+  school_id: string;
+  name: string;
+  display_order: number;
+  monthly_fee: number;
+  admission_fee: number;
+  active: boolean;
+  created_at: string;
+};
 
 export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName]         = useState('');
-  const [desc, setDesc]         = useState('');
   const [saving, setSaving]     = useState(false);
   const [flash, setFlash]       = useState('');
   const [search, setSearch]     = useState('');
@@ -29,10 +37,17 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
-    const { error } = await supabase.from('classes').insert({ school_id: schoolId, name: name.trim(), description: desc.trim() });
+    const { error } = await supabase.from('classes').insert({
+        school_id: schoolId,
+        name: name.trim(),
+        display_order: classes.length + 1,
+        monthly_fee: 0,
+        admission_fee: 0,
+        active: true
+      });
     setSaving(false);
     if (error) { setFlash('Error: ' + error.message); }
-    else       { setFlash('Class added!'); setName(''); setDesc(''); load(); }
+    else       { setFlash('Class added!'); setName(''); load(); }
     setTimeout(() => setFlash(''), 3000);
   };
 
@@ -77,12 +92,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
           onChange={e => setName(e.target.value)}
           required
         />
-        <Input
-          label="Description (optional)"
-          placeholder="e.g. Morning shift"
-          value={desc}
-          onChange={e => setDesc(e.target.value)}
-        />
+
         <Button type="submit" isLoading={saving} style={{ marginTop: '22px' }}>
           <Plus size={18} /> Add Class
         </Button>
@@ -101,7 +111,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
             <div key={c.id} className="class-chip">
               <BookOpen size={14} color="var(--primary)" />
               <span>{c.name}</span>
-              {c.description && <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>— {c.description}</span>}
+              
               <button className="class-chip-del" title="Remove class" onClick={() => handleDelete(c.id)}>
                 <X size={13} />
               </button>
