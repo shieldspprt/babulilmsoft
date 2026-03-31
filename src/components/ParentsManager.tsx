@@ -44,13 +44,22 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const [childForm, setChildForm] = useState({ ...EMPTY_STUDENT });
   const [classes, setClasses] = useState<Class[]>([]);
   const [savingChild, setSavingChild] = useState(false);
+  const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from('parents').select('*')
-      .eq('school_id', schoolId)
-      .order('created_at', { ascending: false });
-    setRecords(data || []);
+    const [{ data: parents }, { data: students }] = await Promise.all([
+      supabase.from('parents').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
+      supabase.from('students').select('id, parent_id').eq('school_id', schoolId)
+    ]);
+    setRecords(parents || []);
+    
+    // Count students per parent
+    const counts: Record<string, number> = {};
+    (students || []).forEach(s => {
+      counts[s.parent_id] = (counts[s.parent_id] || 0) + 1;
+    });
+    setStudentCounts(counts);
     setLoading(false);
   };
 
@@ -277,6 +286,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
               <thead>
                 <tr>
                   <th>Parent Name</th>
+                  <th>Children</th>
                   <th>CNIC</th>
                   <th>Contact</th>
                   <th>Address</th>
@@ -293,6 +303,22 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                         </div>
                         <span style={{ fontWeight:600 }}>{r.first_name} {r.last_name}</span>
                       </div>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span style={{ 
+                        display: 'inline-flex', 
+                        alignItems: 'center', 
+                        gap: '4px',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        background: studentCounts[r.id] ? 'var(--primary-light)' : 'var(--bg-alt)',
+                        color: studentCounts[r.id] ? 'var(--primary)' : 'var(--text-muted)',
+                        fontWeight: 600,
+                        fontSize: '0.85rem'
+                      }}>
+                        <GraduationCap size={14} />
+                        {studentCounts[r.id] || 0}
+                      </span>
                     </td>
                     <td style={{ fontFamily:'monospace', fontSize:'0.8rem' }}>{r.cnic}</td>
                     <td>{r.contact}</td>
