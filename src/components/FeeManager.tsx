@@ -87,11 +87,6 @@ function formatMonth(ym: string): string {
   return `${MONTH_NAMES[m - 1]} ${y}`;
 }
 
-function lastDayOfMonth(ym: string): string {
-  const [y, m] = ym.split('-').map(Number);
-  return new Date(y, m, 0).toISOString().split('T')[0];
-}
-
 function currentMonth(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -226,13 +221,13 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     }
 
     for (const month of monthsToProcess) {
-      const cutoff = lastDayOfMonth(month);
       const existing = existingMap[month];
 
-      // Filter students admitted on or before this month
+      // Filter students admitted on or before this month (YYYY-MM string compare)
       const admitted = (allStudents || []).filter((s: any) => {
         if (!s.date_of_admission) return true; // no date = include
-        return s.date_of_admission <= cutoff;
+        const admMonth = s.date_of_admission.slice(0, 7); // "YYYY-MM"
+        return admMonth <= month;
       });
 
       if (admitted.length === 0) {
