@@ -41,6 +41,7 @@ const EMPTY_FORM = {
   parent_id: '', first_name: '', last_name: '', cnic: '',
   date_of_birth: '', date_of_admission: new Date().toISOString().split('T')[0],
   admission_class_id: '', monthly_fee: 0,
+  discount_type: '', discount_value: 0,
 };
 
 const PAGE_SIZE = 25;
@@ -75,12 +76,22 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
 
   useEffect(() => { load(); }, [schoolId]);
 
-  const set = (k: string, v: string) => {
+  const getFinalFee = () => {
+    if (!(form as any).discount_type || !(form as any).discount_value) return (form as any).monthly_fee || 0;
+    if ((form as any).discount_type === 'percentage') {
+      return Math.round(((form as any).monthly_fee || 0) * (1 - (form as any).discount_value / 100));
+    }
+    return Math.max(0, ((form as any).monthly_fee || 0) - (form as any).discount_value);
+  };
+
+  const set = (k: string, v: string | number) => {
     const newForm = { ...form, [k]: v };
     // Auto-fill monthly fee when class changes
     if (k === 'admission_class_id') {
       const cls = classes.find(c => c.id === v);
       newForm.monthly_fee = cls ? cls.monthly_fee : 0;
+      newForm.discount_type = '';
+      newForm.discount_value = 0;
     }
     setForm(newForm);
   };
@@ -98,6 +109,8 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
       date_of_admission: s.date_of_admission || new Date().toISOString().split('T')[0],
       admission_class_id: s.admission_class_id || '',
       monthly_fee: s.monthly_fee,
+      discount_type: s.discount_type || '',
+      discount_value: s.discount_value || 0,
     });
     setShowModal(true);
   };
@@ -118,6 +131,8 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
       date_of_admission: form.date_of_admission || null,
       admission_class_id: form.admission_class_id || null,
       monthly_fee: form.monthly_fee || 0,
+      discount_type: (form as any).discount_type || null,
+      discount_value: (form as any).discount_value || null,
       active: true,
     };
     let error;
@@ -325,8 +340,34 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
                 </div>
                 <div>
                   <label className="form-label">Monthly Fee (Rs)</label>
-                  <input type="number" className="form-input" value={form.monthly_fee} onChange={e => set('monthly_fee', e.target.value)} min="0" step="1" />
+                  <input type="number" className="form-input" value={(form as any).monthly_fee || ''} onChange={e => set('monthly_fee', e.target.value)} min="0" step="1" />
                   <small style={{color:'var(--text-muted)', fontSize:'0.7rem'}}>Auto-filled from class. Edit manually if needed.</small>
+                </div>
+                <div>
+                  <label className="form-label">Discount Type</label>
+                  <select className="form-select" value={(form as any).discount_type || ''} onChange={e => set('discount_type', e.target.value)}>
+                    <option value="">No Discount</option>
+                    <option value="percentage">Percentage (%)</option>
+                    <option value="amount">Fixed Amount (Rs)</option>
+                  </select>
+                </div>
+                {(form as any).discount_type && (
+                  <div>
+                    <label className="form-label">{(form as any).discount_type === 'percentage' ? 'Discount %' : 'Discount Amount (Rs)'}</label>
+                    <Input
+                      type="number"
+                      value={(form as any).discount_value || ''}
+                      onChange={e => set('discount_value', parseFloat(e.target.value) || 0)}
+                      placeholder={(form as any).discount_type === 'percentage' ? 'e.g. 10' : 'e.g. 500'}
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="form-label">Final Monthly Fee (Rs)</label>
+                  <div style={{padding: '0.625rem 0.875rem', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontWeight: 600, color: (form as any).discount_value ? 'var(--success)' : 'var(--text)'}}>
+                    Rs {getFinalFee().toLocaleString()}
+                    {(form as any).discount_value > 0 && <span style={{fontSize: '0.75rem', marginLeft: 8, color: 'var(--text-muted)'}}>(was Rs {((form as any).monthly_fee || 0).toLocaleString()})</span>}
+                  </div>
                 </div>
               </div>
             </div>
