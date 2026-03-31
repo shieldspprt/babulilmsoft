@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Navbar } from './components/layout/Navbar';
+import { CreditGuard } from './components/CreditGuard';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
@@ -29,7 +30,7 @@ function AppContent() {
           <Route path="/"        element={<Home />} />
           <Route path="/login"   element={<Login />} />
           <Route path="/signup"  element={<Signup />} />
-          <Route path="/dashboard/*" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/*" element={<ProtectedRoute><CreditGuard><Dashboard /></CreditGuard></ProtectedRoute>} />
           <Route path="/admin/*"     element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         </Routes>
       </main>
