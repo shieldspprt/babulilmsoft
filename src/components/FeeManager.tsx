@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
 import {
-  Search, Receipt, X, Trash2, Phone, CreditCard,
+  Search, Receipt, Trash2, Phone, CreditCard,
   CheckCircle, ArrowLeft, ChevronRight
 } from 'lucide-react';
 import './FeeManager.css';
@@ -63,7 +63,7 @@ type StudentRow = {
   parent_id: string;
   first_name: string;
   last_name: string;
-  monthly_fee: string | number;   // from Supabase: might be string
+  monthly_fee: string | number;
   discount_type: string | null;
   discount_value: string | number | null;
   date_of_admission: string | null;
@@ -75,12 +75,13 @@ type StudentRow = {
 /* ── Helpers ──────────────────────────────────────────────────── */
 
 const MONTH_NAMES = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'JazzCash', 'EasyPaisa'];
 
+/** Safe numeric coercion for PostgreSQL numeric values (returned as strings) */
 function N(v: unknown): number {
   const n = Number(v);
   return isNaN(n) ? 0 : n;
@@ -107,6 +108,7 @@ function shortMonth(ym: string): string {
   return MONTH_NAMES[m];
 }
 
+/** Returns 7 months centered on current month (-3 to +3) */
 function getMonthWindow(): string[] {
   const now = new Date();
   const cm = now.getMonth();
@@ -119,7 +121,7 @@ function getMonthWindow(): string[] {
   return months;
 }
 
-/* Parse a raw row from Supabase into a FeeBill with correct numeric types */
+/** Parse a raw Supabase row into a FeeBill with correct numeric types */
 function parseBill(raw: any): FeeBill {
   return {
     id: raw.id,
@@ -147,6 +149,7 @@ function parseBill(raw: any): FeeBill {
   };
 }
 
+/** Parse a raw Supabase row into a FeePayment with correct numeric types */
 function parsePayment(raw: any): FeePayment {
   return {
     id: raw.id,
@@ -167,30 +170,28 @@ function parsePayment(raw: any): FeePayment {
 export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   const { flash, showFlash } = useFlashMessage(4000);
 
-  /* State */
-  const [parents, setParents]             = useState<Parent[]>([]);
+  // ── State ──────────────────────────────────────────────────────
+  const [parents, setParents] = useState<Parent[]>([]);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [parentStatuses, setParentStatuses] = useState<Record<string, string>>({});
-  const [search, setSearch]               = useState('');
-  const [loading, setLoading]             = useState(true);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
-  const [bills, setBills]                 = useState<FeeBill[]>([]);
-  const [payments, setPayments]           = useState<FeePayment[]>([]);
-  const [children, setChildren]           = useState<StudentRow[]>([]);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [bills, setBills] = useState<FeeBill[]>([]);
+  const [payments, setPayments] = useState<FeePayment[]>([]);
+  const [children, setChildren] = useState<StudentRow[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set());
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
-  const [paymentDate, setPaymentDate]     = useState(new Date().toISOString().split('T')[0]);
-  const [paymentNotes, setPaymentNotes]   = useState('');
-  const [saving, setSaving]               = useState(false);
-  const [deleteTarget, setDeleteTarget]   = useState<FeePayment | null>(null);
-  const [deleting, setDeleting]           = useState(false);
+  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentNotes, setPaymentNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<FeePayment | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
-  const [focusedMonth, setFocusedMonth]   = useState<string | null>(null);
+  const [focusedMonth, setFocusedMonth] = useState<string | null>(null);
 
-  /* ── Load parents ──────────────────────────────────────────── */
-
+  // ── Load parents ───────────────────────────────────────────────
   const loadParents = async () => {
     setLoading(true);
     try {
@@ -199,13 +200,14 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         supabase.from('students').select('parent_id').eq('school_id', schoolId).eq('active', true),
       ]);
       setParents(pData || []);
+
       const counts: Record<string, number> = {};
       (sData || []).forEach((s: any) => {
         counts[s.parent_id] = (counts[s.parent_id] || 0) + 1;
       });
       setStudentCounts(counts);
 
-      // Load current-month bill status for each parent (for the dot indicator)
+      // Load current-month bill status for each parent (dot indicator)
       const cm = currentMonthStr();
       const parentIdList = (pData || []).map((p: any) => p.id);
       if (parentIdList.length > 0) {
@@ -215,6 +217,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
           .eq('school_id', schoolId)
           .eq('billing_month', cm)
           .in('parent_id', parentIdList);
+
         const statusMap: Record<string, string> = {};
         (statusBills || []).forEach((b: any) => {
           const fee = N(b.total_fee);
@@ -241,20 +244,17 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
 
   useEffect(() => { loadParents(); }, [schoolId]);
 
-  /* ── Derived: month window ────────────────────────────────── */
-
+  // ── Derived: month window ──────────────────────────────────────
   const monthWindow = useMemo(getMonthWindow, []);
 
-  /* ── Bills lookup map ────────────────────────────────────── */
-
+  // ── Bills lookup map ───────────────────────────────────────────
   const billsByMonth = useMemo(() => {
     const map: Record<string, FeeBill> = {};
     bills.forEach(b => { map[b.billing_month] = b; });
     return map;
   }, [bills]);
 
-  /* ── Generate bills for month window ───────────────────────── */
-
+  // ── Generate bills for month window ────────────────────────────
   const generateBills = useCallback(async (parentId: string, existingBills: FeeBill[]) => {
     // Keep non-pending bills (paid/partial/overpaid) untouched
     const lockedBills = existingBills.filter(b => b.status !== 'pending');
@@ -304,7 +304,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       });
     }
 
-    // Build new bills for the 7-month window (sorted chronologically for carried_forward chaining)
+    // Build new bills for the 7-month window (sorted chronologically for carry-forward chaining)
     const sortedMonths = [...monthWindow].sort();
     const newBills: any[] = [];
 
@@ -312,13 +312,12 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       // Skip if locked bill exists
       if (lockedMap[month]) continue;
 
-      // Filter students admitted by this month
+      // Filter students admitted by this month (string compare on YYYY-MM)
       const admitted = students.filter((s: any) => {
-        if (!s.date_of_admission) return true; // no admission date = always included
+        if (!s.date_of_admission) return true;
         return s.date_of_admission.slice(0, 7) <= month;
       });
 
-      // Skip if no students admitted yet
       if (admitted.length === 0) continue;
 
       // Compute total fee for this month
@@ -368,15 +367,15 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
 
     // Reload all bills from DB
     const { data: freshBills } = await supabase
-      .from('fee_bills').select('*')
+      .from('fee_bills')
+      .select('*')
       .eq('parent_id', parentId)
       .eq('school_id', schoolId)
       .order('billing_month');
     setBills((freshBills || []).map(parseBill));
   }, [schoolId, monthWindow, showFlash]);
 
-  /* ── Load parent detail ─────────────────────────────────────── */
-
+  // ── Load parent detail ─────────────────────────────────────────
   const loadParentDetail = useCallback(async (parent: Parent) => {
     setSelectedParent(parent);
     setBills([]);
@@ -406,16 +405,14 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     }
   }, [schoolId, generateBills, showFlash]);
 
-  /* ── Select parent ─────────────────────────────────────────── */
-
+  // ── Select parent ──────────────────────────────────────────────
   const selectParent = useCallback((p: Parent) => {
     setSelectedParent(p);
     setMobileShowDetail(true);
     loadParentDetail(p);
   }, [loadParentDetail]);
 
-  /* ── Filtered parents ────────────────────────────────────────── */
-
+  // ── Filtered parents ───────────────────────────────────────────
   const filteredParents = useMemo(() => {
     if (!search.trim()) return parents;
     const q = search.toLowerCase();
@@ -427,28 +424,15 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     );
   }, [parents, search]);
 
-  /* ── Derived: current month bill ─────────────────────────────── */
-
+  // ── Derived: current month bill ────────────────────────────────
   const currentMonthBill = billsByMonth[currentMonthStr()];
 
-  /* ── Derived: current monthly fee total from children ────────── */
-
+  // ── Derived: current monthly fee total from children ───────────
   const currentMonthlyFee = useMemo(() => {
     return children.reduce((sum: number, c: StudentRow) => sum + N(c.monthly_fee), 0);
   }, [children]);
 
-  /* ── Payment modal ─────────────────────────────────────────── */
-
-  const openPaymentModal = () => {
-    if (children.length === 0) return;
-    setSelectedMonths(new Set());
-    setPaymentAmount('');
-    setPaymentMethod('Cash');
-    setPaymentDate(new Date().toISOString().split('T')[0]);
-    setPaymentNotes('');
-    setShowPaymentModal(true);
-  };
-
+  // ── Inline payment helpers ─────────────────────────────────────
   const toggleMonth = (month: string) => {
     setSelectedMonths(prev => {
       const next = new Set(prev);
@@ -462,9 +446,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     const bill = billsByMonth[month];
     if (!bill) return false;
     if (bill.status !== 'pending') return false;
-    const fee = bill.total_fee;
-    const cf = bill.carried_forward;
-    if (fee === 0 && cf === 0) return false;
+    if (bill.total_fee === 0 && bill.carried_forward === 0) return false;
     return true;
   };
 
@@ -479,8 +461,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
 
   const netBalance = totalForSelected - parseInt(paymentAmount || '0', 10);
 
-  /* ── Record payment ───────────────────────────────────────── */
-
+  // ── Record payment ─────────────────────────────────────────────
   const recordPayment = async () => {
     if (selectedMonths.size === 0 || !paymentAmount || parseInt(paymentAmount) <= 0) {
       showFlash('Error: Select at least one month and enter a valid amount');
@@ -493,9 +474,10 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       // Sort selected months chronologically
       const sorted = Array.from(selectedMonths).sort();
 
-      // Reload fresh bills from DB
+      // Reload fresh bills from DB to catch race conditions
       const { data: freshBills } = await supabase
-        .from('fee_bills').select('*')
+        .from('fee_bills')
+        .select('*')
         .eq('parent_id', selectedParent.id)
         .eq('school_id', schoolId)
         .order('billing_month');
@@ -505,11 +487,21 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         freshMap[b.billing_month] = parseBill(b);
       });
 
+      // Duplicate prevention: verify all selected months are still pending
+      for (const month of sorted) {
+        const bill = freshMap[month];
+        if (!bill || bill.status !== 'pending') {
+          showFlash('Error: Some selected months already have payments. Please refresh and try again.');
+          setSaving(false);
+          return;
+        }
+      }
+
       const amt = parseInt(paymentAmount, 10);
       let remaining = amt;
-      const updates: { id: string; amount_paid: number; balance: number; status: string; payment_id: string }[] = [];
+      const billUpdates: { id: string; amount_paid: number; balance: number; status: string }[] = [];
 
-      // Distribution algorithm: go through months in order, apply payment
+      // Distribution algorithm: apply payment to months in chronological order
       for (const month of sorted) {
         const bill = freshMap[month];
         if (!bill) continue;
@@ -517,24 +509,22 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
 
         if (remaining >= billTotal) {
           // Fully pay this month
-          updates.push({
+          billUpdates.push({
             id: bill.id,
             amount_paid: bill.amount_paid + billTotal,
             balance: 0,
             status: 'paid',
-            payment_id: '',
           });
           remaining -= billTotal;
         } else {
           // Partial payment — stop here
           const newPaid = bill.amount_paid + remaining;
           const newBal = billTotal - newPaid;
-          updates.push({
+          billUpdates.push({
             id: bill.id,
             amount_paid: newPaid,
             balance: newBal,
             status: newBal > 0 ? 'partial' : newBal === 0 ? 'paid' : 'overpaid',
-            payment_id: '',
           });
           remaining = 0;
           break;
@@ -542,10 +532,10 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       }
 
       // If surplus after all months, add to last updated bill as overpaid
-      if (remaining > 0 && updates.length > 0) {
-        const last = updates[updates.length - 1];
+      if (remaining > 0 && billUpdates.length > 0) {
+        const last = billUpdates[billUpdates.length - 1];
         last.amount_paid += remaining;
-        const lastMonth = sorted[updates.length - 1];
+        const lastMonth = sorted[billUpdates.length - 1];
         const lastBill = freshMap[lastMonth];
         if (lastBill) {
           last.balance = lastBill.total_fee + lastBill.carried_forward - last.amount_paid;
@@ -553,37 +543,55 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         last.status = 'overpaid';
       }
 
-      if (updates.length === 0) {
+      if (billUpdates.length === 0) {
         showFlash('Error: No valid bills found for selected months');
         setSaving(false);
         return;
       }
 
-      // Insert payment record first
-      const { data: payData, error: payErr } = await supabase.from('fee_payments').insert({
-        school_id: schoolId,
-        parent_id: selectedParent.id,
-        amount: amt,
-        months_paid: sorted,
-        months_count: sorted.length,
-        payment_date: paymentDate || new Date().toISOString().split('T')[0],
-        payment_method: paymentMethod,
-        notes: paymentNotes || null,
-      }).select('id').single();
+      // Insert payment record first, get the ID back
+      const { data: payData, error: payErr } = await supabase
+        .from('fee_payments')
+        .insert({
+          school_id: schoolId,
+          parent_id: selectedParent.id,
+          amount: amt,
+          months_paid: sorted,
+          months_count: sorted.length,
+          payment_date: paymentDate || new Date().toISOString().split('T')[0],
+          payment_method: paymentMethod,
+          notes: paymentNotes || null,
+        })
+        .select('id')
+        .single();
 
       if (payErr) throw payErr;
 
-      // Set payment_id on all bill updates
-      for (const u of updates) {
-        u.payment_id = payData.id;
+      const paymentId = payData?.id;
+
+      // Update each affected bill using .update().eq('id', bill.id)
+      // NOT .upsert() — upsert requires all columns including school_id for RLS WITH CHECK
+      for (const u of billUpdates) {
+        const { error: billErr } = await supabase
+          .from('fee_bills')
+          .update({
+            amount_paid: u.amount_paid,
+            balance: u.balance,
+            status: u.status,
+            payment_id: paymentId || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', u.id);
+        if (billErr) throw billErr;
       }
 
-      // Update all affected bills
-      const { error: updateErr } = await supabase.from('fee_bills').upsert(updates);
-      if (updateErr) throw updateErr;
-
       showFlash(`Payment of Rs ${amt.toLocaleString()} recorded for ${sorted.length} month${sorted.length > 1 ? 's' : ''}!`);
-      setShowPaymentModal(false);
+
+      // Reset form state
+      setSelectedMonths(new Set());
+      setPaymentAmount('');
+      setPaymentNotes('');
+
       // Reload parent detail to reflect changes
       loadParentDetail(selectedParent);
     } catch (err: any) {
@@ -593,8 +601,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     setSaving(false);
   };
 
-  /* ── Delete payment ──────────────────────────────────────────── */
-
+  // ── Delete payment ─────────────────────────────────────────────
   const handleDeletePayment = async () => {
     if (!deleteTarget || !selectedParent) return;
     setDeleting(true);
@@ -645,12 +652,10 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     setDeleting(false);
   };
 
-  /* ── Focused month detail ─────────────────────────────────────── */
-
+  // ── Focused month detail ───────────────────────────────────────
   const focusedBill = focusedMonth ? billsByMonth[focusedMonth] : null;
 
-  /* ── Loading ─────────────────────────────────────────────────── */
-
+  // ── Loading ────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="manager-loading">
@@ -660,8 +665,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     );
   }
 
-  /* ── Render ────────────────────────────────────────────────────── */
-
+  // ── Render ─────────────────────────────────────────────────────
   return (
     <div className="fee-shell">
       {/* ── Left Panel: Parent List ── */}
@@ -709,6 +713,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       {/* ── Right Panel: Parent Detail ── */}
       <div className="fee-detail-panel" style={{ display: !selectedParent && !mobileShowDetail ? 'none' : undefined }}>
         {!selectedParent ? (
+          /* ── Empty state ── */
           <div className="fee-empty-state">
             <Receipt size={52} />
             <p>Select a parent to view fee details</p>
@@ -804,7 +809,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
               </div>
             </div>
 
-            {/* Payment record for this month */}
+            {/* Payment record for this focused month */}
             {(focusedBill.payment_id || focusedBill.status !== 'pending') && (
               <div className="fee-section-title" style={{ marginTop: '1.25rem' }}>Payment Record</div>
             )}
@@ -951,9 +956,8 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                   statusClass = 'empty';
                 }
 
-                // Only show cards for past months and the current month (future months without data are hidden)
+                // Only show cards for past/current months; future months without data are hidden
                 const showCard = bill || i + 1 <= currentM;
-
                 if (!showCard) return null;
 
                 return (
@@ -1002,16 +1006,140 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
               </div>
             )}
 
-            {/* Record Payment button */}
-            <div className="fee-record-btn">
-              <Button
-                onClick={openPaymentModal}
-                disabled={children.length === 0}
-                fullWidth
-              >
-                <Receipt size={18} /> Record Payment
-              </Button>
-            </div>
+            {/* ── Inline Payment Section ── */}
+            {children.length > 0 && (
+              <div>
+                <div className="fee-section-title">Record Payment</div>
+                <div style={{
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1rem',
+                  marginTop: '0.25rem',
+                }}>
+                  {/* Month checkboxes */}
+                  <div className="fee-modal-months">
+                    {monthWindow.map(month => {
+                      const bill = billsByMonth[month];
+                      const isSelected = selectedMonths.has(month);
+                      const isDisabled = !canSelectMonth(month);
+                      return (
+                        <div
+                          key={month}
+                          className={`fee-modal-month-row${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`}
+                          onClick={() => !isDisabled && toggleMonth(month)}
+                        >
+                          <div className={`checkbox${isSelected || isDisabled ? ' checked' : ''}`}>
+                            {(isSelected || isDisabled) && <CheckCircle size={12} />}
+                          </div>
+                          <div className="fee-modal-month-info">
+                            <div className="fee-modal-month-name">{formatMonth(month)}</div>
+                            <div className="fee-modal-month-fee">
+                              {bill
+                                ? `Rs ${(bill.total_fee + bill.carried_forward).toLocaleString()}${bill.carried_forward > 0 ? ' (incl. carry fwd)' : ''}`
+                                : '—'}
+                            </div>
+                          </div>
+                          <div className={`fee-modal-month-badge ${bill && bill.status !== 'pending' ? 'paid' : 'due'}`}>
+                            {bill && bill.status !== 'pending' ? '✓ Paid' : '○ Due'}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Summary when months are selected */}
+                  {selectedMonths.size > 0 && (
+                    <div className="fee-modal-summary">
+                      <div className="fee-modal-summary-row">
+                        <span>{selectedMonths.size} month{selectedMonths.size > 1 ? 's' : ''} selected</span>
+                      </div>
+                      <div className="fee-modal-summary-row total">
+                        <span>Total Due</span>
+                        <span>Rs {totalForSelected.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Remaining indicator */}
+                  {paymentAmount && parseInt(paymentAmount) > 0 && selectedMonths.size > 0 && (
+                    <div className={`fee-modal-remaining ${netBalance > 0 ? 'warning' : netBalance < 0 ? 'advance' : netBalance === 0 ? 'paid' : 'neutral'}`}>
+                      {netBalance > 0 && <ChevronRight size={14} />}
+                      {netBalance < 0 && <ChevronRight size={14} />}
+                      {netBalance === 0 && <CheckCircle size={14} />}
+                      <span>
+                        {netBalance > 0
+                          ? `Rs ${Math.abs(netBalance).toLocaleString()} remaining after payment`
+                          : netBalance < 0
+                            ? `Rs ${Math.abs(netBalance).toLocaleString()} advance after payment`
+                            : 'Exact amount — fully paid!'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Form fields */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+                    <div>
+                      <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Amount Received (Rs) *</label>
+                      <input
+                        type="number"
+                        className="fee-modal-amount-input"
+                        placeholder="Enter amount received…"
+                        value={paymentAmount}
+                        onChange={e => setPaymentAmount(e.target.value)}
+                        min="1"
+                        step="1"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Payment Method *</label>
+                      <select
+                        value={paymentMethod}
+                        onChange={e => setPaymentMethod(e.target.value)}
+                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                      >
+                        {PAYMENT_METHODS.map(m => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div>
+                      <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Payment Date *</label>
+                      <input
+                        type="date"
+                        value={paymentDate}
+                        onChange={e => setPaymentDate(e.target.value)}
+                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Notes (optional)</label>
+                      <input
+                        type="text"
+                        value={paymentNotes}
+                        onChange={e => setPaymentNotes(e.target.value)}
+                        placeholder="Any additional notes…"
+                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Record button */}
+                  <div style={{ marginTop: '1rem' }}>
+                    <Button
+                      onClick={recordPayment}
+                      isLoading={saving}
+                      disabled={selectedMonths.size === 0 || !paymentAmount || parseInt(paymentAmount) <= 0}
+                      fullWidth
+                    >
+                      <CreditCard size={16} /> Record Payment
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {flash && (
               <div className={`flash ${flash.startsWith('Error') ? 'error' : 'success'}`}>
@@ -1036,135 +1164,6 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
             <div className="confirm-box-btns">
               <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancel</Button>
               <Button variant="danger" onClick={handleDeletePayment} isLoading={deleting}>Delete</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Payment Modal ── */}
-      {showPaymentModal && selectedParent && (
-        <div className="fee-modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowPaymentModal(false); }}>
-          <div className="fee-modal" onClick={e => e.stopPropagation()}>
-            {/* Head */}
-            <div className="fee-modal-head">
-              <h3>Record Payment — {selectedParent.first_name} {selectedParent.last_name}</h3>
-              <button className="fee-modal-close" onClick={() => setShowPaymentModal(false)}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="fee-modal-body">
-              <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                Select months and enter the amount received:
-              </div>
-
-              {/* Month list */}
-              <div className="fee-modal-months">
-                {monthWindow.map(month => {
-                  const bill = billsByMonth[month];
-                  const isSelected = selectedMonths.has(month);
-                  const isDisabled = !canSelectMonth(month);
-
-                  return (
-                    <div
-                      key={month}
-                      className={`fee-modal-month-row${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`}
-                      onClick={() => !isDisabled && toggleMonth(month)}
-                    >
-                      <div className={`checkbox${isSelected || isDisabled ? ' checked' : ''}`}>
-                        {(isSelected || isDisabled) && <CheckCircle size={12} />}
-                      </div>
-                      <div className="fee-modal-month-info">
-                        <div className="fee-modal-month-name">{formatMonth(month)}</div>
-                        <div className="fee-modal-month-fee">
-                          {bill
-                            ? `Rs ${(bill.total_fee + bill.carried_forward).toLocaleString()}${bill.carried_forward > 0 ? ' (incl. carry fwd)' : ''}`
-                            : '—'}
-                        </div>
-                      </div>
-                      <div className={`fee-modal-month-badge ${bill && bill.status !== 'pending' ? 'paid' : 'due'}`}>
-                        {bill && bill.status !== 'pending' ? '✓ Paid' : '○ Due'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Summary */}
-              {selectedMonths.size > 0 && (
-                <div className="fee-modal-summary">
-                  <div className="fee-modal-summary-row">
-                    <span>{selectedMonths.size} month{selectedMonths.size > 1 ? 's' : ''} selected</span>
-                  </div>
-                  <div className="fee-modal-summary-row total">
-                    <span>Total Due</span>
-                    <span>Rs {totalForSelected.toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Remaining / advance indicator */}
-              {paymentAmount && parseInt(paymentAmount) > 0 && selectedMonths.size > 0 && (
-                <div className={`fee-modal-remaining ${netBalance > 0 ? 'warning' : netBalance < 0 ? 'advance' : netBalance === 0 ? 'paid' : 'neutral'}`}>
-                  {netBalance === 0 && <CheckCircle size={14} />}
-                  <span>
-                    {netBalance > 0
-                      ? `Rs ${Math.abs(netBalance).toLocaleString()} remaining after payment`
-                      : netBalance < 0
-                        ? `Rs ${Math.abs(netBalance).toLocaleString()} advance after payment`
-                        : 'Exact amount — fully paid!'}
-                  </span>
-                </div>
-              )}
-
-              {/* Amount input */}
-              <div className="fee-modal-amount-label">Amount Received (Rs)</div>
-              <input
-                className="fee-modal-amount-input"
-                type="number"
-                min="1"
-                placeholder="0"
-                value={paymentAmount}
-                onChange={e => setPaymentAmount(e.target.value)}
-              />
-
-              {/* Fields: method, date, notes */}
-              <div className="fee-modal-fields">
-                <div className="fee-modal-field">
-                  <label>Payment Method</label>
-                  <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
-                    {PAYMENT_METHODS.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="fee-modal-field">
-                  <label>Payment Date</label>
-                  <input type="date" value={paymentDate} onChange={e => setPaymentDate(e.target.value)} />
-                </div>
-                <div className="fee-modal-field full">
-                  <label>Notes (optional)</label>
-                  <input
-                    type="text"
-                    placeholder="Any notes…"
-                    value={paymentNotes}
-                    onChange={e => setPaymentNotes(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="fee-modal-foot">
-              <Button variant="secondary" onClick={() => setShowPaymentModal(false)}>Cancel</Button>
-              <Button
-                onClick={recordPayment}
-                isLoading={saving}
-                disabled={selectedMonths.size === 0 || !paymentAmount || parseInt(paymentAmount) <= 0}
-              >
-                <CreditCard size={16} /> Record Payment
-              </Button>
             </div>
           </div>
         </div>

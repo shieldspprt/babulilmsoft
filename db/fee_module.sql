@@ -22,9 +22,17 @@ CREATE TABLE IF NOT EXISTS fee_bills (
 );
 
 ALTER TABLE fee_bills ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "schools_all_own_fee_bills" ON fee_bills
-  FOR ALL USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()))
+
+-- Per-operation policies (FOR ALL can be unreliable in some Supabase versions)
+CREATE POLICY "fee_bills_select" ON fee_bills FOR SELECT
+  USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
+CREATE POLICY "fee_bills_insert" ON fee_bills FOR INSERT
   WITH CHECK (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
+CREATE POLICY "fee_bills_update" ON fee_bills FOR UPDATE
+  USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()))
+  WITH CHECK (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
+CREATE POLICY "fee_bills_delete" ON fee_bills FOR DELETE
+  USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
 
 CREATE INDEX idx_fee_bills_parent       ON fee_bills(parent_id, billing_month);
 CREATE INDEX idx_fee_bills_parent_status ON fee_bills(parent_id, status);
@@ -44,8 +52,12 @@ CREATE TABLE IF NOT EXISTS fee_payments (
 );
 
 ALTER TABLE fee_payments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "schools_all_own_fee_payments" ON fee_payments
-  FOR ALL USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()))
+
+CREATE POLICY "fee_payments_select" ON fee_payments FOR SELECT
+  USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
+CREATE POLICY "fee_payments_insert" ON fee_payments FOR INSERT
   WITH CHECK (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
+CREATE POLICY "fee_payments_delete" ON fee_payments FOR DELETE
+  USING (school_id IN (SELECT id FROM schools WHERE user_id = auth.uid()));
 
 CREATE INDEX idx_fee_payments_parent ON fee_payments(parent_id, created_at DESC);
