@@ -23,7 +23,7 @@ const EMPTY = {
 
 const PAGE_SIZE = 25;
 
-export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
+export const ParentsManager = ({ schoolId, onAddChild }: { schoolId: string; onAddChild?: (parentId: string) => void }) => {
   const [records, setRecords]       = useState<Parent[]>([]);
   const [loading, setLoading]       = useState(true);
   const [showModal, setShowModal]   = useState(false);
@@ -239,7 +239,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                     <td style={{ color:'var(--text-muted)', maxWidth:'200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.address || '-'}</td>
                     <td>
                       <div className="row-actions">
-                        <button className="action-btn add-child" title="Add Child" onClick={() => {}}>
+                        <button className="action-btn add-child" title="Add Child" onClick={() => onAddChild && onAddChild(r.id)}>
                           <UserPlus size={14} />
                         </button>
                         <button className="action-btn edit" title="Edit" onClick={() => openEdit(r)}>

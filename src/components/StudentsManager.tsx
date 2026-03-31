@@ -42,7 +42,7 @@ const EMPTY_FORM = {
 
 const PAGE_SIZE = 25;
 
-export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
+export const StudentsManager = ({ schoolId, preSelectedParentId, onStudentAdded }: { schoolId: string; preSelectedParentId?: string | null; onStudentAdded?: () => void }) => {
   const [students, setStudents]       = useState<Student[]>([]);
   const [classes, setClasses]         = useState<Class[]>([]);
   const [parents, setParents]         = useState<Parent[]>([]);
@@ -71,6 +71,29 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
   };
 
   useEffect(() => { load(); }, [schoolId]);
+
+  // Auto-open modal when called from parent's "Add Child" button
+  useEffect(() => {
+    if (preSelectedParentId) {
+      setForm({ ...EMPTY_FORM, parent_id: preSelectedParentId });
+      setEditStudent(null);
+      setShowModal(true);
+    }
+  }, [preSelectedParentId]);
+
+  // Listen for custom event from ParentsManager
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const parentId = (e as CustomEvent).detail?.parentId;
+      if (parentId) {
+        setForm({ ...EMPTY_FORM, parent_id: parentId });
+        setEditStudent(null);
+        setShowModal(true);
+      }
+    };
+    window.addEventListener('openStudentModal', handler);
+    return () => window.removeEventListener('openStudentModal', handler);
+  }, []);
 
   const set = (k: string, v: string) => {
     const newForm = { ...form, [k]: v };
@@ -133,6 +156,7 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
     } else {
       setFlash(`Student "${form.first_name} ${form.last_name}" ${editStudent ? 'updated' : 'added'}!`);
       setShowModal(false); setForm({ ...EMPTY_FORM }); setEditStudent(null); load();
+      if (!editStudent && onStudentAdded) onStudentAdded();
       setTimeout(() => setFlash(''), 4000);
     }
   };
