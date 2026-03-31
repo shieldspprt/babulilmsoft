@@ -195,8 +195,14 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   /* ── Ensure bills exist for month window ──────────────────── */
 
   const ensureBillsForWindow = async (parentId: string, existingBills: FeeBill[]) => {
-    const existingSet = new Set(existingBills.map(b => b.billing_month));
-    const monthsToGen = monthWindow.filter(m => !existingSet.has(m));
+    const existingMap: Record<string, FeeBill> = {};
+    existingBills.forEach(b => { existingMap[b.billing_month] = b; });
+
+    // Months that need bills: missing entirely OR pending (stale data from before students existed)
+    const monthsToProcess = monthWindow.filter(m => {
+      const existing = existingMap[m];
+      return !existing || existing.status === 'pending';
+    });
 
     // Fetch all active students for this parent
     const { data: allStudents } = await supabase
@@ -219,8 +225,9 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       });
     }
 
-    for (const month of monthsToGen) {
+    for (const month of monthsToProcess) {
       const cutoff = lastDayOfMonth(month);
+      const existing = existingMap[month];
 
       // Filter students admitted on or before this month
       const admitted = (allStudents || []).filter((s: any) => {
@@ -229,8 +236,8 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       });
 
       if (admitted.length === 0) {
-        // Still create an empty bill
-        await supabase.from('fee_bills').insert({
+        // Empty bill — no children admitted yet
+        const emptyPayload = {
           school_id: schoolId,
           parent_id: parentId,
           billing_month: month,
@@ -239,8 +246,13 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
           carried_forward: 0,
           amount_paid: 0,
           balance: 0,
-          status: 'pending',
-        });
+          status: 'pending' as const,
+        };
+        if (existing) {
+          await supabase.from('fee_bills').update(emptyPayload).eq('id', existing.id);
+        } else {
+          await supabase.from('fee_bills').insert(emptyPayload);
+        }
         continue;
       }
 
@@ -261,7 +273,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
 
       const totalFee = admitted.reduce((sum: number, s: any) => sum + (s.monthly_fee || 0), 0);
 
-      // Compute carried_forward from previous month
+      // Compute carried_forward from previous month's bill
       const pm = prevMonth(month);
       const prevBill = existingBills.find(b => b.billing_month === pm);
       let cf = 0;
@@ -269,7 +281,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         cf = prevBill.balance;
       }
 
-      await supabase.from('fee_bills').insert({
+      const billPayload = {
         school_id: schoolId,
         parent_id: parentId,
         billing_month: month,
@@ -278,11 +290,17 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         carried_forward: cf,
         amount_paid: 0,
         balance: totalFee + cf,
-        status: 'pending',
-      });
+        status: 'pending' as const,
+      };
+
+      if (existing) {
+        await supabase.from('fee_bills').update(billPayload).eq('id', existing.id);
+      } else {
+        await supabase.from('fee_bills').insert(billPayload);
+      }
     }
 
-    // Reload bills after generating
+    // Reload bills after generating/updating
     const { data: freshBills } = await supabase
       .from('fee_bills').select('*')
       .eq('parent_id', parentId)
@@ -776,11 +794,12 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
 
                 let statusClass = 'pending';
                 let statusLabel = '';
+                let badgeClass = '';
                 if (bill) {
-                  if (bill.status === 'paid') { statusClass = 'paid'; statusLabel = '✓ Paid'; }
-                  else if (bill.status === 'overpaid') { statusClass = 'overpaid'; statusLabel = '↻ Advance'; }
-                  else if (bill.status === 'partial') { statusClass = 'partial'; statusLabel = '● Partial'; }
-                  else if (bill.total_fee > 0 || bill.carried_forward > 0) { statusClass = 'pending'; statusLabel = '○ Due'; }
+                  if (bill.status === 'paid') { statusClass = 'paid'; statusLabel = '✓ Paid'; badgeClass = 'paid'; }
+                  else if (bill.status === 'overpaid') { statusClass = 'overpaid'; statusLabel = '↻ Advance'; badgeClass = 'paid'; }
+                  else if (bill.status === 'partial') { statusClass = 'partial'; statusLabel = '● Partial'; badgeClass = 'due'; }
+                  else if (bill.total_fee > 0 || bill.carried_forward > 0) { statusClass = 'pending'; statusLabel = '○ Due'; badgeClass = 'due'; }
                 } else {
                   statusClass = 'empty';
                 }
@@ -799,7 +818,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                     <div className="fee-month-fee">
                       {bill ? `Rs ${(bill.total_fee + bill.carried_forward).toLocaleString()}` : '—'}
                     </div>
-                    <div className={`fee-month-badge ${bill && bill.status !== 'pending' ? (statusClass === 'paid' || statusClass === 'overpaid') ? 'paid' : 'due' : ''}`}>
+                    <div className={`fee-month-badge ${badgeClass}`}>
                       {statusLabel}
                     </div>
                   </div>
