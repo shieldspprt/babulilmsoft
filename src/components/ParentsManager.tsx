@@ -25,7 +25,7 @@ const EMPTY_STUDENT = { first_name: '', last_name: '', cnic: '', date_of_birth: 
 
 const PAGE_SIZE = 25;
 
-export const ParentsManager = ({ schoolId, onAddChild }: { schoolId: string; onAddChild?: (parentId: string) => void }) => {
+export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const [records, setRecords]       = useState<Parent[]>([]);
   const [loading, setLoading]       = useState(true);
   const [showModal, setShowModal]   = useState(false);
