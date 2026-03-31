@@ -216,6 +216,7 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
                   <th>Parent</th>
                   <th>Class</th>
                   <th>Monthly Fee</th>
+                  <th>Discount</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -239,7 +240,19 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
                         {getClassName(s.admission_class_id)}
                       </span>
                     </td>
-                    <td>Rs {s.monthly_fee.toLocaleString()}</td>
+                    <td>
+                      {s.discount_type
+                        ? <span>Rs {(s.discount_type === 'percentage' 
+                            ? Math.round(s.monthly_fee * (100 - s.discount_value) / 100) 
+                            : s.monthly_fee - s.discount_value).toLocaleString()}</span>
+                        : <span>Rs {s.monthly_fee.toLocaleString()}</span>
+                      }
+                    </td>
+                    <td>
+                      {s.discount_type === 'percentage' && <span style={{color:'var(--success)', fontWeight:600}}>{s.discount_value}%</span>}
+                      {s.discount_type === 'amount' && <span style={{color:'var(--success)', fontWeight:600}}>Rs {s.discount_value.toLocaleString()}</span>}
+                      {!s.discount_type && <span style={{color:'var(--text-muted)'}}>—</span>}
+                    </td>
                     <td>
                       <div className="row-actions">
                         <button className="action-btn edit" title="Edit" onClick={() => openEdit(s)}>
