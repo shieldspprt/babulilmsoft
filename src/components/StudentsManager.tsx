@@ -216,7 +216,6 @@ export const StudentsManager = ({ schoolId, preSelectedParentId, onStudentAdded 
             <Search size={16} />
             <input placeholder="Search by name, CNIC, parent or class…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <Button onClick={openAdd}><Plus size={18} /> Add Student</Button>
         </div>
       </div>
 
@@ -316,14 +315,11 @@ export const StudentsManager = ({ schoolId, preSelectedParentId, onStudentAdded 
 
               <div className="form-section-label">Enrollment Details *</div>
               <div className="form-grid">
-                <div>
-                  <label className="form-label">Parent *</label>
-                  <select className="form-select" value={form.parent_id} onChange={e => set('parent_id', e.target.value)} required>
-                    <option value="">Select parent…</option>
-                    {parents.map(p => (
-                      <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>
-                    ))}
-                  </select>
+                <div className="span-2">
+                  <label className="form-label">Parent</label>
+                  <div style={{padding:'0.625rem 0.875rem', background:'var(--bg)', border:'1.5px solid var(--border)', borderRadius:'var(--radius-md)', fontWeight:600, color:'var(--text)'}}>
+                    {getParentName(form.parent_id)}
+                  </div>
                 </div>
                 <div>
                   <label className="form-label">Admission Date</label>
