@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
 import '../components/managers.css';
@@ -35,6 +35,8 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const [deleting, setDeleting]     = useState(false);
   const [cnicError, setCnicError]   = useState('');
   const [page, setPage]             = useState(1);
+  const [editTarget, setEditTarget] = useState<Parent | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -52,13 +54,11 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
     if (k === 'cnic') setCnicError('');
   };
 
-  const validateCnic = async (cnic: string): Promise<boolean> => {
+  const validateCnic = async (cnic: string, excludeId?: string): Promise<boolean> => {
     if (!cnic.trim()) return false;
-    const { data } = await supabase.from('parents')
-      .select('id')
-      .eq('school_id', schoolId)
-      .eq('cnic', cnic)
-      .maybeSingle();
+    let query = supabase.from('parents').select('id').eq('school_id', schoolId).eq('cnic', cnic);
+    if (excludeId) query = query.neq('id', excludeId);
+    const { data } = await query.maybeSingle();
     return data === null;
   };
 
@@ -68,13 +68,11 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
       setTimeout(() => setFlash(''), 4000);
       return;
     }
-
     const cnicValid = await validateCnic(form.cnic);
     if (!cnicValid) {
       setCnicError('A parent with this CNIC already exists');
       return;
     }
-
     setSaving(true);
     const { error } = await supabase.from('parents').insert({
       school_id: schoolId,
@@ -93,8 +91,60 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
         setTimeout(() => setFlash(''), 4000);
       }
     } else {
-      setFlash(`Parent "${form.first_name} ${form.last_name}" added!`);
+      setFlash('Parent "' + form.first_name + ' ' + form.last_name + '" added!');
       setShowModal(false);
+      setForm({ ...EMPTY });
+      setCnicError('');
+      load();
+      setTimeout(() => setFlash(''), 4000);
+    }
+  };
+
+  const openEdit = (parent: Parent) => {
+    setEditTarget(parent);
+    setForm({
+      first_name: parent.first_name,
+      last_name: parent.last_name,
+      cnic: parent.cnic,
+      contact: parent.contact,
+      address: parent.address || '',
+    });
+    setCnicError('');
+    setShowEditModal(true);
+  };
+
+  const handleEdit = async () => {
+    if (!editTarget) return;
+    if (!form.first_name.trim() || !form.last_name.trim() || !form.contact.trim() || !form.cnic.trim()) {
+      setFlash('Error: All fields are required');
+      setTimeout(() => setFlash(''), 4000);
+      return;
+    }
+    const cnicValid = await validateCnic(form.cnic, editTarget.id);
+    if (!cnicValid) {
+      setCnicError('A parent with this CNIC already exists');
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from('parents').update({
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      cnic: form.cnic.trim(),
+      contact: form.contact.trim(),
+      address: form.address.trim() || null,
+    }).eq('id', editTarget.id);
+    setSaving(false);
+    if (error) {
+      if (error.message.includes('unique') || error.message.includes('duplicate')) {
+        setCnicError('A parent with this CNIC already exists');
+      } else {
+        setFlash('Error: ' + error.message);
+        setTimeout(() => setFlash(''), 4000);
+      }
+    } else {
+      setFlash('Parent "' + form.first_name + ' ' + form.last_name + '" updated!');
+      setShowEditModal(false);
+      setEditTarget(null);
       setForm({ ...EMPTY });
       setCnicError('');
       load();
@@ -128,7 +178,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
 
   useEffect(() => { setPage(1); }, [search]);
 
-  if (loading) return <div className="manager-loading"><div className="spinner" /><span>Loading…</span></div>;
+  if (loading) return <div className="manager-loading"><div className="spinner" /><span>Loading...</span></div>;
 
   return (
     <div className="manager">
@@ -143,7 +193,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
         <div style={{ display:'flex', gap:'0.75rem', alignItems:'center', flexWrap:'wrap' }}>
           <div className="manager-search-bar">
             <Search size={16} />
-            <input placeholder="Search by name, CNIC or contact…" value={search} onChange={e => setSearch(e.target.value)} />
+            <input placeholder="Search by name, CNIC or contact..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <Button onClick={() => { setForm({ ...EMPTY }); setCnicError(''); setShowModal(true); }}>
             <Plus size={18} /> Add Parent
@@ -151,7 +201,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
         </div>
       </div>
 
-      {flash && <div className={`flash ${flash.startsWith('Error') ? 'error' : 'success'}`}>{flash}</div>}
+      {flash && <div className={"flash " + (flash.startsWith('Error') ? 'error' : 'success')}>{flash}</div>}
 
       {filtered.length === 0 ? (
         <div className="empty-state">
@@ -186,14 +236,14 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                     </td>
                     <td style={{ fontFamily:'monospace', fontSize:'0.8rem' }}>{r.cnic}</td>
                     <td>{r.contact}</td>
-                    <td style={{ color:'var(--text-muted)', maxWidth:'200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.address || '—'}</td>
+                    <td style={{ color:'var(--text-muted)', maxWidth:'200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.address || '-'}</td>
                     <td>
                       <div className="row-actions">
                         <button className="action-btn add-child" title="Add Child" onClick={() => {}}>
                           <UserPlus size={14} />
                         </button>
-                        <button className="action-btn edit" title="Edit" onClick={() => {}}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <button className="action-btn edit" title="Edit" onClick={() => openEdit(r)}>
+                          <Edit2 size={14} />
                         </button>
                         <button className="action-btn delete" title="Delete" onClick={() => setDeleteTarget(r)}>
                           <Trash2 size={14} />
@@ -209,14 +259,14 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
           {totalPages > 1 && (
             <div className="pagination">
               <span className="pagination-info">
-                Showing {(page-1)*PAGE_SIZE + 1}–{Math.min(page*PAGE_SIZE, filtered.length)} of {filtered.length}
+                Showing {(page-1)*PAGE_SIZE + 1}-{Math.min(page*PAGE_SIZE, filtered.length)} of {filtered.length}
               </span>
               <div className="pagination-controls">
                 <button className="page-btn" disabled={page === 1} onClick={() => setPage(p => p-1)}>
                   <ChevronLeft size={16} />
                 </button>
                 {Array.from({ length: totalPages }, (_, i) => i+1).map(p => (
-                  <button key={p} className={`page-btn${p === page ? ' active' : ''}`} onClick={() => setPage(p)}>{p}</button>
+                  <button key={p} className={"page-btn" + (p === page ? ' active' : '')} onClick={() => setPage(p)}>{p}</button>
                 ))}
                 <button className="page-btn" disabled={page === totalPages} onClick={() => setPage(p => p+1)}>
                   <ChevronRight size={16} />
@@ -242,7 +292,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                 <div>
                   <label className="form-label">CNIC *</label>
                   <input
-                    className={`form-input ${cnicError ? 'error' : ''}`}
+                    className={"form-input " + (cnicError ? 'error' : '')}
                     placeholder="XXXXX-XXXXXXX-X"
                     value={form.cnic}
                     onChange={e => set('cnic', e.target.value)}
@@ -261,6 +311,46 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
               <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
               <Button onClick={handleSave} isLoading={saving} disabled={!form.first_name.trim() || !form.last_name.trim() || !form.cnic.trim() || !form.contact.trim()}>
                 <Plus size={18} /> Save Parent
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowEditModal(false)}>
+          <div className="modal-box">
+            <div className="modal-head">
+              <h3>Edit Parent</h3>
+              <button className="modal-close" onClick={() => setShowEditModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-section-label">Personal Information *</div>
+              <div className="form-grid">
+                <Input label="First Name *" placeholder="Enter first name" value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
+                <Input label="Last Name *" placeholder="Enter last name" value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
+                <div>
+                  <label className="form-label">CNIC *</label>
+                  <input
+                    className={"form-input " + (cnicError ? 'error' : '')}
+                    placeholder="XXXXX-XXXXXXX-X"
+                    value={form.cnic}
+                    onChange={e => set('cnic', e.target.value)}
+                    required
+                  />
+                  {cnicError && <div style={{color: 'var(--danger)', fontSize: '0.75rem', marginTop: '0.25rem'}}>{cnicError}</div>}
+                </div>
+                <Input label="Contact Number *" placeholder="03XX-XXXXXXX" value={form.contact} onChange={e => set('contact', e.target.value)} required />
+                <div className="span-2">
+                  <label className="form-label">Address</label>
+                  <textarea className="form-textarea" rows={2} placeholder="Home address (optional)" value={form.address} onChange={e => set('address', e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
+              <Button onClick={handleEdit} isLoading={saving} disabled={!form.first_name.trim() || !form.last_name.trim() || !form.cnic.trim() || !form.contact.trim()}>
+                <Edit2 size={14} /> Save Changes
               </Button>
             </div>
           </div>
