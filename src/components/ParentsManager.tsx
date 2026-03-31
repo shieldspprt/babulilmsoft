@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2 } from 'lucide-react';
+import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
 import '../components/managers.css';
@@ -17,9 +17,11 @@ type Parent = {
   updated_at: string;
 };
 
+type Class = { id: string; name: string; monthly_fee: number; };
 const EMPTY = {
   first_name: '', last_name: '', cnic: '', contact: '', address: '',
 };
+const EMPTY_STUDENT = { first_name: '', last_name: '', cnic: '', date_of_birth: '', date_of_admission: new Date().toISOString().split('T')[0], admission_class_id: '', monthly_fee: 0, };
 
 const PAGE_SIZE = 25;
 
@@ -37,6 +39,11 @@ export const ParentsManager = ({ schoolId, onAddChild }: { schoolId: string; onA
   const [page, setPage]             = useState(1);
   const [editTarget, setEditTarget] = useState<Parent | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showChildModal, setShowChildModal] = useState(false);
+  const [selectedParentForChild, setSelectedParentForChild] = useState<Parent | null>(null);
+  const [childForm, setChildForm] = useState({ ...EMPTY_STUDENT });
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [savingChild, setSavingChild] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -47,11 +54,25 @@ export const ParentsManager = ({ schoolId, onAddChild }: { schoolId: string; onA
     setLoading(false);
   };
 
+  const loadClasses = async () => {
+    const { data } = await supabase.from('classes').select('id, name, monthly_fee').eq('school_id', schoolId).eq('active', true).order('name');
+    setClasses(data || []);
+  };
+
   useEffect(() => { load(); }, [schoolId]);
 
   const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
     if (k === 'cnic') setCnicError('');
+  };
+
+  const setChild = (k: string, v: string | number) => {
+    const newForm = { ...childForm, [k]: v };
+    if (k === 'admission_class_id') {
+      const cls = classes.find(c => c.id === v);
+      newForm.monthly_fee = cls ? cls.monthly_fee : 0;
+    }
+    setChildForm(newForm);
   };
 
   const validateCnic = async (cnic: string, excludeId?: string): Promise<boolean> => {
@@ -159,6 +180,45 @@ export const ParentsManager = ({ schoolId, onAddChild }: { schoolId: string; onA
     setDeleting(false); setDeleteTarget(null); load();
   };
 
+  const openAddChild = (parent: Parent) => {
+    setSelectedParentForChild(parent);
+    setChildForm({ ...EMPTY_STUDENT });
+    loadClasses();
+    setShowChildModal(true);
+  };
+
+  const handleSaveChild = async () => {
+    if (!selectedParentForChild || !childForm.first_name.trim() || !childForm.last_name.trim()) {
+      setFlash('Error: First name and last name are required');
+      setTimeout(() => setFlash(''), 4000);
+      return;
+    }
+    setSavingChild(true);
+    const { error } = await supabase.from('students').insert({
+      school_id: schoolId,
+      parent_id: selectedParentForChild.id,
+      first_name: childForm.first_name.trim(),
+      last_name: childForm.last_name.trim(),
+      cnic: childForm.cnic.trim() || null,
+      date_of_birth: childForm.date_of_birth || null,
+      date_of_admission: childForm.date_of_admission || null,
+      admission_class_id: childForm.admission_class_id || null,
+      monthly_fee: childForm.monthly_fee || 0,
+      active: true,
+    });
+    setSavingChild(false);
+    if (error) {
+      setFlash('Error: ' + error.message);
+      setTimeout(() => setFlash(''), 4000);
+    } else {
+      setFlash('Student "' + childForm.first_name + ' ' + childForm.last_name + '" added for ' + selectedParentForChild.first_name + '!');
+      setShowChildModal(false);
+      setChildForm({ ...EMPTY_STUDENT });
+      setSelectedParentForChild(null);
+      setTimeout(() => setFlash(''), 4000);
+    }
+  };
+
   const filtered = useMemo(() => {
     if (!search.trim()) return records;
     const q = search.toLowerCase();
@@ -239,7 +299,7 @@ export const ParentsManager = ({ schoolId, onAddChild }: { schoolId: string; onA
                     <td style={{ color:'var(--text-muted)', maxWidth:'200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.address || '-'}</td>
                     <td>
                       <div className="row-actions">
-                        <button className="action-btn add-child" title="Add Child" onClick={() => onAddChild && onAddChild(r.id)}>
+                        <button className="action-btn add-child" title="Add Child" onClick={() => openAddChild(r)}>
                           <UserPlus size={14} />
                         </button>
                         <button className="action-btn edit" title="Edit" onClick={() => openEdit(r)}>
@@ -366,6 +426,54 @@ export const ParentsManager = ({ schoolId, onAddChild }: { schoolId: string; onA
             <div className="confirm-box-btns">
               <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Cancel</Button>
               <Button variant="danger" onClick={handleDelete} isLoading={deleting}>Remove</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showChildModal && selectedParentForChild && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowChildModal(false)}>
+          <div className="modal-box" style={{maxWidth: '550px'}}>
+            <div className="modal-head">
+              <h3><GraduationCap size={20} /> Add Child for {selectedParentForChild.first_name}</h3>
+              <button className="modal-close" onClick={() => setShowChildModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-section-label">Student Information *</div>
+              <div className="form-grid">
+                <Input label="First Name *" placeholder="Enter first name" value={childForm.first_name} onChange={e => setChild('first_name', e.target.value)} required />
+                <Input label="Last Name *" placeholder="Enter last name" value={childForm.last_name} onChange={e => setChild('last_name', e.target.value)} required />
+                <Input label="CNIC" placeholder="XXXXX-XXXXXXX-X" value={childForm.cnic} onChange={e => setChild('cnic', e.target.value)} />
+                <div>
+                  <label className="form-label"><Calendar size={14} style={{marginRight: 4}}/> Date of Birth</label>
+                  <input type="date" className="form-input" value={childForm.date_of_birth} onChange={e => setChild('date_of_birth', e.target.value)} />
+                </div>
+              </div>
+              <div className="form-section-label">Enrollment Details *</div>
+              <div className="form-grid">
+                <div>
+                  <label className="form-label"><BookOpen size={14} style={{marginRight: 4}}/> Class *</label>
+                  <select className="form-select" value={childForm.admission_class_id} onChange={e => setChild('admission_class_id', e.target.value)} required>
+                    <option value="">Select class...</option>
+                    {classes.map(c => <option key={c.id} value={c.id}>{c.name} (Rs {c.monthly_fee.toLocaleString()}/mo)</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label"><Calendar size={14} style={{marginRight: 4}}/> Admission Date</label>
+                  <input type="date" className="form-input" value={childForm.date_of_admission} onChange={e => setChild('date_of_admission', e.target.value)} />
+                </div>
+                <div>
+                  <label className="form-label">Monthly Fee (Rs)</label>
+                  <input type="number" className="form-input" value={childForm.monthly_fee} onChange={e => setChild('monthly_fee', parseInt(e.target.value) || 0)} />
+                  <small style={{color:'var(--text-muted)', fontSize:'0.7rem'}}>Auto-filled from class. Edit if needed.</small>
+                </div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <Button variant="secondary" onClick={() => setShowChildModal(false)}>Cancel</Button>
+              <Button onClick={handleSaveChild} isLoading={savingChild} disabled={!childForm.first_name.trim() || !childForm.last_name.trim()}>
+                <Plus size={18} /> Save Student
+              </Button>
             </div>
           </div>
         </div>

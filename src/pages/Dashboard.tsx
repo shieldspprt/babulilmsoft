@@ -52,7 +52,6 @@ export const Dashboard = () => {
   const location  = useLocation();
 
   const [tab, setTab]               = useState<Tab>('overview');
-  const [preSelectedParentId, setPreSelectedParentId] = useState<string | null>(null);
   const [payMethod, setPayMethod]   = useState<'JazzCash' | 'Bank'>('JazzCash');
   const [plan, setPlan]             = useState<{ credits: number; pkr: number } | null>(null);
   const [reference, setReference]   = useState('');
@@ -246,8 +245,8 @@ export const Dashboard = () => {
           {/* Feature tabs */}
           {tab === 'classes'   && <ClassesManager   schoolId={profile.id} />}
           {tab === 'teachers'  && <TeachersManager  schoolId={profile.id} />}
-          {tab === 'parents'   && <ParentsManager   schoolId={profile.id} onAddChild={(parentId) => { setTab('students'); setPreSelectedParentId(parentId); }} />}
-          {tab === 'students'  && <StudentsManager  schoolId={profile.id} preSelectedParentId={preSelectedParentId} />}
+          {tab === 'parents'   && <ParentsManager   schoolId={profile.id} />}
+          {tab === 'students'  && <StudentsManager  schoolId={profile.id} />}
           {tab === 'income'    && <IncomeManager    schoolId={profile.id} />}
           {tab === 'expense'   && <ExpenseManager   schoolId={profile.id} />}
           {tab === 'suppliers' && <SuppliersManager schoolId={profile.id} />}
