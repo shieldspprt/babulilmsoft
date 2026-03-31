@@ -207,8 +207,10 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       .eq('school_id', schoolId)
       .eq('active', true);
 
+    const students = allStudents || [];
+
     // Fetch class info for fee display
-    const classIds = [...new Set((allStudents || []).map((s: any) => s.admission_class_id).filter(Boolean))];
+    const classIds = [...new Set(students.map((s: any) => s.admission_class_id).filter(Boolean))];
     let classNameMap: Record<string, string> = {};
     let classFeeMap: Record<string, number> = {};
     if (classIds.length > 0) {
@@ -216,22 +218,24 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         .from('classes').select('id, name, monthly_fee').in('id', classIds);
       (classRows || []).forEach((c: any) => {
         classNameMap[c.id] = c.name || '';
-        classFeeMap[c.id] = parseInt(c.monthly_fee || '0', 10);
+        classFeeMap[c.id] = Number(c.monthly_fee) || 0;
       });
     }
 
-    for (const month of monthsToProcess) {
+    // Sort months chronologically so carried_forward chains correctly
+    const sorted = [...monthsToProcess].sort();
+
+    for (const month of sorted) {
       const existing = existingMap[month];
 
       // Filter students admitted on or before this month (YYYY-MM string compare)
-      const admitted = (allStudents || []).filter((s: any) => {
-        if (!s.date_of_admission) return true; // no date = include
-        const admMonth = s.date_of_admission.slice(0, 7); // "YYYY-MM"
+      const admitted = students.filter((s: any) => {
+        if (!s.date_of_admission) return true;
+        const admMonth = s.date_of_admission.slice(0, 7);
         return admMonth <= month;
       });
 
       if (admitted.length === 0) {
-        // Empty bill — no children admitted yet
         const emptyPayload = {
           school_id: schoolId,
           parent_id: parentId,
@@ -244,37 +248,38 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
           status: 'pending' as const,
         };
         if (existing) {
-          await supabase.from('fee_bills').update(emptyPayload).eq('id', existing.id);
+          const { error } = await supabase.from('fee_bills').update(emptyPayload).eq('id', existing.id);
+          if (error) console.error('Bill update failed:', month, error);
         } else {
-          await supabase.from('fee_bills').insert(emptyPayload);
+          const { error } = await supabase.from('fee_bills').insert(emptyPayload);
+          if (error) console.error('Bill insert failed:', month, error);
         }
         continue;
       }
 
-      // Build children_data
+      // Build children_data — always use Number() to handle Supabase numeric/decimal string returns
       const childrenData = admitted.map((s: any) => {
-        const originalFee = classFeeMap[s.admission_class_id] || 0;
+        const studentFee = Number(s.monthly_fee) || 0;
+        const classFee = classFeeMap[s.admission_class_id] || 0;
         return {
           student_id: s.id,
           name: `${s.first_name} ${s.last_name}`,
           class_name: classNameMap[s.admission_class_id] || '—',
           date_of_admission: s.date_of_admission || '',
-          original_fee: originalFee,
-          discount_type: s.discount_type,
-          discount_value: s.discount_value,
-          monthly_fee: s.monthly_fee || 0,
+          original_fee: classFee,
+          discount_type: s.discount_type || null,
+          discount_value: Number(s.discount_value) || null,
+          monthly_fee: studentFee,
         };
       });
 
-      const totalFee = admitted.reduce((sum: number, s: any) => sum + (s.monthly_fee || 0), 0);
+      // Sum monthly fees — Number() prevents string concatenation ("0" + "3000" = "03000")
+      const totalFee = admitted.reduce((sum, s: any) => sum + (Number(s.monthly_fee) || 0), 0);
 
-      // Compute carried_forward from previous month's bill
+      // Compute carried_forward from previous month's bill (use existingMap for already-refreshed bills)
       const pm = prevMonth(month);
-      const prevBill = existingBills.find(b => b.billing_month === pm);
-      let cf = 0;
-      if (prevBill) {
-        cf = prevBill.balance;
-      }
+      const prevBill = existingMap[pm];
+      const cf = (prevBill && Number(prevBill.balance)) || 0;
 
       const billPayload = {
         school_id: schoolId,
@@ -283,15 +288,17 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         children_data: childrenData,
         total_fee: totalFee,
         carried_forward: cf,
-        amount_paid: 0,
+        amount_paid: existing ? Number(existing.amount_paid) || 0 : 0,
         balance: totalFee + cf,
         status: 'pending' as const,
       };
 
       if (existing) {
-        await supabase.from('fee_bills').update(billPayload).eq('id', existing.id);
+        const { error } = await supabase.from('fee_bills').update(billPayload).eq('id', existing.id);
+        if (error) console.error('Bill update failed:', month, error);
       } else {
-        await supabase.from('fee_bills').insert(billPayload);
+        const { error } = await supabase.from('fee_bills').insert(billPayload);
+        if (error) console.error('Bill insert failed:', month, error);
       }
     }
 
@@ -346,7 +353,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   }, [billsByMonth]);
 
   const currentMonthlyFee = useMemo(() => {
-    return children.reduce((sum: number, c: StudentWithClass) => sum + (c.monthly_fee || 0), 0);
+    return children.reduce((sum: number, c: StudentWithClass) => sum + (Number(c.monthly_fee) || 0), 0);
   }, [children]);
 
   /* ── Payment modal ─────────────────────────────────────────── */
@@ -374,7 +381,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     let total = 0;
     selectedMonths.forEach(month => {
       const bill = billsByMonth[month];
-      if (bill) total += bill.total_fee + bill.carried_forward;
+      if (bill) total += Number(bill.total_fee) + Number(bill.carried_forward);
     });
     return total;
   }, [selectedMonths, billsByMonth]);
@@ -383,7 +390,9 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     const bill = billsByMonth[month];
     if (!bill) return false;
     if (bill.status !== 'pending') return false;
-    if (bill.total_fee === 0 && bill.carried_forward === 0) return false;
+    const fee = Number(bill.total_fee) || 0;
+    const cf = Number(bill.carried_forward) || 0;
+    if (fee === 0 && cf === 0) return false;
     return true;
   };
 
@@ -426,19 +435,19 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       for (const month of sorted) {
         const bill = freshMap[month];
         if (!bill) continue;
-        const billTotal = bill.total_fee + bill.carried_forward;
+        const billTotal = Number(bill.total_fee) + Number(bill.carried_forward);
 
         if (remaining >= billTotal) {
           updates.push({
             id: bill.id,
-            amount_paid: bill.amount_paid + billTotal,
+            amount_paid: Number(bill.amount_paid) + billTotal,
             balance: 0,
             status: 'paid',
             payment_id: '',
           });
           remaining -= billTotal;
         } else {
-          const newPaid = bill.amount_paid + remaining;
+          const newPaid = Number(bill.amount_paid) + remaining;
           const newBalance = billTotal - newPaid;
           updates.push({
             id: bill.id,
@@ -456,8 +465,9 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       if (remaining > 0 && updates.length > 0) {
         const last = updates[updates.length - 1];
         last.amount_paid += remaining;
-        last.balance = (freshMap[sorted[sorted.length - 1]]?.total_fee || 0) +
-                          (freshMap[sorted[sorted.length - 1]]?.carried_forward || 0) -
+        const lastBill = freshMap[sorted[sorted.length - 1]];
+        last.balance = (Number(lastBill?.total_fee) || 0) +
+                          (Number(lastBill?.carried_forward) || 0) -
                           last.amount_paid;
         last.status = 'overpaid';
       }
@@ -506,8 +516,8 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
 
       // Revert each bill
       for (const bill of linkedBills) {
-        const revertedPaid = Math.max(0, bill.amount_paid - deleteTarget.amount);
-        const newBalance = bill.total_fee + bill.carried_forward - revertedPaid;
+        const revertedPaid = Math.max(0, Number(bill.amount_paid) - deleteTarget.amount);
+        const newBalance = Number(bill.total_fee) + Number(bill.carried_forward) - revertedPaid;
         const newStatus = newBalance > 0 ? 'partial' : newBalance === 0 ? 'paid' : (bill.carried_forward < 0 && revertedPaid === 0 ? 'pending' : newBalance < 0 ? 'overpaid' : 'pending');
 
         await supabase.from('fee_bills').update({
@@ -794,7 +804,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                   if (bill.status === 'paid') { statusClass = 'paid'; statusLabel = '✓ Paid'; badgeClass = 'paid'; }
                   else if (bill.status === 'overpaid') { statusClass = 'overpaid'; statusLabel = '↻ Advance'; badgeClass = 'paid'; }
                   else if (bill.status === 'partial') { statusClass = 'partial'; statusLabel = '● Partial'; badgeClass = 'due'; }
-                  else if (bill.total_fee > 0 || bill.carried_forward > 0) { statusClass = 'pending'; statusLabel = '○ Due'; badgeClass = 'due'; }
+                  else if (bill.total_fee > 0 || Number(bill.carried_forward) > 0) { statusClass = 'pending'; statusLabel = '○ Due'; badgeClass = 'due'; }
                 } else {
                   statusClass = 'empty';
                 }
