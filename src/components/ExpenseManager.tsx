@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
-import { Plus, Trash2, Edit2, Save, X, DollarSign, FileText, CreditCard, Search, User } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, DollarSign, FileText, CreditCard, Search, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import './ExpenseManager.css';
+import './managers.css';
 
 export type ExpenseCategory = {
   id: string;
@@ -32,6 +33,7 @@ type ExpenseManagerProps = {
 };
 
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'Easy Paisa', 'Jazz Cash'];
+const PAGE_SIZE = 25;
 
 export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
   const { flash, showFlash } = useFlashMessage(4000);
@@ -44,6 +46,8 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   
+  const [page, setPage] = useState(1);
+
   const [formData, setFormData] = useState({
     category_id: '',
     amount: '',
@@ -193,6 +197,14 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
     const matchesCategory = !filterCategory || e.category_id === filterCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const totalPages = Math.ceil(filteredExpenses.length / PAGE_SIZE);
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredExpenses.slice(start, start + PAGE_SIZE);
+  }, [filteredExpenses, page]);
+
+  useEffect(() => { setPage(1); }, [searchTerm]);
 
   if (loading) return <div className="loading">Loading expenses...</div>;
 
@@ -404,7 +416,7 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
                 <td colSpan={8} className="empty-cell">No expenses found</td>
               </tr>
             ) : (
-              filteredExpenses.map(expense => (
+              paginated.map(expense => (
                 <tr key={expense.id}>
                   <td>{new Date(expense.expense_date).toLocaleDateString()}</td>
                   <td>
@@ -430,6 +442,21 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="pagination">
+          <span className="pagination-info">
+            Showing {(page-1)*PAGE_SIZE + 1}–{Math.min(page*PAGE_SIZE, filteredExpenses.length)} of {filteredExpenses.length}
+          </span>
+          <div className="pagination-controls">
+            <button className="page-btn" disabled={page === 1} onClick={() => setPage(p => p-1)}><ChevronLeft size={16} /></button>
+            {Array.from({ length: totalPages }, (_, i) => i+1).map(p => (
+              <button key={p} className={`page-btn${p === page ? ' active' : ''}`} onClick={() => setPage(p)}>{p}</button>
+            ))}
+            <button className="page-btn" disabled={page === totalPages} onClick={() => setPage(p => p+1)}><ChevronRight size={16} /></button>
+          </div>
+        </div>
+      )}
 
       {flash && <div className={`flash ${flash.startsWith('Error') || flash.startsWith('Cannot') ? 'error' : 'success'}`}>{flash}</div>}
 

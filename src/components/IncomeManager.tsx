@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
-import { Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, CreditCard, Search } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, CreditCard, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import './IncomeManager.css';
+import './managers.css';
 
 export type IncomeCategory = {
   id: string;
@@ -31,6 +32,7 @@ type IncomeManagerProps = {
 };
 
 const DEFAULT_CATEGORIES = ['Book Sales', 'Notebook Sales', 'Canteen', 'Other Income'];
+const PAGE_SIZE = 25;
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'EasyPaisa', 'JazzCash'];
 
 export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
@@ -45,6 +47,8 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+
+  const [page, setPage] = useState(1);
 
   const [formData, setFormData] = useState({
     category_id: '',
@@ -223,6 +227,14 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
   });
 
   const totalIncome = filteredRecords.reduce((sum, r) => sum + r.amount, 0);
+
+  const totalPages = Math.ceil(filteredRecords.length / PAGE_SIZE);
+  const paginated = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredRecords.slice(start, start + PAGE_SIZE);
+  }, [filteredRecords, page]);
+
+  useEffect(() => { setPage(1); }, [searchQuery]);
 
   if (loading) return <div className="loading">Loading income data...</div>;
 
@@ -415,7 +427,7 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
               <p>No income records found</p>
             </div>
           ) : (
-            filteredRecords.map(record => (
+            paginated.map(record => (
               <div key={record.id} className="record-card">
                 <div className="record-main">
                   <span className="record-category">{record.category_name}</span>
@@ -437,6 +449,21 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
             ))
           )}
         </div>
+
+        {totalPages > 1 && (
+          <div className="pagination">
+            <span className="pagination-info">
+              Showing {(page-1)*PAGE_SIZE + 1}–{Math.min(page*PAGE_SIZE, filteredRecords.length)} of {filteredRecords.length}
+            </span>
+            <div className="pagination-controls">
+              <button className="page-btn" disabled={page === 1} onClick={() => setPage(p => p-1)}><ChevronLeft size={16} /></button>
+              {Array.from({ length: totalPages }, (_, i) => i+1).map(p => (
+                <button key={p} className={`page-btn${p === page ? ' active' : ''}`} onClick={() => setPage(p)}>{p}</button>
+              ))}
+              <button className="page-btn" disabled={page === totalPages} onClick={() => setPage(p => p+1)}><ChevronRight size={16} /></button>
+            </div>
+          </div>
+        )}
       </div>
 
       {flash && <div className={`flash ${flash.startsWith('Error') ? 'error' : 'success'}`}>{flash}</div>}
