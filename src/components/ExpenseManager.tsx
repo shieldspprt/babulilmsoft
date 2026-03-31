@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useFlashMessage } from '../hooks/useFlashMessage';
+import { Button } from './ui/Button';
 import { Plus, Trash2, Edit2, Save, X, DollarSign, FileText, CreditCard, Search, User } from 'lucide-react';
 import './ExpenseManager.css';
 
@@ -32,6 +34,8 @@ type ExpenseManagerProps = {
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'Easy Paisa', 'Jazz Cash'];
 
 export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
+  const { flash, showFlash } = useFlashMessage(4000);
+  const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,10 +148,15 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this expense record?')) return;
-    await supabase.from('expenses').delete().eq('id', id);
-    loadExpenses();
+  const handleDelete = (id: string) => {
+    setConfirmAction({
+      message: 'Delete this expense record?',
+      onConfirm: async () => {
+        await supabase.from('expenses').delete().eq('id', id);
+        loadExpenses();
+        setConfirmAction(null);
+      }
+    });
   };
 
   const addCategory = async () => {
@@ -161,14 +170,19 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
     loadCategories();
   };
 
-  const deleteCategory = async (id: string, isDefault: boolean) => {
+  const deleteCategory = (id: string, isDefault: boolean) => {
     if (isDefault) {
-      alert('Cannot delete default categories');
+      showFlash('Cannot delete default categories');
       return;
     }
-    if (!confirm('Delete this category?')) return;
-    await supabase.from('expense_categories').delete().eq('id', id);
-    loadCategories();
+    setConfirmAction({
+      message: 'Delete this category?',
+      onConfirm: async () => {
+        await supabase.from('expense_categories').delete().eq('id', id);
+        loadCategories();
+        setConfirmAction(null);
+      }
+    });
   };
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -416,6 +430,21 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
           </tbody>
         </table>
       </div>
+
+      {flash && <div className={`flash ${flash.startsWith('Error') || flash.startsWith('Cannot') ? 'error' : 'success'}`}>{flash}</div>}
+
+      {confirmAction && (
+        <div className="modal-backdrop" onClick={() => setConfirmAction(null)}>
+          <div className="confirm-box" onClick={e => e.stopPropagation()}>
+            <Trash2 size={40} color="var(--danger)" />
+            <h3>{confirmAction.message}</h3>
+            <div className="confirm-box-btns">
+              <Button variant="secondary" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button variant="danger" onClick={confirmAction.onConfirm}>Confirm</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

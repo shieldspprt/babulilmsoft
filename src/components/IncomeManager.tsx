@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useFlashMessage } from '../hooks/useFlashMessage';
+import { Button } from './ui/Button';
 import { Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, CreditCard, Search } from 'lucide-react';
 import './IncomeManager.css';
 
@@ -32,6 +34,8 @@ const DEFAULT_CATEGORIES = ['Book Sales', 'Notebook Sales', 'Canteen', 'Other In
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'EasyPaisa', 'JazzCash'];
 
 export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
+  const { flash, showFlash } = useFlashMessage(4000);
+  const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [categories, setCategories] = useState<IncomeCategory[]>([]);
   const [records, setRecords] = useState<IncomeRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +118,7 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.category_id || !formData.amount) {
-      alert('Please fill all required fields');
+      showFlash('Please fill all required fields');
       return;
     }
 
@@ -133,10 +137,10 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
         .from('income_records')
         .update(payload)
         .eq('id', editingId);
-      if (error) alert('Error updating: ' + error.message);
+      if (error) showFlash('Error updating: ' + error.message);
     } else {
       const { error } = await supabase.from('income_records').insert(payload);
-      if (error) alert('Error creating: ' + error.message);
+      if (error) showFlash('Error creating: ' + error.message);
     }
 
     resetForm();
@@ -169,11 +173,16 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this income record?')) return;
-    const { error } = await supabase.from('income_records').delete().eq('id', id);
-    if (error) alert('Error deleting: ' + error.message);
-    else loadRecords();
+  const handleDelete = (id: string) => {
+    setConfirmAction({
+      message: 'Delete this income record?',
+      onConfirm: async () => {
+        const { error } = await supabase.from('income_records').delete().eq('id', id);
+        if (error) showFlash('Error deleting: ' + error.message);
+        else loadRecords();
+        setConfirmAction(null);
+      }
+    });
   };
 
   const addCategory = async (e: React.FormEvent) => {
@@ -186,7 +195,7 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
       is_default: false
     });
     
-    if (error) alert('Error adding category: ' + error.message);
+    if (error) showFlash('Error adding category: ' + error.message);
     else {
       setNewCategoryName('');
       setShowCategoryForm(false);
@@ -194,11 +203,16 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
     }
   };
 
-  const deleteCategory = async (id: string) => {
-    if (!confirm('Delete this category? Existing records will keep it.')) return;
-    const { error } = await supabase.from('income_categories').delete().eq('id', id);
-    if (error) alert('Error: ' + error.message);
-    else loadCategories();
+  const deleteCategory = (id: string) => {
+    setConfirmAction({
+      message: 'Delete this category? Existing records will keep it.',
+      onConfirm: async () => {
+        const { error } = await supabase.from('income_categories').delete().eq('id', id);
+        if (error) showFlash('Error: ' + error.message);
+        else loadCategories();
+        setConfirmAction(null);
+      }
+    });
   };
 
   const filteredRecords = records.filter(r => {
@@ -424,6 +438,21 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
           )}
         </div>
       </div>
+
+      {flash && <div className={`flash ${flash.startsWith('Error') ? 'error' : 'success'}`}>{flash}</div>}
+
+      {confirmAction && (
+        <div className="modal-backdrop" onClick={() => setConfirmAction(null)}>
+          <div className="confirm-box" onClick={e => e.stopPropagation()}>
+            <Trash2 size={40} color="var(--danger)" />
+            <h3>{confirmAction.message}</h3>
+            <div className="confirm-box-btns">
+              <Button variant="secondary" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button variant="danger" onClick={confirmAction.onConfirm}>Confirm</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

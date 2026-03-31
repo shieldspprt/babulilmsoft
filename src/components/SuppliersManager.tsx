@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
-import { Plus, Store, Phone, MapPin, ArrowLeft, ArrowUpCircle, ArrowDownCircle, BookOpen } from 'lucide-react';
+import { Plus, Store, Phone, MapPin, ArrowLeft, ArrowUpCircle, ArrowDownCircle, BookOpen, Trash2 } from 'lucide-react';
 import './SuppliersManager.css';
 
 type Supplier = {
@@ -31,6 +32,8 @@ type SupplierTransaction = {
 type ViewType = 'list' | 'add' | 'payment' | 'bill' | 'ledger';
 
 export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
+  const { flash, showFlash } = useFlashMessage(4000);
+  const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [transactions, setTransactions] = useState<SupplierTransaction[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
@@ -110,7 +113,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     });
 
     if (error) {
-      alert('Error adding supplier: ' + error.message);
+      showFlash('Error adding supplier: ' + error.message);
       return;
     }
 
@@ -146,7 +149,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     });
 
     if (txError) {
-      alert('Error recording payment: ' + txError.message);
+      showFlash('Error recording payment: ' + txError.message);
       return;
     }
 
@@ -182,7 +185,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     });
 
     if (txError) {
-      alert('Error recording bill: ' + txError.message);
+      showFlash('Error recording bill: ' + txError.message);
       return;
     }
 
@@ -199,21 +202,24 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     setCurrentView('list');
   };
 
-  const handleDeleteSupplier = async (id: string) => {
-    if (!confirm('Delete this supplier?')) return;
+  const handleDeleteSupplier = (id: string) => {
+    setConfirmAction({
+      message: 'Delete this supplier?',
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from('suppliers')
+          .delete()
+          .eq('id', id)
+          .eq('school_id', schoolId);
 
-    const { error } = await supabase
-      .from('suppliers')
-      .delete()
-      .eq('id', id)
-      .eq('school_id', schoolId); // Extra safety
-
-    if (error) {
-      alert('Error deleting supplier: ' + error.message);
-      return;
-    }
-
-    loadSuppliers();
+        if (error) {
+          showFlash('Error deleting supplier: ' + error.message);
+        } else {
+          loadSuppliers();
+        }
+        setConfirmAction(null);
+      }
+    });
   };
 
   const selectSupplier = (supplier: Supplier, view: ViewType) => {
@@ -231,6 +237,24 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     if (balance < 0) return { text: 'They Owe', class: 'owed' };
     return { text: 'Settled', class: 'settled' };
   };
+
+  const flashAndConfirm = (
+    <>
+      {flash && <div className={`flash ${flash.startsWith('Error') ? 'error' : 'success'}`}>{flash}</div>}
+      {confirmAction && (
+        <div className="modal-backdrop" onClick={() => setConfirmAction(null)}>
+          <div className="confirm-box" onClick={e => e.stopPropagation()}>
+            <Trash2 size={40} color="var(--danger)" />
+            <h3>{confirmAction.message}</h3>
+            <div className="confirm-box-btns">
+              <Button variant="secondary" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button variant="danger" onClick={confirmAction.onConfirm}>Confirm</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   if (loading) {
     return <div className="suppliers-manager"><div className="loading">Loading suppliers...</div></div>;
@@ -293,6 +317,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
             })
           )}
         </div>
+        {flashAndConfirm}
       </div>
     );
   }
@@ -383,6 +408,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
             </Button>
           </div>
         </form>
+        {flashAndConfirm}
       </div>
     );
   }
@@ -462,6 +488,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
             </Button>
           </div>
         </form>
+        {flashAndConfirm}
       </div>
     );
   }
@@ -595,6 +622,7 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
             </tbody>
           </table>
         </div>
+        {flashAndConfirm}
       </div>
     );
   }

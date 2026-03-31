@@ -22,6 +22,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const { flash, showFlash } = useFlashMessage(3000);
+  const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [search, setSearch] = useState('');
   
   const [showAddModal, setShowAddModal] = useState(false);
@@ -100,15 +101,20 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this class?')) return;
-    const { error } = await supabase.from('classes').delete().eq('id', id);
-    if (error) {
-      showFlash('Error: ' + error.message);
-    } else {
-      showFlash('Class deleted!');
-      load();
-    }
+  const handleDelete = (id: string) => {
+    setConfirmAction({
+      message: 'Delete this class?',
+      onConfirm: async () => {
+        const { error } = await supabase.from('classes').delete().eq('id', id);
+        if (error) {
+          showFlash('Error: ' + error.message);
+        } else {
+          showFlash('Class deleted!');
+          load();
+        }
+        setConfirmAction(null);
+      }
+    });
   };
 
   const openEdit = (c: Class) => {
@@ -250,6 +256,19 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
               <Button onClick={handleEdit} isLoading={saving} disabled={!editName.trim() || !editFee.trim()}>
                 <Edit2 size={14} /> Save Changes
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmAction && (
+        <div className="modal-backdrop" onClick={() => setConfirmAction(null)}>
+          <div className="confirm-box" onClick={e => e.stopPropagation()}>
+            <Trash2 size={40} color="var(--danger)" />
+            <h3>{confirmAction.message}</h3>
+            <div className="confirm-box-btns">
+              <Button variant="secondary" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button variant="danger" onClick={confirmAction.onConfirm}>Confirm</Button>
             </div>
           </div>
         </div>

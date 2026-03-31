@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from '../components/ui/Button';
 import {
   CheckCircle, XCircle, Clock, Users, CreditCard, TrendingUp,
   AlertCircle, Search, RefreshCw, LogOut, GraduationCap,
-  Building2, Wallet, Landmark, Phone, Mail, Calendar, Filter
+  Building2, Wallet, Landmark, Phone, Mail, Calendar, Filter, Trash2
 } from 'lucide-react';
 import './AdminDashboard.css';
 
@@ -27,6 +28,8 @@ type Stats = { totalSchools: number; pendingRequests: number; totalRevenue: numb
 export const AdminDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { flash, showFlash } = useFlashMessage(4000);
+  const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
   const [tab, setTab]                     = useState<'requests' | 'schools' | 'payments'>('requests');
   const [requests, setRequests]           = useState<Request[]>([]);
@@ -104,17 +107,22 @@ export const AdminDashboard = () => {
     });
     setProcessingId(null);
     if (error || !success) {
-      alert('Approval failed: ' + (error?.message || 'Request may no longer be pending'));
+      showFlash('Approval failed: ' + (error?.message || 'Request may no longer be pending'));
     }
     loadAll();
   };
 
-  const handleReject = async (id: string) => {
-    if (!confirm('Reject this request?')) return;
-    setProcessingId(id);
-    await supabase.from('credit_requests').update({ status: 'rejected' }).eq('id', id);
-    setProcessingId(null);
-    loadAll();
+  const handleReject = (id: string) => {
+    setConfirmAction({
+      message: 'Reject this request?',
+      onConfirm: async () => {
+        setProcessingId(id);
+        await supabase.from('credit_requests').update({ status: 'rejected' }).eq('id', id);
+        setProcessingId(null);
+        loadAll();
+        setConfirmAction(null);
+      }
+    });
   };
 
   const getSchoolStatus = (s: School) => {
@@ -342,6 +350,21 @@ export const AdminDashboard = () => {
           </div>
         )}
       </div>
+
+      {flash && <div className={`flash ${flash.startsWith('Error') || flash.startsWith('Approval failed') ? 'error' : 'success'}`}>{flash}</div>}
+
+      {confirmAction && (
+        <div className="modal-backdrop" onClick={() => setConfirmAction(null)}>
+          <div className="confirm-box" onClick={e => e.stopPropagation()}>
+            <Trash2 size={40} color="var(--danger)" />
+            <h3>{confirmAction.message}</h3>
+            <div className="confirm-box-btns">
+              <Button variant="secondary" onClick={() => setConfirmAction(null)}>Cancel</Button>
+              <Button variant="danger" onClick={confirmAction.onConfirm}>Confirm</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
