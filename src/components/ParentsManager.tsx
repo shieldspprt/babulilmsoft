@@ -46,21 +46,36 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const [classes, setClasses] = useState<Class[]>([]);
   const [savingChild, setSavingChild] = useState(false);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
+  const [monthlyTotals, setMonthlyTotals] = useState<Record<string, number>>({});
+  const [discountTotals, setDiscountTotals] = useState<Record<string, number>>({});
 
   const load = async () => {
     setLoading(true);
     const [{ data: parents }, { data: students }] = await Promise.all([
       supabase.from('parents').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
-      supabase.from('students').select('id, parent_id').eq('school_id', schoolId)
+      supabase.from('students').select('id, parent_id, monthly_fee, discount_type, discount_value').eq('school_id', schoolId)
     ]);
     setRecords(parents || []);
     
-    // Count students per parent
+        // Count students, total monthly fee, and total discount per parent
     const counts: Record<string, number> = {};
-    (students || []).forEach(s => {
+    const monthlyTotals: Record<string, number> = {};
+    const discountTotals: Record<string, number> = {};
+    students?.forEach(s => {
       counts[s.parent_id] = (counts[s.parent_id] || 0) + 1;
+      const fee = s.monthly_fee || 0;
+      let disc = 0;
+      if (s.discount_type === 'percentage' && s.discount_value) {
+        disc = (fee * s.discount_value) / 100;
+      } else if (s.discount_type === 'amount' && s.discount_value) {
+        disc = s.discount_value;
+      }
+      monthlyTotals[s.parent_id] = (monthlyTotals[s.parent_id] || 0) + fee;
+      discountTotals[s.parent_id] = (discountTotals[s.parent_id] || 0) + disc;
     });
     setStudentCounts(counts);
+    setMonthlyTotals(monthlyTotals);
+    setDiscountTotals(discountTotals);
     setLoading(false);
   };
 
@@ -299,10 +314,11 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
               <thead>
                 <tr>
                   <th>Parent Name</th>
-                  <th>Children</th>
                   <th>CNIC</th>
                   <th>Contact</th>
-                  <th>Address</th>
+                  <th>Children</th>
+                  <th>Monthly Payment</th>
+                  <th>Discount</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -317,6 +333,8 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                         <span style={{ fontWeight:600 }}>{r.first_name} {r.last_name}</span>
                       </div>
                     </td>
+                    <td style={{ fontFamily:'monospace', fontSize:'0.8rem' }}>{r.cnic}</td>
+                    <td>{r.contact}</td>
                     <td style={{ textAlign: 'center' }}>
                       <span style={{ 
                         display: 'inline-flex', 
@@ -324,8 +342,8 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                         gap: '4px',
                         padding: '4px 12px',
                         borderRadius: '12px',
-                        background: studentCounts[r.id] ? 'var(--primary-light)' : 'var(--bg-alt)',
-                        color: studentCounts[r.id] ? 'var(--primary)' : 'var(--text-muted)',
+                        background: (studentCounts[r.id] || 0) > 0 ? 'var(--primary-light)' : 'var(--bg-alt)',
+                        color: (studentCounts[r.id] || 0) > 0 ? 'var(--primary)' : 'var(--text-muted)',
                         fontWeight: 600,
                         fontSize: '0.85rem'
                       }}>
@@ -333,9 +351,12 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                         {studentCounts[r.id] || 0}
                       </span>
                     </td>
-                    <td style={{ fontFamily:'monospace', fontSize:'0.8rem' }}>{r.cnic}</td>
-                    <td>{r.contact}</td>
-                    <td style={{ color:'var(--text-muted)', maxWidth:'200px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.address || '-'}</td>
+                    <td style={{ fontWeight: 600 }}>
+                      Rs {((monthlyTotals[r.id] || 0) - (discountTotals[r.id] || 0)).toLocaleString()}
+                    </td>
+                    <td style={{ color: (discountTotals[r.id] || 0) > 0 ? 'var(--success)' : 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>
+                      {(discountTotals[r.id] || 0) > 0 ? `-Rs ${Math.round(discountTotals[r.id]!).toLocaleString()}` : '-'}
+                    </td>
                     <td>
                       <div className="row-actions">
                         <button className="action-btn add-child" title="Add Child" onClick={() => openAddChild(r)}>
