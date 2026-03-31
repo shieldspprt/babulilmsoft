@@ -18,9 +18,11 @@ type Parent = {
 };
 
 type Class = { id: string; name: string; monthly_fee: number; };
+
+const EMPTY = {
   first_name: '', last_name: '', cnic: '', contact: '', address: '',
 };
-const EMPTY_STUDENT = { first_name: '', last_name: '', cnic: '', date_of_birth: '', date_of_admission: new Date().toISOString().split('T')[0], admission_class_id: '', monthly_fee: 0, };
+const EMPTY_STUDENT = { first_name: '', last_name: '', cnic: '', date_of_birth: '', date_of_admission: new Date().toISOString().split('T')[0], admission_class_id: '', monthly_fee: 0, discount_type: '', discount_value: 0 };
 
 const PAGE_SIZE = 25;
 
@@ -222,7 +224,8 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
       date_of_admission: childForm.date_of_admission || null,
       admission_class_id: childForm.admission_class_id || null,
       monthly_fee: getFinalFee(),
-      
+      discount_type: childForm.discount_type || null,
+      discount_value: childForm.discount_value || null,
       active: true,
     });
     setSavingChild(false);
@@ -385,17 +388,14 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
               <div className="form-grid">
                 <Input label="First Name *" placeholder="Enter first name" value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
                 <Input label="Last Name *" placeholder="Enter last name" value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
-                <div>
-                  <label className="form-label">CNIC *</label>
-                  <input
-                    className={"form-input " + (cnicError ? 'error' : '')}
-                    placeholder="XXXXX-XXXXXXX-X"
-                    value={form.cnic}
-                    onChange={e => set('cnic', e.target.value)}
-                    required
-                  />
-                  {cnicError && <div style={{color: 'var(--danger)', fontSize: '0.75rem', marginTop: '0.25rem'}}>{cnicError}</div>}
-                </div>
+                <Input
+                  label="CNIC *"
+                  placeholder="XXXXX-XXXXXXX-X"
+                  value={form.cnic}
+                  onChange={e => set('cnic', e.target.value)}
+                  required
+                  error={cnicError}
+                />
                 <Input label="Contact Number *" placeholder="03XX-XXXXXXX" value={form.contact} onChange={e => set('contact', e.target.value)} required />
                 <div className="span-2">
                   <label className="form-label">Address</label>
@@ -425,17 +425,14 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
               <div className="form-grid">
                 <Input label="First Name *" placeholder="Enter first name" value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
                 <Input label="Last Name *" placeholder="Enter last name" value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
-                <div>
-                  <label className="form-label">CNIC *</label>
-                  <input
-                    className={"form-input " + (cnicError ? 'error' : '')}
-                    placeholder="XXXXX-XXXXXXX-X"
-                    value={form.cnic}
-                    onChange={e => set('cnic', e.target.value)}
-                    required
-                  />
-                  {cnicError && <div style={{color: 'var(--danger)', fontSize: '0.75rem', marginTop: '0.25rem'}}>{cnicError}</div>}
-                </div>
+                <Input
+                  label="CNIC *"
+                  placeholder="XXXXX-XXXXXXX-X"
+                  value={form.cnic}
+                  onChange={e => set('cnic', e.target.value)}
+                  required
+                  error={cnicError}
+                />
                 <Input label="Contact Number *" placeholder="03XX-XXXXXXX" value={form.contact} onChange={e => set('contact', e.target.value)} required />
                 <div className="span-2">
                   <label className="form-label">Address</label>
