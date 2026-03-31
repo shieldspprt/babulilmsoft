@@ -1,0 +1,383 @@
+
+> ilmsoft@0.0.0 lint
+> eslint .
+
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/ClassesManager.tsx
+  19:21  error    Error: Cannot access variable before it is declared
+
+`load` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/ClassesManager.tsx:19:21
+  17 |   const [search, setSearch]     = useState('');
+  18 |
+> 19 |   useEffect(() => { load(); }, [schoolId]);
+     |                     ^^^^ `load` accessed before it is declared
+  20 |
+  21 |   const load = async () => {
+  22 |     setLoading(true);
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/ClassesManager.tsx:21:3
+  19 |   useEffect(() => { load(); }, [schoolId]);
+  20 |
+> 21 |   const load = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 22 |     setLoading(true);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 23 |     const { data } = await supabase.from('classes').select('*').eq('school_id', schoolId).order('name');
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 24 |     setClasses(data || []);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 25 |     setLoading(false);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 26 |   };
+     | ^^^^^ `load` is declared here
+  27 |
+  28 |   const handleAdd = async (e: React.FormEvent) => {
+  29 |     e.preventDefault();  react-hooks/immutability
+  19:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react-hooks/exhaustive-deps
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/CreditGuard.tsx
+  20:21  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/CreditGuard.tsx:20:21
+  18 |
+  19 |   useEffect(() => {
+> 20 |     if (!profile) { setChecking(false); return; }
+     |                     ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |     const now      = new Date();
+  22 |     const exp      = profile.credit_expires_at ? new Date(profile.credit_expires_at) : null;
+  23 |     const expired  = !!exp && exp <= now;  react-hooks/set-state-in-effect
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/ExpenseManager.tsx
+  57:5   error    Error: Cannot access variable before it is declared
+
+`loadData` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/ExpenseManager.tsx:57:5
+  55 |
+  56 |   useEffect(() => {
+> 57 |     loadData();
+     |     ^^^^^^^^ `loadData` accessed before it is declared
+  58 |   }, [schoolId]);
+  59 |
+  60 |   const loadData = async () => {
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/ExpenseManager.tsx:60:3
+  58 |   }, [schoolId]);
+  59 |
+> 60 |   const loadData = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 61 |     setLoading(true);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 62 |     await Promise.all([loadCategories(), loadExpenses()]);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 63 |     setLoading(false);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 64 |   };
+     | ^^^^^ `loadData` is declared here
+  65 |
+  66 |   const loadCategories = async () => {
+  67 |     const { data } = await supabase  react-hooks/immutability
+  58:6   warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              react-hooks/exhaustive-deps
+  86:38  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/IncomeManager.tsx
+  55:5  error    Error: Cannot access variable before it is declared
+
+`loadData` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/IncomeManager.tsx:55:5
+  53 |
+  54 |   useEffect(() => {
+> 55 |     loadData();
+     |     ^^^^^^^^ `loadData` accessed before it is declared
+  56 |   }, [schoolId]);
+  57 |
+  58 |   const loadData = async () => {
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/IncomeManager.tsx:58:3
+  56 |   }, [schoolId]);
+  57 |
+> 58 |   const loadData = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 59 |     setLoading(true);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 60 |     await Promise.all([loadCategories(), loadRecords()]);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 61 |     setLoading(false);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 62 |   };
+     | ^^^^^ `loadData` is declared here
+  63 |
+  64 |   const loadCategories = async () => {
+  65 |     const { data, error } = await supabase  react-hooks/immutability
+  56:6  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/ParentsManager.tsx
+  40:21  error    Error: Cannot access variable before it is declared
+
+`load` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/ParentsManager.tsx:40:21
+  38 |   const [deleting, setDeleting]     = useState(false);
+  39 |
+> 40 |   useEffect(() => { load(); }, [schoolId]);
+     |                     ^^^^ `load` accessed before it is declared
+  41 |
+  42 |   const load = async () => {
+  43 |     setLoading(true);
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/ParentsManager.tsx:42:3
+  40 |   useEffect(() => { load(); }, [schoolId]);
+  41 |
+> 42 |   const load = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 43 |     setLoading(true);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 44 |     const { data } = await supabase.from('parents').select('*')
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 45 |       .eq('school_id', schoolId).eq('is_active', true).order('relation').order('name');
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 46 |     setRecords(data || []);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 47 |     setLoading(false);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 48 |   };
+     | ^^^^^ `load` is declared here
+  49 |
+  50 |   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  51 |  react-hooks/immutability
+  40:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-hooks/exhaustive-deps
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/SuppliersManager.tsx
+  68:5  error    Error: Cannot access variable before it is declared
+
+`loadSuppliers` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/SuppliersManager.tsx:68:5
+  66 |
+  67 |   useEffect(() => {
+> 68 |     loadSuppliers();
+     |     ^^^^^^^^^^^^^ `loadSuppliers` accessed before it is declared
+  69 |   }, [schoolId]);
+  70 |
+  71 |   useEffect(() => {
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/SuppliersManager.tsx:77:3
+  75 |   }, [selectedSupplier]);
+  76 |
+> 77 |   const loadSuppliers = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 78 |     const { data, error } = await supabase
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 79 |       .from('suppliers')
+     …
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 87 |     setLoading(false);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 88 |   };
+     | ^^^^^ `loadSuppliers` is declared here
+  89 |
+  90 |   const loadTransactions = async (supplierId: string) => {
+  91 |     const { data, error } = await supabase                                                                                                       react-hooks/immutability
+  69:6  warning  React Hook useEffect has a missing dependency: 'loadSuppliers'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-hooks/exhaustive-deps
+  73:7  error    Error: Cannot access variable before it is declared
+
+`loadTransactions` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/SuppliersManager.tsx:73:7
+  71 |   useEffect(() => {
+  72 |     if (selectedSupplier) {
+> 73 |       loadTransactions(selectedSupplier.id);
+     |       ^^^^^^^^^^^^^^^^ `loadTransactions` accessed before it is declared
+  74 |     }
+  75 |   }, [selectedSupplier]);
+  76 |
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/SuppliersManager.tsx:90:3
+   88 |   };
+   89 |
+>  90 |   const loadTransactions = async (supplierId: string) => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  91 |     const { data, error } = await supabase
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  92 |       .from('supplier_transactions')
+      …
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  99 |     setTransactions(data || []);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 100 |   };
+      | ^^^^^ `loadTransactions` is declared here
+  101 |
+  102 |   const handleAddSupplier = async (e: React.FormEvent) => {
+  103 |     e.preventDefault();  react-hooks/immutability
+  75:6  warning  React Hook useEffect has a missing dependency: 'loadTransactions'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/exhaustive-deps
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/TeachersManager.tsx
+  35:21  error    Error: Cannot access variable before it is declared
+
+`load` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/TeachersManager.tsx:35:21
+  33 |   const [deleting, setDeleting]     = useState(false);
+  34 |
+> 35 |   useEffect(() => { load(); }, [schoolId]);
+     |                     ^^^^ `load` accessed before it is declared
+  36 |
+  37 |   const load = async () => {
+  38 |     setLoading(true);
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/components/TeachersManager.tsx:37:3
+  35 |   useEffect(() => { load(); }, [schoolId]);
+  36 |
+> 37 |   const load = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 38 |     setLoading(true);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 39 |     const { data } = await supabase.from('teachers').select('*')
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 40 |       .eq('school_id', schoolId).eq('is_active', true).order('type').order('name');
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 41 |     setRecords(data || []);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 42 |     setLoading(false);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 43 |   };
+     | ^^^^^ `load` is declared here
+  44 |
+  45 |   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  46 |  react-hooks/immutability
+  35:32  warning  React Hook useEffect has a missing dependency: 'load'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/contexts/AuthContext.tsx
+  91:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/pages/AdminDashboard.tsx
+   45:21  error    Error: Cannot access variable before it is declared
+
+`checkAdmin` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/pages/AdminDashboard.tsx:45:21
+  43 |   });
+  44 |
+> 45 |   useEffect(() => { checkAdmin(); }, [user]);
+     |                     ^^^^^^^^^^ `checkAdmin` accessed before it is declared
+  46 |
+  47 |   const checkAdmin = async () => {
+  48 |     if (!user) { navigate('/login'); return; }
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/pages/AdminDashboard.tsx:47:3
+  45 |   useEffect(() => { checkAdmin(); }, [user]);
+  46 |
+> 47 |   const checkAdmin = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 48 |     if (!user) { navigate('/login'); return; }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 49 |     const { data, error } = await supabase.from('admin_users').select('id').eq('user_id', user.id).single();
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 50 |     if (error || !data) { navigate('/dashboard'); return; }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 51 |     loadAll();
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 52 |   };
+     | ^^^^^ `checkAdmin` is declared here
+  53 |
+  54 |   const loadAll = async () => {
+  55 |     setLoading(true);  react-hooks/immutability
+   45:38  warning  React Hook useEffect has a missing dependency: 'checkAdmin'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react-hooks/exhaustive-deps
+   65:38  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  125:68  error    Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/pages/AdminDashboard.tsx:125:68
+  123 |     if (!s.total_credits) return { label: 'No Credits', cls: 'expired' };
+  124 |     if (!s.credit_expires_at) return { label: `${s.total_credits} credits`, cls: 'active' };
+> 125 |     const d = Math.ceil((new Date(s.credit_expires_at).getTime() - Date.now()) / 86400000);
+      |                                                                    ^^^^^^^^^^ Cannot call impure function
+  126 |     if (d < 0) return { label: 'Expired', cls: 'expired' };
+  127 |     if (d <= 7) return { label: `${d} days left`, cls: 'warning' };
+  128 |     return { label: `${d} days left`, cls: 'active' };                                                                                                                                                                                                                                                                                                                                                              react-hooks/purity
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/pages/Dashboard.tsx
+  57:48  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-explicit-any
+  61:34  error    Error: Cannot access variable before it is declared
+
+`checkCredits` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/pages/Dashboard.tsx:61:34
+  59 |   const [daysLeft, setDaysLeft]     = useState(0);
+  60 |
+> 61 |   useEffect(() => { if (profile) checkCredits(); }, [profile]);
+     |                                  ^^^^^^^^^^^^ `checkCredits` accessed before it is declared
+  62 |   useEffect(() => { if (tab === 'history' && profile) loadHistory(); }, [tab, profile]);
+  63 |   useEffect(() => {
+  64 |     const s = location.state as { showBuyCredits?: boolean };
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/pages/Dashboard.tsx:68:3
+  66 |   }, [location, navigate]);
+  67 |
+> 68 |   const checkCredits = () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 69 |     if (!profile) return;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 70 |     const now = new Date();
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 71 |     const exp = profile.credit_expires_at ? new Date(profile.credit_expires_at) : null;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 72 |     const expired = !!exp && exp <= now;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 73 |     const days = exp ? Math.max(0, Math.ceil((exp.getTime() - now.getTime()) / 86400000)) : profile.total_credits;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 74 |     setCreditExpired(expired || profile.total_credits <= 0);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 75 |     setDaysLeft(days);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 76 |     if (expired || profile.total_credits <= 0) setTab('buy');
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 77 |   };
+     | ^^^^^ `checkCredits` is declared here
+  78 |
+  79 |   const loadHistory = async () => {
+  80 |     if (!profile) return;  react-hooks/immutability
+  61:53  warning  React Hook useEffect has a missing dependency: 'checkCredits'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react-hooks/exhaustive-deps
+  62:55  error    Error: Cannot access variable before it is declared
+
+`loadHistory` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/pages/Dashboard.tsx:62:55
+  60 |
+  61 |   useEffect(() => { if (profile) checkCredits(); }, [profile]);
+> 62 |   useEffect(() => { if (tab === 'history' && profile) loadHistory(); }, [tab, profile]);
+     |                                                       ^^^^^^^^^^^ `loadHistory` accessed before it is declared
+  63 |   useEffect(() => {
+  64 |     const s = location.state as { showBuyCredits?: boolean };
+  65 |     if (s?.showBuyCredits) { setTab('buy'); navigate('/dashboard', { replace: true, state: {} }); }
+
+/Users/abdurrehman/Desktop/Trae/babulilmsoft/src/pages/Dashboard.tsx:79:3
+  77 |   };
+  78 |
+> 79 |   const loadHistory = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 80 |     if (!profile) return;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 81 |     const { data } = await supabase.from('credit_requests').select('*').eq('school_id', profile.id).order('created_at', { ascending: false });
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 82 |     setHistory(data || []);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^
+> 83 |   };
+     | ^^^^^ `loadHistory` is declared here
+  84 |
+  85 |   const handleBuy = async (e: React.FormEvent) => {
+  86 |     e.preventDefault();                                                                                                                                                                                                                                                                                                                                                                                              react-hooks/immutability
+  62:73  warning  React Hook useEffect has a missing dependency: 'loadHistory'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/exhaustive-deps
+
+✖ 26 problems (16 errors, 10 warnings)
+

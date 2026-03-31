@@ -53,10 +53,6 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
   const [newCategory, setNewCategory] = useState('');
   const [showCategoryForm, setShowCategoryForm] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, [schoolId]);
-
   const loadData = async () => {
     setLoading(true);
     await Promise.all([loadCategories(), loadExpenses()]);
@@ -87,9 +83,13 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
         ...e,
         category_name: e.categories?.name || 'Unknown'
       }));
-      setExpenses(formatted);
+      setExpenses(formatted as Expense[]);
     }
   };
+
+  useEffect(() => {
+    loadData();
+  }, [schoolId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

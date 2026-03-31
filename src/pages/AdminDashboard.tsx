@@ -42,8 +42,6 @@ export const AdminDashboard = () => {
     bank_name: 'Meezan Bank', bank_account_title: 'ilmsoft', bank_iban: 'PK12MEZN000123456789',
   });
 
-  useEffect(() => { checkAdmin(); }, [user]);
-
   const checkAdmin = async () => {
     if (!user) { navigate('/login'); return; }
     const { data, error } = await supabase.from('admin_users').select('id').eq('user_id', user.id).single();
@@ -94,6 +92,9 @@ export const AdminDashboard = () => {
     });
   };
 
+  useEffect(() => { checkAdmin(); }, [user]);
+
+
   const handleApprove = async (req: Request) => {
     setProcessingId(req.id);
     const now = new Date();
@@ -122,7 +123,7 @@ export const AdminDashboard = () => {
   const getSchoolStatus = (s: School) => {
     if (!s.total_credits) return { label: 'No Credits', cls: 'expired' };
     if (!s.credit_expires_at) return { label: `${s.total_credits} credits`, cls: 'active' };
-    const d = Math.ceil((new Date(s.credit_expires_at).getTime() - Date.now()) / 86400000);
+    const d = Math.ceil((new Date(s.credit_expires_at).getTime() - new Date().getTime()) / 86400000);
     if (d < 0) return { label: 'Expired', cls: 'expired' };
     if (d <= 7) return { label: `${d} days left`, cls: 'warning' };
     return { label: `${d} days left`, cls: 'active' };

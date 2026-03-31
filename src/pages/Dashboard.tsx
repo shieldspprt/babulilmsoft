@@ -58,13 +58,6 @@ export const Dashboard = () => {
   const [creditExpired, setCreditExpired] = useState(false);
   const [daysLeft, setDaysLeft]     = useState(0);
 
-  useEffect(() => { if (profile) checkCredits(); }, [profile]);
-  useEffect(() => { if (tab === 'history' && profile) loadHistory(); }, [tab, profile]);
-  useEffect(() => {
-    const s = location.state as { showBuyCredits?: boolean };
-    if (s?.showBuyCredits) { setTab('buy'); navigate('/dashboard', { replace: true, state: {} }); }
-  }, [location, navigate]);
-
   const checkCredits = () => {
     if (!profile) return;
     const now = new Date();
@@ -81,6 +74,13 @@ export const Dashboard = () => {
     const { data } = await supabase.from('credit_requests').select('*').eq('school_id', profile.id).order('created_at', { ascending: false });
     setHistory(data || []);
   };
+
+  useEffect(() => { if (profile) checkCredits(); }, [profile]);
+  useEffect(() => { if (tab === 'history' && profile) loadHistory(); }, [tab, profile]);
+  useEffect(() => {
+    const s = location.state as { showBuyCredits?: boolean };
+    if (s?.showBuyCredits) { setTab('buy'); navigate('/dashboard', { replace: true, state: {} }); }
+  }, [location, navigate]);
 
   const handleBuy = async (e: React.FormEvent) => {
     e.preventDefault();

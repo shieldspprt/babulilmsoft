@@ -37,8 +37,6 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const [deleteTarget, setDeleteTarget] = useState<Parent | null>(null);
   const [deleting, setDeleting]     = useState(false);
 
-  useEffect(() => { load(); }, [schoolId]);
-
   const load = async () => {
     setLoading(true);
     const { data } = await supabase.from('parents').select('*')
@@ -46,6 +44,8 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
     setRecords(data || []);
     setLoading(false);
   };
+
+  useEffect(() => { load(); }, [schoolId]);
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 

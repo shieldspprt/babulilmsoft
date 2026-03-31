@@ -64,16 +64,6 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     description: ''
   });
 
-  useEffect(() => {
-    loadSuppliers();
-  }, [schoolId]);
-
-  useEffect(() => {
-    if (selectedSupplier) {
-      loadTransactions(selectedSupplier.id);
-    }
-  }, [selectedSupplier]);
-
   const loadSuppliers = async () => {
     const { data, error } = await supabase
       .from('suppliers')
@@ -98,6 +88,16 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
     if (error) console.error('Error loading transactions:', error);
     setTransactions(data || []);
   };
+
+  useEffect(() => {
+    loadSuppliers();
+  }, [schoolId]);
+
+  useEffect(() => {
+    if (selectedSupplier) {
+      loadTransactions(selectedSupplier.id);
+    }
+  }, [selectedSupplier]);
 
   const handleAddSupplier = async (e: React.FormEvent) => {
     e.preventDefault();

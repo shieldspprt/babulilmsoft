@@ -51,10 +51,6 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
     additional_notes: ''
   });
 
-  useEffect(() => {
-    loadData();
-  }, [schoolId]);
-
   const loadData = async () => {
     setLoading(true);
     await Promise.all([loadCategories(), loadRecords()]);
@@ -104,12 +100,16 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
       return;
     }
 
-    const formatted = (data || []).map(r => ({
+    const formatted = (data || []).map((r: any) => ({
       ...r,
       category_name: r.category?.name || 'Unknown'
     }));
-    setRecords(formatted);
+    setRecords(formatted as IncomeRecord[]);
   };
+
+  useEffect(() => {
+    loadData();
+  }, [schoolId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

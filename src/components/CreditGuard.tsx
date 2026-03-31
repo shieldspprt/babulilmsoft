@@ -17,7 +17,7 @@ export const CreditGuard: React.FC<{ children: React.ReactNode }> = ({ children 
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!profile) { setChecking(false); return; }
+    if (!profile) { setTimeout(() => setChecking(false), 0); return; }
     const now      = new Date();
     const exp      = profile.credit_expires_at ? new Date(profile.credit_expires_at) : null;
     const expired  = !!exp && exp <= now;

@@ -16,14 +16,14 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
   const [flash, setFlash]       = useState('');
   const [search, setSearch]     = useState('');
 
-  useEffect(() => { load(); }, [schoolId]);
-
   const load = async () => {
     setLoading(true);
     const { data } = await supabase.from('classes').select('*').eq('school_id', schoolId).order('name');
     setClasses(data || []);
     setLoading(false);
   };
+
+  useEffect(() => { load(); }, [schoolId]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
