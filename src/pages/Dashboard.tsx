@@ -225,7 +225,6 @@ export const Dashboard = () => {
               <div className="quick-actions">
                 {[
                   { id: 'parents'   as Tab, icon: Users2,        color: 'purple', label: 'Add Parent',    sub: 'Register guardian' },
-                  { id: 'students'  as Tab, icon: GraduationCap, color: 'green',  label: 'Add Student',   sub: 'Enroll a student' },
                   { id: 'fee'       as Tab, icon: Receipt,       color: 'rose',   label: 'Add Fee',       sub: 'Collect from parents' },
                   { id: 'income'    as Tab, icon: DollarSign,    color: 'cyan',   label: 'Record Income', sub: 'Other income' },
                   { id: 'expense'   as Tab, icon: Truck,         color: 'amber',  label: 'Add Expense',   sub: 'Track spending' },
