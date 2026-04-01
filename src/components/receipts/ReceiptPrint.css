@@ -123,3 +123,22 @@
     transform-origin: top left;
   }
 }
+
+/* Cut line between receipts */
+.cut-line {
+  text-align: center;
+  padding: 4px 0;
+  font-size: 9px;
+  color: #999;
+  letter-spacing: 2px;
+  border-top: 1px dashed #ccc;
+  border-bottom: 1px dashed #ccc;
+  margin: 4px 0;
+}
+
+@media print {
+  .cut-line {
+    border: none;
+    padding: 2px 0;
+  }
+}
