@@ -530,6 +530,13 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     if (!deleteTarget || !selectedParent) return;
     setDeleting(true);
     try {
+      // First delete associated receipt if exists
+      await supabase
+        .from('fee_receipts')
+        .delete()
+        .eq('payment_id', deleteTarget.id);
+      
+      // Then delete the payment
       const { error } = await supabase
         .from('fee_payments')
         .delete()
