@@ -54,7 +54,7 @@ export async function generateReceiptData(
         monthly_fee: Number(s.classes?.monthly_fee) || baseFee,
         discount_type: s.discount_type,
         discount_value: discount,
-        final_fee: Math.max(0, baseFee - discount)
+        final_fee: baseFee  // Student's actual monthly fee
       };
     });
 
@@ -116,7 +116,7 @@ export async function generateReceiptData(
 
     const receiptData: ReceiptData = {
       receipt_no: '',
-      date: payment.payment_date || new Date().toISOString().split('T')[0],
+      date: payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }),
       school: { name: school?.school_name || '—', address: school?.contact || '—', contact: school?.contact || '—' },
       parent: { name: `${parent?.first_name || ''} ${parent?.last_name || ''}`.trim(), contact: parent?.contact || '—', cnic: parent?.cnic || '—' },
       students: receiptStudents,

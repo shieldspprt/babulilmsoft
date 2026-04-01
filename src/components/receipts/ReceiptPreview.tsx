@@ -158,7 +158,7 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
           </tfoot>
         </table>
         
-        {/* Summary - Simplified */}
+        {/* Summary - Payment details */}
         <div className="r-summary">
           {s.previous_balance > 0 && (
             <div className="r-summary-row">
@@ -172,33 +172,20 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
               <span>{formatCurrency(Math.abs(s.previous_balance))}</span>
             </div>
           )}
-          <div className="r-summary-row">
-            <span>Payment Received:</span>
-            <span>{formatCurrency(s.payment_received)}</span>
-          </div>
           <div className="r-summary-row total">
-            <span>Total Due ({receipt.payment.method}):</span>
-            <span>{formatCurrency(Math.max(0, s.previous_balance - s.payment_received))}</span>
+            <span>Payment Received</span>
+            <span>{formatCurrency(s.payment_received)} {receipt.payment.method}</span>
           </div>
         </div>
 
         {/* Footer */}
         <div className="r-footer">
-          <div className="r-balance-note">
-            {s.is_cleared ? (
-              <span className="cleared">✓ Account Cleared</span>
-            ) : s.new_balance > 0 ? (
-              <span>Balance Due: {formatCurrency(s.new_balance)}</span>
-            ) : s.new_balance < 0 ? (
-              <span>Advance: {formatCurrency(Math.abs(s.new_balance))}</span>
-            ) : null}
-          </div>
           <div className="r-signature">
             <div className="r-signature-line"></div>
-            <span>Authorized</span>
+            <span>Authorized Signature</span>
           </div>
         </div>
-        <div className="r-note">Computer generated receipt</div>
+        <div className="r-note">Computer generated receipt · {receipt.date}</div>
       </div>
     </div>
   );
