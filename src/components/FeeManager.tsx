@@ -6,6 +6,9 @@ import {
   Search, Receipt, Trash2, Phone, CreditCard,
   CheckCircle, ArrowLeft, Calendar, Users, AlertCircle,
 } from 'lucide-react';
+import { generateReceiptData, saveReceipt } from '../lib/receiptGenerator';
+import type { ReceiptData, FeeReceipt } from '../lib/supabase';
+import { ReceiptPreview } from './receipts/ReceiptPreview';
 import './FeeManager.css';
 import './managers.css';
 
@@ -205,6 +208,10 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   // delete
   const [deleteTarget, setDeleteTarget] = useState<FeePayment | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // RECEIPT MODAL STATE
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState<ReceiptData | null>(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const cm = useMemo(currentMonthStr, []);
@@ -454,7 +461,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     setSaving(true);
     try {
       const sortedSelectedMonths = Array.from(selectedMonths).sort();
-      const { error } = await supabase.from('fee_payments').insert({
+      const { data: paymentData, error } = await supabase.from('fee_payments').insert({
         school_id: schoolId,
         parent_id: selectedParent.id,
         amount: amt,
@@ -463,13 +470,31 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         payment_date: paymentDate || todayStr,
         payment_method: paymentMethod,
         notes: paymentNotes || null,
-      });
+      }).select().single();
 
       if (error) throw error;
 
       showFlash(
         `Payment of Rs ${amt.toLocaleString()} recorded for ${sortedSelectedMonths.length} month(s)!`,
       );
+      
+      // Generate receipt
+      if (paymentData) {
+        const receiptData = await generateReceiptData(paymentData.id, schoolId);
+        if (receiptData) {
+          const savedReceipt = await saveReceipt(
+            receiptData,
+            paymentData.id,
+            schoolId,
+            selectedParent.id
+          );
+          if (savedReceipt) {
+            setCurrentReceipt(savedReceipt.receipt_data);
+            setShowReceipt(true);
+          }
+        }
+      }
+
       setSelectedMonths(new Set());
       setPaymentAmount('');
       setPaymentNotes('');
@@ -1014,6 +1039,14 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ─── Receipt Preview Modal ──────────────────────────────────── */}
+      {showReceipt && currentReceipt && (
+        <ReceiptPreview
+          receipt={currentReceipt}
+          onClose={() => setShowReceipt(false)}
+        />
       )}
     </div>
   );
