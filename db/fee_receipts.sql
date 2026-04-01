@@ -52,3 +52,47 @@ BEGIN
   RETURN 'R-' || year || '-' || LPAD(seq_num::text, 4, '0');
 END;
 $$ LANGUAGE plpgsql;
+
+-- =====================================================
+-- RPC FUNCTION: Generate sequential receipt numbers
+-- Returns R-YYYY-XXXX format (e.g., R-2026-0042)
+-- =====================================================
+
+CREATE OR REPLACE FUNCTION generate_receipt_no()
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  year_prefix TEXT;
+  next_num INTEGER;
+  receipt_no TEXT;
+BEGIN
+  year_prefix := 'R-' || EXTRACT(YEAR FROM CURRENT_DATE) || '-';
+  
+  -- Get max sequence number for current year
+  SELECT COALESCE(
+    MAX(
+      CAST(
+        SUBSTRING(receipt_no FROM LENGTH(year_prefix) + 1) AS INTEGER
+      )
+    ),
+    0
+  ) INTO next_num
+  FROM fee_receipts
+  WHERE receipt_no LIKE year_prefix || '%';
+  
+  next_num := next_num + 1;
+  receipt_no := year_prefix || LPAD(next_num::TEXT, 4, '0');
+  
+  RETURN receipt_no;
+END;
+$$;
+
+-- Grant execute to authenticated users
+GRANT EXECUTE ON FUNCTION generate_receipt_no() TO authenticated;
+
+-- =====================================================
+-- EXAMPLE: Test the function
+-- =====================================================
+-- SELECT generate_receipt_no(); -- Returns: R-2026-0001
