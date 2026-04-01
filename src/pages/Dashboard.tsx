@@ -355,6 +355,11 @@ export const Dashboard = () => {
                                 {item.status === 'approved' ? <CheckCircle size={14} color="var(--success)" /> : item.status === 'rejected' ? <XCircle size={14} color="var(--danger)" /> : <Clock size={14} color="var(--warning)" />}
                                 <span className={`status-pill ${item.status}`}>{item.status}</span>
                               </div>
+                              {item.status === 'rejected' && item.admin_notes && (
+                                <div style={{ fontSize: '10px', color: 'var(--danger)', marginTop: '4px', fontStyle: 'italic' }}>
+                                  Reason: {item.admin_notes}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))}
