@@ -265,40 +265,35 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
         </div>
       </div>
 
-      {/* Categories Management */}
-      <div className="categories-section glass">
-        <div className="section-header">
-          <h4>Income Categories</h4>
-          <button className="btn-text" onClick={() => setShowCategoryForm(!showCategoryForm)}>
-            <Plus size={16} /> Add Category
-          </button>
-        </div>
-        
-        {showCategoryForm && (
-          <form className="category-form" onSubmit={addCategory}>
-            <input
-              type="text"
-              placeholder="New category name"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-            />
-            <button type="submit" className="btn-primary">Add</button>
-            <button type="button" className="btn-ghost" onClick={() => setShowCategoryForm(false)}>
-              <X size={16} />
-            </button>
-          </form>
-        )}
-
+      {/* Categories */}
+      <div className="categories-bar">
+        <span className="categories-label">Categories:</span>
         <div className="categories-list">
           {categories.map(cat => (
             <span key={cat.id} className={`category-tag ${cat.is_default ? 'default' : 'custom'}`}>
               {cat.name}
               {!cat.is_default && (
-                <button onClick={() => deleteCategory(cat.id)}><X size={12} /></button>
+                <button onClick={() => deleteCategory(cat.id)} title="Delete"><X size={10} /></button>
               )}
             </span>
           ))}
         </div>
+        <button className="btn-add-category" onClick={() => setShowCategoryForm(!showCategoryForm)}>
+          <Plus size={14} />
+        </button>
+        {showCategoryForm && (
+          <form className="category-form-inline" onSubmit={addCategory}>
+            <input
+              type="text"
+              placeholder="New category"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              autoFocus
+            />
+            <button type="submit" className="btn-confirm"><Save size={14} /></button>
+            <button type="button" className="btn-cancel" onClick={() => {setShowCategoryForm(false); setNewCategoryName('');}}><X size={14} /></button>
+          </form>
+        )}
       </div>
 
       {/* Record Form */}

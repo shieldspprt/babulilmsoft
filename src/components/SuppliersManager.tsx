@@ -264,10 +264,9 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
   if (currentView === 'list') {
     return (
       <div className="suppliers-manager">
-        <div className="manager-header">
-          <h2><Store size={24} /> Suppliers</h2>
+        <div className="manager-toolbar">
           <Button onClick={() => setCurrentView('add')}>
-            <Plus size={18} /> Add New Supplier
+            <Plus size={18} /> Add Supplier
           </Button>
         </div>
 
