@@ -87,11 +87,6 @@ function N(v: unknown): number {
   return isNaN(n) ? 0 : n;
 }
 
-function formatMonth(ym: string): string {
-  const [y, m] = ym.split('-').map(Number);
-  return `${MONTH_NAMES[m - 1]} ${y}`;
-}
-
 function currentMonthStr(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -108,15 +103,13 @@ function shortMonth(ym: string): string {
   return MONTH_NAMES[m];
 }
 
-/** Returns 7 months centered on current month (-3 to +3) */
+/** Returns all 12 months of the current year */
 function getMonthWindow(): string[] {
   const now = new Date();
-  const cm = now.getMonth();
-  const cy = now.getFullYear();
+  const y = now.getFullYear();
   const months: string[] = [];
-  for (let i = -3; i <= 3; i++) {
-    const d = new Date(cy, cm + i, 1);
-    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  for (let i = 0; i < 12; i++) {
+    months.push(`${y}-${String(i + 1).padStart(2, '0')}`);
   }
   return months;
 }
@@ -303,7 +296,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       });
     }
 
-    // Build new bills for the 7-month window (sorted chronologically for carry-forward chaining)
+    // Build new bills for the 12-month window (sorted chronologically for carry-forward chaining)
     const sortedMonths = [...monthWindow].sort();
     const newBills: any[] = [];
 
@@ -396,7 +389,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       setPayments((paymentsRes.data || []).map(parsePayment));
       setChildren((childrenRes.data || []) as unknown as StudentRow[]);
 
-      // Generate / refresh bills for the 7-month window
+      // Generate / refresh bills for the 12-month window
       await generateBills(parent.id, existingBills);
     } catch (err: any) {
       showFlash('Error loading parent detail: ' + (err.message || 'Unknown error'));
@@ -785,50 +778,75 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
               </>
             )}
 
-            {/* ── Record Payment ── */}
+            {/* ── Fee Status Grid (selectable pending months) ── */}
             {children.length > 0 && (
-              <div>
-                <div className="fee-section-title">Record Payment</div>
-                <div style={{
-                  background: 'var(--bg)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1rem',
-                  marginTop: '0.25rem',
-                }}>
-                  {/* Month checkboxes */}
-                  <div className="fee-modal-months">
-                    {monthWindow.map(month => {
-                      const bill = billsByMonth[month];
-                      const isSelected = selectedMonths.has(month);
-                      const isDisabled = !canSelectMonth(month);
-                      return (
-                        <div
-                          key={month}
-                          className={`fee-modal-month-row${isSelected ? ' selected' : ''}${isDisabled ? ' disabled' : ''}`}
-                          onClick={() => !isDisabled && toggleMonth(month)}
-                        >
-                          <div className={`checkbox${isSelected || isDisabled ? ' checked' : ''}`}>
-                            {(isSelected || isDisabled) && <CheckCircle size={12} />}
-                          </div>
-                          <div className="fee-modal-month-info">
-                            <div className="fee-modal-month-name">{formatMonth(month)}</div>
-                            <div className="fee-modal-month-fee">
-                              {bill
-                                ? `Rs ${(bill.total_fee + bill.carried_forward).toLocaleString()}${bill.carried_forward !== 0 ? ' (incl. carry fwd)' : ''}`
-                                : '—'}
-                            </div>
-                          </div>
-                          <div className={`fee-modal-month-badge ${bill && bill.status !== 'pending' ? 'paid' : 'due'}`}>
-                            {bill && bill.status !== 'pending' ? '✓ Paid' : '○ Due'}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+              <>
+                <div className="fee-section-title">
+                  Fee Status — {new Date().getFullYear()}{selectedMonths.size > 0 ? ` (${selectedMonths.size} selected)` : ''}
+                </div>
+                <div className="fee-month-grid">
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const y = new Date().getFullYear();
+                    const m = String(i + 1).padStart(2, '0');
+                    const ym = `${y}-${m}`;
+                    const bill = billsByMonth[ym];
+                    const currentM = new Date().getMonth() + 1;
+                    const isSelectable = canSelectMonth(ym);
+                    const isSelected = selectedMonths.has(ym);
 
-                  {/* Payment summary when months are selected */}
-                  {selectedMonths.size > 0 && (
+                    let statusClass = 'pending';
+                    let statusLabel = '';
+                    let badgeClass = '';
+
+                    if (bill) {
+                      const totalDue = bill.total_fee + bill.carried_forward;
+                      if (bill.status === 'paid') {
+                        statusClass = 'paid'; statusLabel = '✓ Paid'; badgeClass = 'paid';
+                      } else if (bill.status === 'overpaid') {
+                        statusClass = 'overpaid'; statusLabel = '↻ Advance'; badgeClass = 'paid';
+                      } else if (bill.status === 'partial') {
+                        statusClass = 'partial'; statusLabel = '● Partial'; badgeClass = 'due';
+                      } else if (totalDue > 0) {
+                        statusClass = 'pending'; statusLabel = '○ Due'; badgeClass = 'due';
+                      }
+                    } else {
+                      statusClass = 'empty';
+                    }
+
+                    // Only show cards for past/current months; future months without data are hidden
+                    const showCard = bill || i + 1 <= currentM;
+                    if (!showCard) return null;
+
+                    return (
+                      <div
+                        key={ym}
+                        className={`fee-month-card ${statusClass}${!bill ? ' empty' : ''}${isSelected ? ' selected' : ''}${isSelectable ? ' selectable' : ''}`}
+                        onClick={() => isSelectable && toggleMonth(ym)}
+                        style={isSelectable ? { cursor: 'pointer' } : undefined}
+                      >
+                        {isSelected && <div className="fee-month-selected-check"><CheckCircle size={14} /></div>}
+                        <div className="fee-month-name">{MONTH_NAMES[i]}</div>
+                        <div className="fee-month-fee">
+                          {bill ? `Rs ${(bill.total_fee + bill.carried_forward).toLocaleString()}` : '—'}
+                        </div>
+                        <div className={`fee-month-badge ${badgeClass}`}>
+                          {statusLabel}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ── Payment Summary + Form (appears when months are selected) ── */}
+                {selectedMonths.size > 0 && (
+                  <div style={{
+                    background: 'var(--bg)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1rem',
+                    marginTop: '0.5rem',
+                  }}>
+                    {/* Payment summary */}
                     <div className="fee-modal-summary">
                       <div className="fee-modal-summary-row">
                         <span>Previous Balance</span>
@@ -847,134 +865,84 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                         <span>Rs {totalForSelected.toLocaleString()}</span>
                       </div>
                     </div>
-                  )}
 
-                  {/* Remaining indicator — shown only when amount entered */}
-                  {paymentAmount && parseInt(paymentAmount) > 0 && selectedMonths.size > 0 && (
-                    <div className={`fee-modal-remaining ${netBalance > 0 ? 'warning' : netBalance < 0 ? 'advance' : netBalance === 0 ? 'paid' : 'neutral'}`}>
-                      <span>
-                        {netBalance > 0
-                          ? `⚠ Rs ${Math.abs(netBalance).toLocaleString()} remaining after payment`
-                          : netBalance < 0
-                            ? `↻ Rs ${Math.abs(netBalance).toLocaleString()} advance after payment`
-                            : '✓ Exact amount — fully paid!'}
-                      </span>
-                    </div>
-                  )}
+                    {/* Remaining indicator — shown only when amount entered */}
+                    {paymentAmount && parseInt(paymentAmount) > 0 && (
+                      <div className={`fee-modal-remaining ${netBalance > 0 ? 'warning' : netBalance < 0 ? 'advance' : netBalance === 0 ? 'paid' : 'neutral'}`}>
+                        <span>
+                          {netBalance > 0
+                            ? `⚠ Rs ${Math.abs(netBalance).toLocaleString()} remaining after payment`
+                            : netBalance < 0
+                              ? `↻ Rs ${Math.abs(netBalance).toLocaleString()} advance after payment`
+                              : '✓ Exact amount — fully paid!'}
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Form fields */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
-                    <div>
-                      <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Amount Paying Now (Rs) *</label>
-                      <input
-                        type="number"
-                        className="fee-modal-amount-input"
-                        placeholder="Enter amount received…"
-                        value={paymentAmount}
-                        onChange={e => setPaymentAmount(e.target.value)}
-                        min="1"
-                        step="1"
-                      />
+                    {/* Form fields */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+                      <div>
+                        <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Amount Paying Now (Rs) *</label>
+                        <input
+                          type="number"
+                          className="fee-modal-amount-input"
+                          placeholder="Enter amount received…"
+                          value={paymentAmount}
+                          onChange={e => setPaymentAmount(e.target.value)}
+                          min="1"
+                          step="1"
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Payment Method *</label>
+                        <select
+                          value={paymentMethod}
+                          onChange={e => setPaymentMethod(e.target.value)}
+                          style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                        >
+                          {PAYMENT_METHODS.map(m => (
+                            <option key={m} value={m}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Payment Method *</label>
-                      <select
-                        value={paymentMethod}
-                        onChange={e => setPaymentMethod(e.target.value)}
-                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div>
+                        <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Payment Date *</label>
+                        <input
+                          type="date"
+                          value={paymentDate}
+                          onChange={e => setPaymentDate(e.target.value)}
+                          style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Notes (optional)</label>
+                        <input
+                          type="text"
+                          value={paymentNotes}
+                          onChange={e => setPaymentNotes(e.target.value)}
+                          placeholder="Any additional notes…"
+                          style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Record button */}
+                    <div style={{ marginTop: '1rem' }}>
+                      <Button
+                        onClick={recordPayment}
+                        isLoading={saving}
+                        disabled={!paymentAmount || parseInt(paymentAmount) <= 0}
+                        fullWidth
                       >
-                        {PAYMENT_METHODS.map(m => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </select>
+                        <CreditCard size={16} /> Record Payment
+                      </Button>
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <div>
-                      <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Payment Date *</label>
-                      <input
-                        type="date"
-                        value={paymentDate}
-                        onChange={e => setPaymentDate(e.target.value)}
-                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Notes (optional)</label>
-                      <input
-                        type="text"
-                        value={paymentNotes}
-                        onChange={e => setPaymentNotes(e.target.value)}
-                        placeholder="Any additional notes…"
-                        style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Record button */}
-                  <div style={{ marginTop: '1rem' }}>
-                    <Button
-                      onClick={recordPayment}
-                      isLoading={saving}
-                      disabled={selectedMonths.size === 0 || !paymentAmount || parseInt(paymentAmount) <= 0}
-                      fullWidth
-                    >
-                      <CreditCard size={16} /> Record Payment
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                )}
+              </>
             )}
-
-            {/* 12-month grid */}
-            <div className="fee-section-title">Fee Status — {new Date().getFullYear()}</div>
-            <div className="fee-month-grid">
-              {Array.from({ length: 12 }, (_, i) => {
-                const y = new Date().getFullYear();
-                const m = String(i + 1).padStart(2, '0');
-                const ym = `${y}-${m}`;
-                const bill = billsByMonth[ym];
-                const currentM = new Date().getMonth() + 1;
-
-                let statusClass = 'pending';
-                let statusLabel = '';
-                let badgeClass = '';
-
-                if (bill) {
-                  const totalDue = bill.total_fee + bill.carried_forward;
-                  if (bill.status === 'paid') {
-                    statusClass = 'paid'; statusLabel = '✓ Paid'; badgeClass = 'paid';
-                  } else if (bill.status === 'overpaid') {
-                    statusClass = 'overpaid'; statusLabel = '↻ Advance'; badgeClass = 'paid';
-                  } else if (bill.status === 'partial') {
-                    statusClass = 'partial'; statusLabel = '● Partial'; badgeClass = 'due';
-                  } else if (totalDue > 0) {
-                    statusClass = 'pending'; statusLabel = '○ Due'; badgeClass = 'due';
-                  }
-                } else {
-                  statusClass = 'empty';
-                }
-
-                // Only show cards for past/current months; future months without data are hidden
-                const showCard = bill || i + 1 <= currentM;
-                if (!showCard) return null;
-
-                return (
-                  <div
-                    key={ym}
-                    className={`fee-month-card ${statusClass}${!bill ? ' empty' : ''}`}
-                  >
-                    <div className="fee-month-name">{MONTH_NAMES[i]}</div>
-                    <div className="fee-month-fee">
-                      {bill ? `Rs ${(bill.total_fee + bill.carried_forward).toLocaleString()}` : '—'}
-                    </div>
-                    <div className={`fee-month-badge ${badgeClass}`}>
-                      {statusLabel}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
 
             {/* Payment history */}
             <div className="fee-section-title">Payment History</div>
