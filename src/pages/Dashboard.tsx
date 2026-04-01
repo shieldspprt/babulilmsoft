@@ -36,7 +36,7 @@ const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: str
 ];
 
 const PAGE_TITLES: Record<Tab, string> = {
-  overview:  'Dashboard Overview',
+  overview:  '',  // Title shown as Welcome {school_name} in the component
   classes:   'Classes',
   teachers:  'Teachers & Staff',
   parents:   'Parents & Guardians',

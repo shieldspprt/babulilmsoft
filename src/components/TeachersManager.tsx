@@ -80,7 +80,7 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
         <div className="manager-title">
           <GraduationCap size={24} />
           <div>
-            <h3>Teachers &amp; Staff</h3>
+            <h3></h3>
             <p>{counts.Teacher} Teachers · {counts.Staff} Staff</p>
           </div>
         </div>

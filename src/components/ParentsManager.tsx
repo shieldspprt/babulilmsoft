@@ -275,7 +275,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
         <div className="manager-title">
           <Users size={24} />
           <div>
-            <h3>Parents</h3>
+            <h3></h3>
             <p>{records.length} parent{records.length !== 1 ? 's' : ''} registered</p>
           </div>
         </div>

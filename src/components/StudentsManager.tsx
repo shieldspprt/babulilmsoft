@@ -198,7 +198,7 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
         <div className="manager-title">
           <GraduationCap size={24} />
           <div>
-            <h3>Students</h3>
+            <h3></h3>
             <p>{students.length} student{students.length !== 1 ? 's' : ''} enrolled</p>
           </div>
         </div>

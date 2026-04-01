@@ -139,7 +139,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
         <div className="manager-title">
           <BookOpen size={24} />
           <div>
-            <h3>Classes</h3>
+            <h3></h3>
             <p>{classes.length} class{classes.length !== 1 ? 'es' : ''} registered</p>
           </div>
         </div>
