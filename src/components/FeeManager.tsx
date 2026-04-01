@@ -524,54 +524,6 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     }
   }, [showFlash]);
 
-  /* ── print receipt ─────────────────────────────────────────── */
-  const handlePrintReceipt = useCallback(() => {
-    if (!currentReceipt) return;
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Receipt ${currentReceipt.receipt_no}</title>
-          <style>
-            @page { size: A4 landscape; margin: 8mm; }
-            body { margin: 0; font-family: Inter, sans-serif; font-size: 11px; color: #1a1a1a; }
-            .receipt-single { width: 93mm; padding: 5mm; box-sizing: border-box; }
-          </style>
-        </head>
-        <body>
-          <div class="receipt-print-item">
-            <!-- Receipt content will be injected here -->
-          </div>
-          <script>window.print(); window.close();</script>
-        </body>
-        </html>
-      `);
-    }
-  }, [currentReceipt]);
-
-  /* ── download PDF ───────────────────────────────────────────── */
-  const handleDownloadPDF = useCallback(async () => {
-    // TODO: Implement PDF generation with html2canvas + jsPDF
-    showFlash('PDF download coming soon!');
-  }, [showFlash]);
-
-  /* ── WhatsApp share ──────────────────────────────────────────── */
-  const handleWhatsAppShare = useCallback(() => {
-    if (!currentReceipt) return;
-    const s = currentReceipt.summary;
-    const message = encodeURIComponent(
-      `\u2705 Fee Receipt #${currentReceipt.receipt_no}\n\n` +
-      `Parent: ${currentReceipt.parent.name}\n` +
-      `Amount: Rs ${s.payment_received.toLocaleString()}\n` +
-      `Method: ${currentReceipt.payment.method}\n\n` +
-      `Students:\n${currentReceipt.students.map(s => `- ${s.name}: ${s.class_name}`).join('\n')}\n\n` +
-      `New Balance: Rs ${s.new_balance > 0 ? s.new_balance + ' due' : Math.abs(s.new_balance) + ' advance'}\n\n` +
-      `_This is a computer generated message from ${currentReceipt.school.name}_`
-    );
-    window.open(`https://wa.me/${currentReceipt.parent.contact}?text=${message}`, '_blank');
-  }, [currentReceipt]);
 
   /* ── delete payment ─────────────────────────────────────────────── */
   const handleDeletePayment = useCallback(async () => {
@@ -1116,9 +1068,6 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         <ReceiptPreview
           receipt={currentReceipt}
           onClose={() => setShowReceipt(false)}
-          onPrint={handlePrintReceipt}
-          onDownload={handleDownloadPDF}
-          onWhatsApp={handleWhatsAppShare}
         />
       )}
     </div>
