@@ -40,6 +40,7 @@ export const AdminDashboard = () => {
   const [search, setSearch]               = useState('');
   const [schoolSearch, setSchoolSearch]   = useState('');
   const [processingId, setProcessingId]   = useState<string | null>(null);
+  const [rejectModal, setRejectModal]       = useState<{ id: string; notes: string } | null>(null);
   const [paySettings, setPaySettings]     = useState({
     jazzcash_number: '0300-1234567', jazzcash_name: 'ilmsoft',
     bank_name: 'Meezan Bank', bank_account_title: 'ilmsoft', bank_iban: 'PK12MEZN000123456789',
@@ -95,7 +96,7 @@ export const AdminDashboard = () => {
     });
   };
 
-  useEffect(() => { checkAdmin(); }, [user]);
+  useEffect(() => { checkAdmin(); }, []);
 
 
   const handleApprove = async (req: Request) => {
@@ -113,16 +114,21 @@ export const AdminDashboard = () => {
   };
 
   const handleReject = (id: string) => {
-    setConfirmAction({
-      message: 'Reject this request?',
-      onConfirm: async () => {
-        setProcessingId(id);
-        await supabase.from('credit_requests').update({ status: 'rejected' }).eq('id', id);
-        setProcessingId(null);
-        loadAll();
-        setConfirmAction(null);
-      }
-    });
+    setRejectModal({ id, notes: '' });
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectModal) return;
+    setProcessingId(rejectModal.id);
+    const { error } = await supabase
+      .from('credit_requests')
+      .update({ status: 'rejected', admin_notes: rejectModal.notes })
+      .eq('id', rejectModal.id);
+    setProcessingId(null);
+    setRejectModal(null);
+    if (error) showFlash('Reject failed: ' + error.message);
+    else showFlash('Request rejected successfully');
+    loadAll();
   };
 
   const getSchoolStatus = (s: School) => {
@@ -352,6 +358,27 @@ export const AdminDashboard = () => {
       </div>
 
       {flash && <div className={`flash ${flash.startsWith('Error') || flash.startsWith('Approval failed') ? 'error' : 'success'}`}>{flash}</div>}
+
+      {rejectModal && (
+        <div className="modal-backdrop" onClick={() => setRejectModal(null)}>
+          <div className="confirm-box" onClick={e => e.stopPropagation()}>
+            <XCircle size={40} color="var(--danger)" />
+            <h3>Reject Credit Request</h3>
+            <p style={{marginBottom:"1rem"}}>Reason for rejection:</p>
+            <textarea
+              className="reject-notes-input"
+              value={rejectModal.notes}
+              onChange={e => setRejectModal({...rejectModal, notes: e.target.value})}
+              placeholder="Enter rejection reason..."
+              rows={3}
+            />
+            <div className="confirm-box-btns">
+              <Button variant="secondary" onClick={() => setRejectModal(null)}>Cancel</Button>
+              <Button variant="danger" onClick={handleConfirmReject} disabled={!rejectModal.notes.trim()}>Reject</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmAction && (
         <div className="modal-backdrop" onClick={() => setConfirmAction(null)}>
