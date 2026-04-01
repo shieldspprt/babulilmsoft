@@ -9,17 +9,16 @@ import { ExpenseManager }   from '../components/ExpenseManager';
 import { SuppliersManager } from '../components/SuppliersManager';
 import { ParentsManager }   from '../components/ParentsManager';
 import { StudentsManager }  from '../components/StudentsManager';
-import { FeeManager }      from '../components/FeeManager';
 import { Button } from '../components/ui/Button';
 import { Input }  from '../components/ui/Input';
 import {
   LayoutDashboard, GraduationCap, DollarSign, Truck, Store,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
-  CheckCircle, XCircle, Banknote, BookOpen, Receipt
+  CheckCircle, XCircle, Banknote, BookOpen
 } from 'lucide-react';
 import './Dashboard.css';
 
-type Tab = 'overview' | 'classes' | 'teachers' | 'parents' | 'students' | 'fee' | 'income' | 'expense' | 'suppliers' | 'buy' | 'history';
+type Tab = 'overview' | 'classes' | 'teachers' | 'parents' | 'students' | 'income' | 'expense' | 'suppliers' | 'buy' | 'history';
 
 const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: string }[] = [
   { id: 'overview',   label: 'Overview',       icon: LayoutDashboard, section: 'MAIN' },
@@ -27,7 +26,6 @@ const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: str
   { id: 'teachers',   label: 'Teachers',        icon: GraduationCap },
   { id: 'parents',    label: 'Parents',         icon: Users2 },
   { id: 'students',  label: 'Students',        icon: GraduationCap },
-  { id: 'fee',        label: 'Fee Collection',   icon: Receipt },
   { id: 'income',     label: 'Income',          icon: DollarSign },
   { id: 'expense',    label: 'Expenses',        icon: Truck },
   { id: 'suppliers',  label: 'Suppliers',       icon: Store },
@@ -44,7 +42,6 @@ const PAGE_TITLES: Record<Tab, string> = {
   expense:   'Expenses',
   suppliers: 'Suppliers',
   students:  'Students',
-  fee:       'Fee Collection',
   buy:       'Buy Credits',
   history:   'Payment History',
 };
@@ -246,7 +243,6 @@ export const Dashboard = () => {
           {tab === 'teachers'  && <TeachersManager  schoolId={profile.id} />}
           {tab === 'parents'   && <ParentsManager   schoolId={profile.id} />}
           {tab === 'students'  && <StudentsManager  schoolId={profile.id} />}
-          {tab === 'fee'       && <FeeManager      schoolId={profile.id} />}
           {tab === 'income'    && <IncomeManager    schoolId={profile.id} />}
           {tab === 'expense'   && <ExpenseManager   schoolId={profile.id} />}
           {tab === 'suppliers' && <SuppliersManager schoolId={profile.id} />}
