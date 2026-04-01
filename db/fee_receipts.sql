@@ -79,3 +79,13 @@ BEGIN
     RETURN v_new_receipt_no;
 END;
 $$;
+
+-- Update policies to ensure DELETE works
+DROP POLICY IF EXISTS fee_payments_delete ON public.fee_payments;
+CREATE POLICY fee_payments_delete ON public.fee_payments FOR DELETE USING (school_id IN (SELECT id FROM public.schools WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS fee_payments_update ON public.fee_payments;
+CREATE POLICY fee_payments_update ON public.fee_payments FOR UPDATE USING (school_id IN (SELECT id FROM public.schools WHERE user_id = auth.uid()));
+
+DROP POLICY IF EXISTS fee_receipts_delete ON public.fee_receipts;
+CREATE POLICY fee_receipts_delete ON public.fee_receipts FOR DELETE USING (school_id IN (SELECT id FROM public.schools WHERE user_id = auth.uid()));
