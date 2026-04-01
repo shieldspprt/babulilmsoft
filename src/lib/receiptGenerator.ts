@@ -34,7 +34,7 @@ export async function generateReceiptData(
     // Fetch students with classes
     const { data: students } = await supabase
       .from('students')
-      .select('first_name, last_name, monthly_fee, discount_type, discount_value, classes(name)')
+      .select('first_name, last_name, monthly_fee, discount_type, discount_value, classes(name, monthly_fee)')
       .eq('parent_id', payment.parent_id)
       .eq('active', true)
       .eq('school_id', schoolId);
@@ -51,7 +51,7 @@ export async function generateReceiptData(
       return {
         name: `${s.first_name} ${s.last_name}`,
         class_name: s.classes?.name || '—',
-        monthly_fee: baseFee,
+        monthly_fee: Number(s.classes?.monthly_fee) || baseFee,
         discount_type: s.discount_type,
         discount_value: discount,
         final_fee: Math.max(0, baseFee - discount)
@@ -67,7 +67,7 @@ export async function generateReceiptData(
     // Step 1: Calculate payable months from admission to current month
     const { data: studentsWithAdmissions } = await supabase
       .from('students')
-      .select('date_of_admission, monthly_fee, discount_type, discount_value, classes(name)')
+      .select('date_of_admission, monthly_fee, discount_type, discount_value, classes(name, monthly_fee)')
       .eq('parent_id', payment.parent_id)
       .eq('active', true)
       .eq('school_id', schoolId);

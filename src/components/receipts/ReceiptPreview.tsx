@@ -131,7 +131,7 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
               <th>S#</th>
               <th>Student</th>
               <th>Class</th>
-              <th>Fee</th>
+              <th>Class Fee</th>
               <th>Disc</th>
               <th>Final</th>
             </tr>
@@ -249,7 +249,7 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
             <th>S#</th>
             <th>Student</th>
             <th>Class</th>
-            <th>Fee</th>
+            <th>Class Fee</th>
             <th>Disc</th>
             <th>Final</th>
           </tr>
