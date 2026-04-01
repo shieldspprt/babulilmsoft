@@ -7,7 +7,8 @@ import {
   CheckCircle, ArrowLeft, Calendar, Users, AlertCircle, FileText,
 } from 'lucide-react';
 import { generateReceiptData, saveReceipt, getReceiptByPayment } from '../lib/receiptGenerator';
-import type { ReceiptData, FeeReceipt } from '../lib/supabase';
+import type { ReceiptData
+} from '../lib/supabase';
 import { ReceiptPreview } from './receipts/ReceiptPreview';
 import './FeeManager.css';
 import './managers.css';
@@ -512,7 +513,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   /* ── load receipt from payment ──────────────────────────────────── */
   const loadReceiptFromPayment = useCallback(async (paymentId: string) => {
     try {
-      const { data: receipt } = await getReceiptByPayment(paymentId);
+      const receipt = await getReceiptByPayment(paymentId);
       if (receipt) {
         setCurrentReceipt(receipt.receipt_data);
         setShowReceipt(true);
@@ -1119,9 +1120,6 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
           onPrint={handlePrintReceipt}
           onDownload={handleDownloadPDF}
           onWhatsApp={handleWhatsAppShare}
-        />
-          receipt={currentReceipt}
-          onClose={() => setShowReceipt(false)}
         />
       )}
     </div>
