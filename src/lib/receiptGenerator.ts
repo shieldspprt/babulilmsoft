@@ -62,22 +62,57 @@ export async function generateReceiptData(
     const grossFee = receiptStudents.reduce((sum, s) => sum + s.monthly_fee, 0);
     const totalDiscount = receiptStudents.reduce((sum, s) => sum + s.discount_value, 0);
     const netMonthly = grossFee - totalDiscount;
-    const paymentReceived = Number(payment.amount);
 
-    // Simplified balance calc
-    const { data: prevPayments } = await supabase
+        // CORRECT BALANCE CALCULATION
+    // Step 1: Calculate payable months from admission to current month
+    const { data: studentsWithAdmissions } = await supabase
+      .from('students')
+      .select('date_of_admission, monthly_fee, discount_type, discount_value, classes(name)')
+      .eq('parent_id', payment.parent_id)
+      .eq('active', true)
+      .eq('school_id', schoolId);
+    
+    // Get earliest admission month
+    const admissionMonths = (studentsWithAdmissions || [])
+      .map((s: any) => s.date_of_admission?.slice(0, 7))
+      .filter((m: string | null): m is string => !!m)
+      .sort();
+    const firstAdmissionMonth = admissionMonths[0] || new Date().toISOString().slice(0, 7);
+    
+    // Calculate months from admission to now
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const [startY, startM] = firstAdmissionMonth.split('-').map(Number);
+    const [endY, endM] = currentMonth.split('-').map(Number);
+    let payableMonthsCount = 0;
+    let y = startY, m = startM;
+    while (y < endY || (y === endY && m <= endM)) {
+      payableMonthsCount++;
+      m++;
+      if (m > 12) { m = 1; y++; }
+    }
+    
+    // Step 2: Get all payments before this one
+    const { data: allPayments } = await supabase
       .from('fee_payments')
-      .select('amount')
+      .select('id, amount, created_at')
       .eq('parent_id', payment.parent_id)
       .eq('school_id', schoolId)
-      .lt('created_at', payment.created_at ?? new Date().toISOString());
+      .order('created_at', { ascending: true });
     
-    const totalPaidBefore = prevPayments?.reduce((a: number, p: any) => a + Number(p.amount), 0) || 0;
-    const monthsCount = (payment.months_paid || []).length;
-    const totalOwed = monthsCount * netMonthly;
-    const previousBalance = totalOwed - totalPaidBefore;
-    const totalPayable = previousBalance + paymentReceived;
-    const newBalance = previousBalance - paymentReceived;
+    // Calculate total paid BEFORE this payment (by ID or by creation time)
+    const currentPaymentIndex = allPayments?.findIndex((p: any) => p.id === payment.id) ?? -1;
+    const paymentsBefore = currentPaymentIndex >= 0 
+      ? allPayments?.slice(0, currentPaymentIndex) 
+      : allPayments?.filter((p: any) => new Date(p.created_at) < new Date(payment.created_at));
+    
+    const totalPaidBefore = paymentsBefore?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+    
+    // Step 3: Calculate balances
+    const totalPaymentReceived = Number(payment.amount);
+    const totalOwedTillNow = payableMonthsCount * netMonthly;
+    const previousBalance = totalOwedTillNow - totalPaidBefore;
+    const totalPayable = previousBalance;
+    const newBalance = previousBalance - totalPaymentReceived;
 
     const receiptData: ReceiptData = {
       receipt_no: '',
@@ -85,7 +120,7 @@ export async function generateReceiptData(
       school: { name: school?.school_name || '—', address: school?.contact || '—', contact: school?.contact || '—' },
       parent: { name: `${parent?.first_name || ''} ${parent?.last_name || ''}`.trim(), contact: parent?.contact || '—', cnic: parent?.cnic || '—' },
       students: receiptStudents,
-      summary: { gross_fee: grossFee, total_discount: totalDiscount, net_monthly: netMonthly, previous_balance: previousBalance, total_payable: totalPayable, payment_received: paymentReceived, new_balance: newBalance, is_cleared: newBalance <= 0 },
+      summary: { gross_fee: grossFee, total_discount: totalDiscount, net_monthly: netMonthly, previous_balance: previousBalance, total_payable: totalPayable, payment_received: totalPaymentReceived, new_balance: newBalance, is_cleared: newBalance <= 0 },
       payment: { method: payment.payment_method || 'Cash', months_paid: payment.months_paid || [], months_count: payment.months_count || (payment.months_paid || []).length }
     };
 
