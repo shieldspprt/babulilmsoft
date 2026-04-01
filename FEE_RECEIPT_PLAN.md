@@ -7,55 +7,54 @@ Generate professional fee receipts for parents with print, PDF, and WhatsApp sha
 
 ## Receipt Layout
 
+### Format: 3 Receipts per A4 Page (Landscape)
+
+Each receipt: ~277mm width × 99mm height (A4 = 297mm × 210mm, minus margins)
+
+Cut lines between receipts for easy separation.
+
 ```
-┌─────────────────────────────────────────┐
-│         [SCHOOL LOGO]                   │
-│         ABC SCHOOL                      │
-│    123 Main Street, City                │
-│    Phone: 03XX-XXXXXXX                  │
-│─────────────────────────────────────────│
-│                                         │
-│  RECEIPT #R-2026-0001                   │
-│  Date: 01-Apr-2026                      │
-│                                         │
-│  Parent: Shahbaz Ali                    │
-│  Contact: 03XX-XXXXXXX                  │
-│─────────────────────────────────────────│
-│                                         │
-│  STUDENT FEE DETAILS                    │
-│  ─────────────────────────────────────  │
-│  Student          Class       Monthly Fee │
-│  ─────────────────────────────────────  │
-│  1. Ali Khan       Grade-3     Rs 2,500 │
-│  2. Sara Khan      Grade-5     Rs 3,000 │
-│  ─────────────────────────────────────  │
-│  GROSS FEE:                    Rs 5,500  │
-│  Less: Discount                  -500   │
-│  ─────────────────────────────────────  │
-│  NET MONTHLY FEE:              Rs 5,000 │
-│                                         │
-│  ─────────────────────────────────────  │
-│  Previous Balance/Advance:     Rs 1,000 │
-│  (Negative = Advance, Positive = Due)   │
-│                                         │
-│  TOTAL PAYABLE:                Rs 4,000 │
-│  ─────────────────────────────────────  │
-│                                         │
-│  PAYMENT RECEIVED:             Rs 4,000 │
-│  Payment Mode: Cash                     │
-│  Paid For: Jan, Feb, Mar 2026          │
-│  ─────────────────────────────────────  │
-│                                         │
-│  NEW BALANCE/ADVANCE:           Rs 0    │
-│  ✓ Account Cleared                    │
-│                                         │
-│  [QR CODE: Scan to verify]              │
-│                                         │
-│  ──── [Authorized Signature] ─────      │
-│                                         │
-│  This is computer generated receipt     │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ [LOGO]  ABC SCHOOL                              Receipt #: R-2026-42 │   │
+│  │ 123 Main St, Lahore                             Date: 01-Apr-2026   │   │
+│  │ Phone: 03XX-XXXXXXX                                                 │   │
+│  ├─────────────────────────────────────────────────────────────────────┤   │
+│  │                                                                     │   │
+│  │  Parent: Shahbaz Ali          Contact: 03XX-XXXXXXX                 │   │
+│  │                                                                     │   │
+│  │  ┌────────────┬─────────────┬──────────┬──────────┬────────────┐   │   │
+│  │  │ Student    │ Class       │ Gross    │ Discount │ Net  Fee   │   │   │
+│  │  ├────────────┼─────────────┼──────────┼──────────┼────────────┤   │   │
+│  │  │ Ali Khan   │ Grade 3     │   2,500  │     500  │     2,000  │   │   │
+│  │  │ Sara Khan  │ Grade 5     │   3,000  │       0  │     3,000  │   │   │
+│  │  └────────────┴─────────────┴──────────┴──────────┴────────────┘   │   │
+│  │                                                                     │   │
+│  │  Monthly Fee: Rs 5,000                                              │   │
+│  │  Previous Balance: +2,000 (Due)  │  Total Payable: Rs 7,000        │   │
+│  │                                                                     │   │
+│  │  ─────────────────────────────────────────────────────────────────  │   │
+│  │  PAYMENT RECEIVED: Rs 7,000    Mode: Cash    Months: Jan-Mar      │   │
+│  │                                                                     │   │
+│  │  ✓ ACCOUNT CLEARED  │  Authorized: _______________                  │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                ✂ CUT HERE ✂                                │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ [Next Receipt...]                                                   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                ✂ CUT HERE ✂                                │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ [Next Receipt...]                                                   │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Single Receipt Dimensions
+- Width: 277mm (fits 3 across on A4 landscape with 10mm margins)
+- Height: 99mm (fits 2 rows with margins, or cut to fit 3)
+- Fold/Cut: Dashed line at bottom for easy separation
 
 ---
 
@@ -126,11 +125,11 @@ CREATE INDEX idx_fee_receipts_receipt_no ON fee_receipts(receipt_no);
 
 ## Sharing Options
 
-- [ ] **Print** - 80mm thermal printer optimized
-- [ ] **PDF Download** - A4 size receipt
-- [ ] **WhatsApp** - Share as image/PDF
-- [ ] **Email** - Send PDF attachment
-- [ ] **QR Code** - Scan to verify receipt online
+- [x] **Print** - **3 receipts per A4 page (landscape)** for cost savings
+- [x] **PDF Download** - A4 landscape, multiple receipts per page
+- [x] **WhatsApp** - Share receipt summary with parent
+- [ ] **Email** - Optional future feature
+- [ ] **QR Code** - Not needed (receipt sent via WhatsApp)
 
 ---
 
@@ -191,15 +190,45 @@ CREATE POLICY "receipts_insert" ON public.fee_receipts
 - [ ] **2.3 ReceiptParentInfo.tsx** - Parent name, contact, CNIC
 - [ ] **2.4 ReceiptStudentList.tsx** - Table with Student, Class, Fee, Discount, Final Fee
 - [ ] **2.5 ReceiptSummary.tsx** - Gross Fee, Total Discount, Net Monthly Fee, Previous Balance, Total Payable, Payment Received, New Balance/Advance
-- [ ] **2.6 ReceiptFooter.tsx** - QR Code, Signature line, Terms
+- [ ] **2.6 ReceiptFooter.tsx** - Signature line only (no QR)
 - [ ] **2.7 ReceiptActions.tsx** - Print, Download PDF, WhatsApp buttons
 
 ### PHASE 3: Output Features (Priority: MEDIUM)
 
-- [ ] **3.1 Print Styles** (`src/styles/receipt-print.css`) - Optimized for 80mm thermal printer
-- [ ] **3.2 PDF Generation** - Using html2canvas + jsPDF
-- [ ] **3.3 WhatsApp Sharing** - Generate message and open WhatsApp Web/APP
-- [ ] **3.4 QR Code Generation** - For online verification
+- [ ] **3.1 Print Styles** (`src/styles/receipt-print.css`) - A4 landscape with cut lines
+  ```css
+  @media print {
+    @page {
+      size: A4 landscape;
+      margin: 10mm;
+    }
+    
+    .receipt-page {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+    }
+    
+    .receipt-single {
+      width: 93mm;  /* (297mm - 20mm margins) / 3 */
+      height: 97mm; /* (210mm - 20mm margins) / 2 - cuts */
+      padding: 8mm;
+      border-right: 2px dashed #ccc;  /* cut line */
+      page-break-inside: avoid;
+    }
+    
+    .receipt-single:nth-child(3n) {
+      border-right: none;
+    }
+    
+    /* Hide cut line for last row */
+    .receipt-single:nth-last-child(-n+3) {
+      border-bottom: none;
+    }
+  }
+  ```
+- [ ] **3.2 PDF Generation** - Using browser print-to-PDF
+- [ ] **3.3 WhatsApp Sharing** - Open wa.me link with pre-filled text
 
 ### PHASE 4: Integration (Priority: HIGH)
 
