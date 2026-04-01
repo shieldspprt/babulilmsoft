@@ -4,7 +4,7 @@ import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
 import {
   Search, Receipt, Trash2, Phone, CreditCard,
-  CheckCircle, ArrowLeft, Calendar, Users,
+  CheckCircle, ArrowLeft, Calendar, Users, AlertCircle,
 } from 'lucide-react';
 import './FeeManager.css';
 import './managers.css';
@@ -971,9 +971,16 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       {/* ─── Flash Message ──────────────────────────────────────────── */}
       {flash && (
         <div
-          className={'flash ' + (flash.startsWith('Error') ? 'error' : 'success')}
+          className={
+            'fee-toast ' + (flash.startsWith('Error') ? 'error' : 'success')
+          }
         >
-          {flash}
+          {flash.startsWith('Error') ? (
+            <AlertCircle size={20} />
+          ) : (
+            <CheckCircle size={20} />
+          )}
+          <span>{flash}</span>
         </div>
       )}
 
