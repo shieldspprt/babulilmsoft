@@ -101,7 +101,7 @@ export async function generateReceiptData(
  */
 export async function saveReceipt(receiptData: ReceiptData, paymentId: string, schoolId: string, parentId: string): Promise<FeeReceipt | null> {
   try {
-    const { data: receiptNo, error: rpcError } = await supabase.rpc('generate_receipt_no');
+    const { data: receiptNo, error: rpcError } = await supabase.rpc('generate_receipt_no', { p_school_id: schoolId });
     if (rpcError) throw rpcError;
 
     const finalData = { ...receiptData, receipt_no: receiptNo };
