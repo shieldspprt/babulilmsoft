@@ -158,41 +158,30 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
           </tfoot>
         </table>
         
-        {/* PREVIOUS BALANCE */}
-        {s.previous_balance !== 0 && (
-          <div className="r-summary">
+        {/* Summary - Simplified */}
+        <div className="r-summary">
+          {s.previous_balance > 0 && (
             <div className="r-summary-row">
-              <span>{s.previous_balance > 0 ? "Previous Balance:" : "Previous Advance:"}</span>
+              <span>Previous Balance:</span>
+              <span>{formatCurrency(s.previous_balance)}</span>
+            </div>
+          )}
+          {s.previous_balance < 0 && (
+            <div className="r-summary-row">
+              <span>Previous Advance:</span>
               <span>{formatCurrency(Math.abs(s.previous_balance))}</span>
             </div>
+          )}
+          <div className="r-summary-row">
+            <span>Payment Received:</span>
+            <span>{formatCurrency(s.payment_received)}</span>
           </div>
-        )}
-        
-        {/* MONTHLY FEE */}
-        <div className="r-summary">
-          <div className="r-summary-row highlight">
-            <span>Monthly Fee:</span>
-            <span>{formatCurrency(s.net_monthly)}</span>
-          </div>
-        </div>
-        
-        {/* TOTAL DUE */}
-        <div className="r-summary">
           <div className="r-summary-row total">
-            <span>Total Due:</span>
-            <span>{formatCurrency((s.previous_balance > 0 ? s.previous_balance : 0) + s.net_monthly)}</span>
+            <span>Total Due ({receipt.payment.method}):</span>
+            <span>{formatCurrency(Math.max(0, s.previous_balance - s.payment_received))}</span>
           </div>
         </div>
-        
-        {/* Payment */}
-        <div className="r-payment">
-          <div className="r-payment-label">Payment Received</div>
-          <div className="r-payment-amount">{formatCurrency(s.payment_received)}</div>
-          <div className="r-payment-meta">
-            {receipt.payment.method} | {receipt.payment.months_paid.map(formatMonth).join(', ')}
-          </div>
-        </div>
-        
+
         {/* Footer */}
         <div className="r-footer">
           <div className="r-balance-note">
@@ -200,9 +189,9 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
               <span className="cleared">✓ Account Cleared</span>
             ) : s.new_balance > 0 ? (
               <span>Balance Due: {formatCurrency(s.new_balance)}</span>
-            ) : (
+            ) : s.new_balance < 0 ? (
               <span>Advance: {formatCurrency(Math.abs(s.new_balance))}</span>
-            )}
+            ) : null}
           </div>
           <div className="r-signature">
             <div className="r-signature-line"></div>
@@ -269,48 +258,37 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
         <tfoot>
           <tr>
             <td colSpan={3}>Total</td>
-            <td>{formatCurrency(s.gross_fee)}</td>
-            <td>-{formatCurrency(s.total_discount)}</td>
-            <td>{formatCurrency(s.net_monthly)}</td>
+            <td>{formatCurrency(receipt.students.reduce((sum, s) => sum + s.monthly_fee, 0))}</td>
+            <td>-{formatCurrency(receipt.students.reduce((sum, s) => sum + s.discount_value, 0))}</td>
+            <td>{formatCurrency(receipt.students.reduce((sum, s) => sum + s.final_fee, 0))}</td>
           </tr>
         </tfoot>
       </table>
       
-      {/* PREVIOUS BALANCE */}
-        {s.previous_balance !== 0 && (
-          <div className="r-summary">
-            <div className="r-summary-row">
-              <span>{s.previous_balance > 0 ? "Previous Balance:" : "Previous Advance:"}</span>
-              <span>{formatCurrency(Math.abs(s.previous_balance))}</span>
-            </div>
+      {/* Summary - Simplified */}
+      <div className="r-summary">
+        {s.previous_balance > 0 && (
+          <div className="r-summary-row">
+            <span>Previous Balance:</span>
+            <span>{formatCurrency(s.previous_balance)}</span>
           </div>
         )}
-        
-        {/* MONTHLY FEE */}
-        <div className="r-summary">
-          <div className="r-summary-row highlight">
-            <span>Monthly Fee:</span>
-            <span>{formatCurrency(s.net_monthly)}</span>
+        {s.previous_balance < 0 && (
+          <div className="r-summary-row">
+            <span>Previous Advance:</span>
+            <span>{formatCurrency(Math.abs(s.previous_balance))}</span>
           </div>
+        )}
+        <div className="r-summary-row">
+          <span>Payment Received:</span>
+          <span>{formatCurrency(s.payment_received)}</span>
         </div>
-        
-        {/* TOTAL DUE */}
-        <div className="r-summary">
-          <div className="r-summary-row total">
-            <span>Total Due:</span>
-            <span>{formatCurrency((s.previous_balance > 0 ? s.previous_balance : 0) + s.net_monthly)}</span>
-          </div>
-        </div>
-      
-      {/* Payment */}
-      <div className="r-payment">
-        <div className="r-payment-label">Payment Received</div>
-        <div className="r-payment-amount">{formatCurrency(s.payment_received)}</div>
-        <div className="r-payment-meta">
-          {receipt.payment.method} | {receipt.payment.months_paid.map(formatMonth).join(', ')}
+        <div className="r-summary-row total">
+          <span>Total Due ({receipt.payment.method}):</span>
+          <span>{formatCurrency(Math.max(0, s.previous_balance - s.payment_received))}</span>
         </div>
       </div>
-      
+
       {/* Footer */}
       <div className="r-footer">
         <div className="r-balance-note">
@@ -318,9 +296,9 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
             <span className="cleared">✓ Account Cleared</span>
           ) : s.new_balance > 0 ? (
             <span>Balance Due: {formatCurrency(s.new_balance)}</span>
-          ) : (
+          ) : s.new_balance < 0 ? (
             <span>Advance: {formatCurrency(Math.abs(s.new_balance))}</span>
-          )}
+          ) : null}
         </div>
         <div className="r-signature">
           <div className="r-signature-line"></div>
