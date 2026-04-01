@@ -286,7 +286,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
       setPaymentMethod('Cash');
       setPaymentDate(todayStr);
       try {
-        const [paymentsRes, studentsRes] = await Promise.all([
+        const [paymentsRes, studentsRes, classesRes] = await Promise.all([
           supabase
             .from('fee_payments')
             .select('*')
@@ -296,15 +296,39 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
           supabase
             .from('students')
             .select(
-              'id, parent_id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, admission_class_id, active, classes(name, monthly_fee)',
+              'id, parent_id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, admission_class_id, active',
             )
             .eq('parent_id', parent.id)
             .eq('school_id', schoolId)
             .eq('active', true),
+          supabase
+            .from('classes')
+            .select('id, name, monthly_fee')
+            .eq('school_id', schoolId),
         ]);
 
+        // Build a map of classes by id for quick lookup
+        const classesMap = new Map<string, { name: string; monthly_fee: number }>();
+        (classesRes.data || []).forEach((c: any) => {
+          classesMap.set(c.id, {
+            name: c.name || '—',
+            monthly_fee: N(c.monthly_fee),
+          });
+        });
+
+        // Manually attach classes data to each student
+        const studentsWithClasses = (studentsRes.data || []).map((student: any) => {
+          const classData = student.admission_class_id
+            ? classesMap.get(student.admission_class_id)
+            : null;
+          return {
+            ...student,
+            classes: classData ? [classData] : null,
+          };
+        });
+
         setPayments((paymentsRes.data || []).map(parsePayment));
-        setChildren(studentsRes.data || []);
+        setChildren(studentsWithClasses);
       } catch (err: any) {
         showFlash('Error loading detail: ' + err.message);
       } finally {
@@ -697,25 +721,9 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
               </div>
             )}
 
-            {/* ── 5. Stats Bar ──────────────────────────────────────── */}
-            <div className="fee-stats-bar">
-              <div className="fee-stat-card">
-                <div className="fee-stat-value">{payableMonths.length}</div>
-                <div className="fee-stat-label">Payable Months</div>
-              </div>
-              <div className="fee-stat-card paid">
-                <div className="fee-stat-value">
-                  {payableMonths.length - unpaidMonths.length}
-                </div>
-                <div className="fee-stat-label">Paid</div>
-              </div>
-              <div className="fee-stat-card unpaid">
-                <div className="fee-stat-value">{unpaidMonths.length}</div>
-                <div className="fee-stat-label">Unpaid</div>
-              </div>
-            </div>
+            {/* ── 3. Stats Bar — REMOVED per user request ───────────── */}
 
-            {/* ── 3. Fee Status — Month Grid ────────────────────────── */}
+            {/* ── 4. Fee Status — Month Grid ────────────────────────── */}
             <div className="fee-status-section">
               <div className="fee-section-title">
                 <Calendar size={14} /> Fee Status
