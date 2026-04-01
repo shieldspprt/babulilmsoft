@@ -4,7 +4,7 @@ import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
 import {
   Search, Receipt, Trash2, Phone, CreditCard,
-  CheckCircle, ArrowLeft, Calendar, Users, AlertCircle,
+  CheckCircle, ArrowLeft, Calendar, Users, AlertCircle, FileText,
 } from 'lucide-react';
 import { generateReceiptData, saveReceipt, getReceiptByPayment } from '../lib/receiptGenerator';
 import type { ReceiptData, FeeReceipt } from '../lib/supabase';
@@ -997,6 +997,13 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                         title="Delete payment"
                       >
                         <Trash2 size={14} />
+                      </button>
+                      <button
+                        className="fee-payment-view"
+                        onClick={() => loadReceiptFromPayment(p.id)}
+                        title="View receipt"
+                      >
+                        <FileText size={14} />
                       </button>
                     </div>
                   ))}
