@@ -105,7 +105,7 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
         <div className="r-header">
           <div className="r-school">
             <div className="r-school-name">{receipt.school.name}</div>
-            <div className="r-school-addr">{receipt.school.address}</div>
+            
             <div className="r-school-phone">Ph: {receipt.school.contact}</div>
           </div>
           <div className="r-meta">
@@ -201,7 +201,7 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
       <div className="r-header">
         <div className="r-school">
           <div className="r-school-name">{receipt.school.name}</div>
-          <div className="r-school-addr">{receipt.school.address}</div>
+          
           <div className="r-school-phone">Ph: {receipt.school.contact}</div>
         </div>
         <div className="r-meta">
