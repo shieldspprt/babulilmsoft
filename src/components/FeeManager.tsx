@@ -12,22 +12,6 @@ import './FeeManager.css';
    Types
    ═══════════════════════════════════════════════════════════════════ */
 
-type FeeBill = {
-  id: string;
-  school_id: string;
-  parent_id: string;
-  billing_month: string;
-  children_data: any[];
-  total_fee: number;
-  carried_forward: number;
-  amount_paid: number;
-  balance: number;
-  status: string;
-  payment_id: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
 type FeePayment = {
   id: string;
   school_id: string;
@@ -65,6 +49,11 @@ type StudentRow = {
   classes: { name: string; monthly_fee: string | number } | null;
 };
 
+type ParentBalanceInfo = {
+  balance: number;
+  currentMonthPaid: boolean;
+};
+
 /* ═══════════════════════════════════════════════════════════════════
    Constants & Helpers
    ═══════════════════════════════════════════════════════════════════ */
@@ -85,12 +74,6 @@ function N(v: unknown): number {
 function currentMonthStr(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function nextMonthStr(ym: string): string {
-  const [y, m] = ym.split('-').map(Number);
-  const d = new Date(y, m, 1); // JS month is 0-based, so m gives next month
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 function shortMonth(ym: string): string {
@@ -122,25 +105,6 @@ function getBillableMonths(startYm: string, endYm: string): string[] {
   return months;
 }
 
-/** Parse raw Supabase row → FeeBill */
-function parseBill(raw: any): FeeBill {
-  return {
-    id: raw.id,
-    school_id: raw.school_id,
-    parent_id: raw.parent_id,
-    billing_month: raw.billing_month,
-    children_data: raw.children_data || [],
-    total_fee: N(raw.total_fee),
-    carried_forward: N(raw.carried_forward),
-    amount_paid: N(raw.amount_paid),
-    balance: N(raw.balance),
-    status: raw.status || 'pending',
-    payment_id: raw.payment_id || null,
-    created_at: raw.created_at || '',
-    updated_at: raw.updated_at || '',
-  };
-}
-
 /** Parse raw Supabase row → FeePayment */
 function parsePayment(raw: any): FeePayment {
   return {
@@ -157,6 +121,42 @@ function parsePayment(raw: any): FeePayment {
   };
 }
 
+/**
+ * Compute parent balance info from children data + payments.
+ * Pure function — no DB queries.
+ *
+ * balance = (payableMonths × monthlyFee) - totalPaid
+ *   positive = parent owes money
+ *   negative = parent has advance
+ */
+function computeParentBalance(
+  childrenData: { monthlyFee: number; admissionDate: string | null }[],
+  paymentsData: { amount: number; months_paid: string[] }[],
+  cm: string,
+): ParentBalanceInfo {
+  if (childrenData.length === 0) {
+    return { balance: 0, currentMonthPaid: false };
+  }
+
+  const mf = childrenData.reduce((sum, c) => sum + c.monthlyFee, 0);
+  const admMonth = childrenData
+    .map(c => c.admissionDate?.slice(0, 7))
+    .filter(Boolean)
+    .sort()[0] || cm;
+
+  const payable = getBillableMonths(admMonth, cm);
+  const totalOwed = payable.length * mf;
+  const totalPaid = paymentsData.reduce((sum, p) => sum + p.amount, 0);
+
+  const touched = new Set<string>();
+  paymentsData.forEach(p => p.months_paid.forEach(m => touched.add(m)));
+
+  return {
+    balance: totalOwed - totalPaid,
+    currentMonthPaid: touched.has(cm),
+  };
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    Component
    ═══════════════════════════════════════════════════════════════════ */
@@ -167,11 +167,11 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   // ── State ──────────────────────────────────────────────────────
   const [parents, setParents] = useState<Parent[]>([]);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
-  const [parentPaidCurrentMonth, setParentPaidCurrentMonth] = useState<Record<string, boolean>>({});
+  const [parentBalances, setParentBalances] = useState<Record<string, ParentBalanceInfo>>({});
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
-  const [bills, setBills] = useState<FeeBill[]>([]);
   const [payments, setPayments] = useState<FeePayment[]>([]);
   const [children, setChildren] = useState<StudentRow[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<Set<string>>(new Set());
@@ -184,40 +184,64 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   const [deleting, setDeleting] = useState(false);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
-  // ── Load parents (list panel) ──────────────────────────────────
+  /* ═══════════════════════════════════════════════════════════════
+     DATA LOADING
+     ═══════════════════════════════════════════════════════════════ */
+
+  // ── Load parents + compute each parent's balance (left panel) ──
   const loadParents = async () => {
     setLoading(true);
     try {
-      const [{ data: pData }, { data: sData }] = await Promise.all([
+      const [parentsRes, studentsRes, paymentsRes] = await Promise.all([
         supabase.from('parents').select('*').eq('school_id', schoolId).order('first_name'),
-        supabase.from('students').select('parent_id').eq('school_id', schoolId).eq('active', true),
+        supabase
+          .from('students')
+          .select('parent_id, monthly_fee, date_of_admission, active')
+          .eq('school_id', schoolId)
+          .eq('active', true),
+        supabase
+          .from('fee_payments')
+          .select('parent_id, amount, months_paid')
+          .eq('school_id', schoolId),
       ]);
-      const parentList = pData || [];
+
+      const parentList = (parentsRes.data || []) as Parent[];
       setParents(parentList);
 
+      // Group students by parent
+      const studentsByParent: Record<string, { monthlyFee: number; admissionDate: string | null }[]> = {};
       const counts: Record<string, number> = {};
-      (sData || []).forEach((s: any) => {
+      (studentsRes.data || []).forEach((s: any) => {
+        if (!studentsByParent[s.parent_id]) studentsByParent[s.parent_id] = [];
+        studentsByParent[s.parent_id].push({
+          monthlyFee: N(s.monthly_fee),
+          admissionDate: s.date_of_admission,
+        });
         counts[s.parent_id] = (counts[s.parent_id] || 0) + 1;
       });
       setStudentCounts(counts);
 
-      // Dot indicator: is current month paid for each parent?
-      const cm = currentMonthStr();
-      const parentIdList = parentList.map((p: any) => p.id);
-      if (parentIdList.length > 0) {
-        const { data: paidBills } = await supabase
-          .from('fee_bills')
-          .select('parent_id')
-          .eq('school_id', schoolId)
-          .eq('billing_month', cm)
-          .eq('status', 'paid')
-          .in('parent_id', parentIdList);
+      // Group payments by parent
+      const paymentsByParent: Record<string, { amount: number; months_paid: string[] }[]> = {};
+      (paymentsRes.data || []).forEach((p: any) => {
+        if (!paymentsByParent[p.parent_id]) paymentsByParent[p.parent_id] = [];
+        paymentsByParent[p.parent_id].push({
+          amount: N(p.amount),
+          months_paid: p.months_paid || [],
+        });
+      });
 
-        const paidSet = new Set((paidBills || []).map((b: any) => b.parent_id));
-        const map: Record<string, boolean> = {};
-        parentList.forEach((p: any) => { map[p.id] = paidSet.has(p.id); });
-        setParentPaidCurrentMonth(map);
-      }
+      // Compute balance for every parent (pure JS, no extra queries)
+      const cm = currentMonthStr();
+      const balances: Record<string, ParentBalanceInfo> = {};
+      parentList.forEach((p: Parent) => {
+        balances[p.id] = computeParentBalance(
+          studentsByParent[p.id] || [],
+          paymentsByParent[p.id] || [],
+          cm,
+        );
+      });
+      setParentBalances(balances);
     } catch (err: any) {
       showFlash('Error loading parents: ' + (err.message || 'Unknown error'));
     }
@@ -226,10 +250,9 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
 
   useEffect(() => { loadParents(); }, [schoolId]);
 
-  // ── Load parent detail (no generateBills — just fetch data) ────
+  // ── Load parent detail (right panel) ───────────────────────────
   const loadParentDetail = useCallback(async (parent: Parent) => {
     setSelectedParent(parent);
-    setBills([]);
     setPayments([]);
     setChildren([]);
     setSelectedMonths(new Set());
@@ -237,24 +260,23 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     setPaymentNotes('');
 
     try {
-      const [billsRes, paymentsRes, childrenRes] = await Promise.all([
-        supabase.from('fee_bills').select('*')
-          .eq('parent_id', parent.id)
-          .eq('school_id', schoolId)
-          .eq('status', 'paid')
-          .order('billing_month'),
-        supabase.from('fee_payments').select('*')
+      const [paymentsRes, childrenRes] = await Promise.all([
+        supabase
+          .from('fee_payments')
+          .select('*')
           .eq('parent_id', parent.id)
           .eq('school_id', schoolId)
           .order('created_at', { ascending: false }),
-        supabase.from('students')
-          .select('id, parent_id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, admission_class_id, active, classes(name, monthly_fee)')
+        supabase
+          .from('students')
+          .select(
+            'id, parent_id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, admission_class_id, active, classes(name, monthly_fee)',
+          )
           .eq('parent_id', parent.id)
           .eq('school_id', schoolId)
           .eq('active', true),
       ]);
 
-      setBills((billsRes.data || []).map(parseBill));
       setPayments((paymentsRes.data || []).map(parsePayment));
       setChildren((childrenRes.data || []) as unknown as StudentRow[]);
     } catch (err: any) {
@@ -263,62 +285,92 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   }, [schoolId, showFlash]);
 
   // ── Select parent ──────────────────────────────────────────────
-  const selectParent = useCallback((p: Parent) => {
-    setSelectedParent(p);
-    setMobileShowDetail(true);
-    loadParentDetail(p);
-  }, [loadParentDetail]);
+  const selectParent = useCallback(
+    (p: Parent) => {
+      setSelectedParent(p);
+      setMobileShowDetail(true);
+      loadParentDetail(p);
+    },
+    [loadParentDetail],
+  );
 
-  // ── Filtered parents ───────────────────────────────────────────
+  // ── Filtered parents (search) ──────────────────────────────────
   const filteredParents = useMemo(() => {
     if (!search.trim()) return parents;
     const q = search.toLowerCase();
-    return parents.filter(p =>
-      p.first_name.toLowerCase().includes(q) ||
-      p.last_name.toLowerCase().includes(q) ||
-      (p.cnic && p.cnic.includes(q)) ||
-      (p.contact && p.contact.includes(q))
+    return parents.filter(
+      (p) =>
+        p.first_name.toLowerCase().includes(q) ||
+        p.last_name.toLowerCase().includes(q) ||
+        (p.cnic && p.cnic.includes(q)) ||
+        (p.contact && p.contact.includes(q)),
     );
   }, [parents, search]);
 
-  // ── Derived: monthly fee (sum of all children's monthly_fee) ──
+  /* ═══════════════════════════════════════════════════════════════
+     DERIVED VALUES (pure computation — no DB queries)
+     ═══════════════════════════════════════════════════════════════ */
+
+  // ── Monthly fee = sum of all children's monthly_fee ────────────
   const monthlyFee = useMemo(() => {
     return children.reduce((sum, c) => sum + N(c.monthly_fee), 0);
   }, [children]);
 
-  // ── Derived: admission month (earliest child admission) ────────
+  // ── Admission month = earliest child admission ─────────────────
   const admissionMonth = useMemo(() => getAdmissionMonth(children), [children]);
 
-  // ── Derived: billable months (admission → current month) ──────
-  const billableMonths = useMemo(() => {
+  // ── Payable months = from admission month → current month ──────
+  const payableMonths = useMemo(() => {
     if (children.length === 0) return [];
     return getBillableMonths(admissionMonth, currentMonthStr());
   }, [children.length, admissionMonth]);
 
-  // ── Derived: paid bills tracking ──────────────────────────────
-  const paidMonthsSet = useMemo(() => new Set(bills.map(b => b.billing_month)), [bills]);
-  const lastPaidBill = bills.length > 0 ? bills[bills.length - 1] : null;
-  const lastPaidBalance = lastPaidBill ? lastPaidBill.balance : 0;
+  // ── Touched months = months covered by ANY payment ─────────────
+  const touchedMonths = useMemo(() => {
+    const set = new Set<string>();
+    payments.forEach((p) => p.months_paid.forEach((m) => set.add(m)));
+    return set;
+  }, [payments]);
 
-  // ── Derived: balance that carries into the first selected month ─
-  const balanceBefore = useMemo(() => {
-    if (selectedMonths.size === 0 || !lastPaidBill) return 0;
-    const sorted = Array.from(selectedMonths).sort();
-    const nextAfterLast = nextMonthStr(lastPaidBill.billing_month);
-    return nextAfterLast === sorted[0] ? lastPaidBalance : 0;
-  }, [selectedMonths, lastPaidBill, lastPaidBalance]);
+  // ── Unpaid months = payable months NOT touched ─────────────────
+  const unpaidMonths = useMemo(() => {
+    return payableMonths.filter((m) => !touchedMonths.has(m));
+  }, [payableMonths, touchedMonths]);
 
-  // ── Derived: total due for selected months ─────────────────────
+  // ── Running balance = totalOwed − totalPaid ────────────────────
+  //    positive = owes money, negative = has advance
+  const totalPaid = useMemo(() => payments.reduce((s, p) => s + p.amount, 0), [payments]);
+  const totalOwed = useMemo(() => payableMonths.length * monthlyFee, [payableMonths.length, monthlyFee]);
+  const runningBalance = useMemo(() => totalOwed - totalPaid, [totalOwed, totalPaid]);
+
+  // ── paidMonthsBalance = balance FROM PAID MONTHS ───────────────
+  //    This is the underpayment/overpayment from months already paid.
+  //    runningBalance = (unpaidMonths × monthlyFee) + paidMonthsBalance
+  //    → paidMonthsBalance = runningBalance - (unpaidMonths × monthlyFee)
+  const paidMonthsBalance = useMemo(() => {
+    return runningBalance - unpaidMonths.length * monthlyFee;
+  }, [runningBalance, unpaidMonths.length, monthlyFee]);
+
+  // ── Total due for selected months ──────────────────────────────
+  //    = fee for selected months + any carried balance from paid months
   const totalForSelected = useMemo(() => {
-    return monthlyFee * selectedMonths.size + balanceBefore;
-  }, [monthlyFee, selectedMonths.size, balanceBefore]);
+    if (selectedMonths.size === 0) return 0;
+    return monthlyFee * selectedMonths.size + paidMonthsBalance;
+  }, [monthlyFee, selectedMonths.size, paidMonthsBalance]);
 
   const netBalance = totalForSelected - parseInt(paymentAmount || '0', 10);
 
+  // ── First unpaid month (gets the balance badge) ────────────────
+  const firstUnpaidMonth = unpaidMonths.length > 0 ? unpaidMonths[0] : null;
+
+  /* ═══════════════════════════════════════════════════════════════
+     ACTIONS
+     ═══════════════════════════════════════════════════════════════ */
+
   // ── Toggle month selection ─────────────────────────────────────
   const toggleMonth = (month: string) => {
-    if (paidMonthsSet.has(month)) return;
-    setSelectedMonths(prev => {
+    if (touchedMonths.has(month)) return;
+    setSelectedMonths((prev) => {
       const next = new Set(prev);
       if (next.has(month)) next.delete(month);
       else next.add(month);
@@ -326,7 +378,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     });
   };
 
-  // ── Record payment (creates bills on-the-fly) ──────────────────
+  // ── Record payment (single INSERT into fee_payments) ───────────
   const recordPayment = async () => {
     if (selectedMonths.size === 0 || !paymentAmount || parseInt(paymentAmount) <= 0 || !selectedParent) {
       showFlash('Select at least one month and enter a valid amount');
@@ -335,123 +387,62 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     setSaving(true);
 
     try {
-      const sorted = Array.from(selectedMonths).sort();
+      const sortedMonths = Array.from(selectedMonths).sort();
       const amt = parseInt(paymentAmount, 10);
 
-      // Double-check: verify no selected month is already paid
-      const { data: existingPaid } = await supabase
-        .from('fee_bills')
-        .select('billing_month')
-        .eq('parent_id', selectedParent.id)
-        .eq('school_id', schoolId)
-        .eq('status', 'paid')
-        .in('billing_month', sorted);
+      const { error } = await supabase.from('fee_payments').insert({
+        school_id: schoolId,
+        parent_id: selectedParent.id,
+        amount: amt,
+        months_paid: sortedMonths,
+        months_count: sortedMonths.length,
+        payment_date: paymentDate || new Date().toISOString().split('T')[0],
+        payment_method: paymentMethod,
+        notes: paymentNotes || null,
+      });
 
-      const alreadyPaid = new Set((existingPaid || []).map((b: any) => b.billing_month));
-      const unpaidMonths = sorted.filter(m => !alreadyPaid.has(m));
-      if (unpaidMonths.length === 0) {
-        showFlash('All selected months are already paid');
-        setSaving(false);
-        return;
-      }
+      if (error) throw error;
 
-      // Calculate balance before (from last paid bill, if contiguous)
-      let balBefore = 0;
-      if (lastPaidBill) {
-        const nextAfterLast = nextMonthStr(lastPaidBill.billing_month);
-        if (nextAfterLast === unpaidMonths[0]) {
-          balBefore = lastPaidBalance;
-        }
-      }
-
-      const totalDue = monthlyFee * unpaidMonths.length + balBefore;
-      const net = totalDue - amt; // positive = underpaid, negative = advance
-
-      // Insert payment record
-      const { data: payData, error: payErr } = await supabase
-        .from('fee_payments')
-        .insert({
-          school_id: schoolId,
-          parent_id: selectedParent.id,
-          amount: amt,
-          months_paid: unpaidMonths,
-          months_count: unpaidMonths.length,
-          payment_date: paymentDate || new Date().toISOString().split('T')[0],
-          payment_method: paymentMethod,
-          notes: paymentNotes || null,
-        })
-        .select('id')
-        .single();
-      if (payErr) throw payErr;
-
-      const paymentId = payData?.id;
-
-      // Create bill records for each month (allocate payment across months)
-      let allocated = 0;
-      for (let i = 0; i < unpaidMonths.length; i++) {
-        const month = unpaidMonths[i];
-        const isLast = i === unpaidMonths.length - 1;
-        const cf = (i === 0) ? balBefore : 0;
-        const due = monthlyFee + cf;
-        const paidAmt = isLast ? (amt - allocated) : due;
-        allocated += paidAmt;
-
-        const { error: billErr } = await supabase.from('fee_bills').insert({
-          school_id: schoolId,
-          parent_id: selectedParent.id,
-          billing_month: month,
-          children_data: [],
-          total_fee: monthlyFee,
-          carried_forward: cf,
-          amount_paid: paidAmt,
-          balance: isLast ? net : 0,
-          status: 'paid',
-          payment_id: paymentId,
-        });
-        if (billErr) throw billErr;
-      }
-
-      showFlash(`Payment of Rs ${amt.toLocaleString()} recorded for ${unpaidMonths.length} month${unpaidMonths.length > 1 ? 's' : ''}!`);
+      showFlash(
+        `Payment of Rs ${amt.toLocaleString()} recorded for ${sortedMonths.length} month${sortedMonths.length > 1 ? 's' : ''}!`,
+      );
       setSelectedMonths(new Set());
       setPaymentAmount('');
       setPaymentNotes('');
+
+      // Refresh both detail and parent list
       loadParentDetail(selectedParent);
+      loadParents();
     } catch (err: any) {
       showFlash('Error: ' + (err.message || 'Failed to record payment'));
     }
     setSaving(false);
   };
 
-  // ── Delete payment (removes bills + payment) ───────────────────
+  // ── Delete payment (single DELETE from fee_payments) ───────────
   const handleDeletePayment = async () => {
     if (!deleteTarget || !selectedParent) return;
     setDeleting(true);
 
     try {
-      // Delete all fee_bills linked to this payment
-      const { error: delBills } = await supabase
-        .from('fee_bills')
-        .delete()
-        .eq('payment_id', deleteTarget.id);
-      if (delBills) throw delBills;
-
-      // Delete the payment record
-      const { error: delPay } = await supabase
-        .from('fee_payments')
-        .delete()
-        .eq('id', deleteTarget.id);
-      if (delPay) throw delPay;
+      const { error } = await supabase.from('fee_payments').delete().eq('id', deleteTarget.id);
+      if (error) throw error;
 
       showFlash('Payment deleted successfully');
       setDeleteTarget(null);
+
       loadParentDetail(selectedParent);
+      loadParents();
     } catch (err: any) {
       showFlash('Error: ' + (err.message || 'Failed to delete payment'));
     }
     setDeleting(false);
   };
 
-  // ── Loading ────────────────────────────────────────────────────
+  /* ═══════════════════════════════════════════════════════════════
+     RENDER
+     ═══════════════════════════════════════════════════════════════ */
+
   if (loading) {
     return (
       <div className="manager-loading">
@@ -461,11 +452,11 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     );
   }
 
-  // ── Render ─────────────────────────────────────────────────────
   return (
     <div className="fee-shell">
-
-      {/* ═══ Left Panel: Parent List ═══ */}
+      {/* ═══════════════════════════════════════════════════════════
+          LEFT PANEL — Parent List
+          ═══════════════════════════════════════════════════════════ */}
       <div className="fee-parents-panel" style={{ display: mobileShowDetail ? 'none' : 'flex' }}>
         <div className="fee-parents-search">
           <div className="fee-search-input">
@@ -473,42 +464,61 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
             <input
               placeholder="Search by name, CNIC or contact…"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
 
         <div className="fee-parents-list">
           {filteredParents.length === 0 ? (
-            <div style={{ padding: '2rem 1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--font-sm)' }}>
+            <div
+              style={{
+                padding: '2rem 1rem',
+                textAlign: 'center',
+                color: 'var(--text-muted)',
+                fontSize: 'var(--font-sm)',
+              }}
+            >
               {parents.length === 0 ? 'No parents yet' : 'No results found'}
             </div>
           ) : (
-            filteredParents.map(p => (
-              <div
-                key={p.id}
-                className={`fee-parent-card${selectedParent?.id === p.id ? ' active' : ''}`}
-                onClick={() => selectParent(p)}
-              >
-                <div className="fee-parent-avatar">
-                  {p.first_name.charAt(0)}{p.last_name.charAt(0)}
+            filteredParents.map((p) => {
+              const info = parentBalances[p.id] || { balance: 0, currentMonthPaid: false };
+              const dotClass = info.balance <= 0 ? 'green' : 'amber';
+              return (
+                <div
+                  key={p.id}
+                  className={`fee-parent-card${selectedParent?.id === p.id ? ' active' : ''}`}
+                  onClick={() => selectParent(p)}
+                >
+                  <div className="fee-parent-avatar">
+                    {p.first_name.charAt(0)}
+                    {p.last_name.charAt(0)}
+                  </div>
+                  <div className="fee-parent-info">
+                    <div className="fee-parent-name">
+                      {p.first_name} {p.last_name}
+                    </div>
+                    <div className="fee-parent-contact">{p.contact}</div>
+                  </div>
+                  <div className="fee-parent-meta">
+                    <span className="fee-children-badge">{studentCounts[p.id] || 0}</span>
+                    <span className={`fee-status-dot ${dotClass}`} />
+                  </div>
                 </div>
-                <div className="fee-parent-info">
-                  <div className="fee-parent-name">{p.first_name} {p.last_name}</div>
-                  <div className="fee-parent-contact">{p.contact}</div>
-                </div>
-                <div className="fee-parent-meta">
-                  <span className="fee-children-badge">{studentCounts[p.id] || 0}</span>
-                  <span className={`fee-status-dot ${parentPaidCurrentMonth[p.id] ? 'green' : 'gray'}`} />
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
 
-      {/* ═══ Right Panel: Parent Detail ═══ */}
-      <div className="fee-detail-panel" style={{ display: !selectedParent && !mobileShowDetail ? 'none' : undefined }}>
+      {/* ═══════════════════════════════════════════════════════════
+          RIGHT PANEL — Fee Detail
+          ═══════════════════════════════════════════════════════════ */}
+      <div
+        className="fee-detail-panel"
+        style={{ display: !selectedParent && !mobileShowDetail ? 'none' : undefined }}
+      >
         {!selectedParent ? (
           <div className="fee-empty-state">
             <Receipt size={52} />
@@ -518,40 +528,57 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
         ) : (
           <div className="animate-fade-up">
             {/* Mobile back button */}
-            <button className="fee-back-btn" onClick={() => { setSelectedParent(null); setMobileShowDetail(false); }}>
+            <button
+              className="fee-back-btn"
+              onClick={() => {
+                setSelectedParent(null);
+                setMobileShowDetail(false);
+              }}
+            >
               <ArrowLeft size={16} /> Back to parents
             </button>
 
-            {/* Parent header with balance indicator */}
+            {/* ── Parent header with balance ─────────────────────── */}
             <div className="fee-parent-header">
               <div>
                 <div className="fee-parent-header-name">
                   {selectedParent.first_name} {selectedParent.last_name}
                 </div>
                 <div className="fee-parent-header-details">
-                  <span><Phone size={12} /> {selectedParent.contact}</span>
+                  <span>
+                    <Phone size={12} /> {selectedParent.contact}
+                  </span>
                   {selectedParent.cnic && (
-                    <span style={{ fontSize: '11px' }}>{selectedParent.cnic.slice(0, 8)}…</span>
+                    <span style={{ fontSize: '11px' }}>
+                      {selectedParent.cnic.slice(0, 8)}…
+                    </span>
                   )}
                 </div>
               </div>
-              {lastPaidBill && lastPaidBill.balance !== 0 && (
+              {runningBalance !== 0 && (
                 <div className="fee-parent-header-balance">
-                  <div className={`balance-amount ${lastPaidBill.balance > 0 ? 'positive' : 'negative'}`}>
-                    {lastPaidBill.balance > 0
-                      ? `Rs ${lastPaidBill.balance.toLocaleString()} due`
-                      : `Rs ${Math.abs(lastPaidBill.balance).toLocaleString()} advance`}
+                  <div className={`balance-amount ${runningBalance > 0 ? 'positive' : 'negative'}`}>
+                    {runningBalance > 0
+                      ? `Rs ${runningBalance.toLocaleString()} due`
+                      : `Rs ${Math.abs(runningBalance).toLocaleString()} advance`}
                   </div>
                   <div className="balance-label">
-                    {lastPaidBill.balance > 0 ? 'unpaid balance' : 'credit'}
+                    {runningBalance > 0 ? 'unpaid balance' : 'credit'}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Children table */}
+            {/* ── Children table ──────────────────────────────────── */}
             {children.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--text-muted)', fontSize: 'var(--font-sm)' }}>
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '2rem 0',
+                  color: 'var(--text-muted)',
+                  fontSize: 'var(--font-sm)',
+                }}
+              >
                 No active children enrolled.
               </div>
             ) : (
@@ -560,17 +587,23 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                 <table className="fee-children-table">
                   <thead>
                     <tr>
-                      <th>Student</th><th>Class</th><th>Fee</th><th>Discount</th><th>Final Fee</th>
+                      <th>Student</th>
+                      <th>Class</th>
+                      <th>Fee</th>
+                      <th>Discount</th>
+                      <th>Final Fee</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {children.map(c => {
+                    {children.map((c) => {
                       const cls = c.classes as any;
                       const classFee = cls ? N(cls.monthly_fee) : 0;
                       const finalFee = N(c.monthly_fee);
                       return (
                         <tr key={c.id}>
-                          <td style={{ fontWeight: 600 }}>{c.first_name} {c.last_name}</td>
+                          <td style={{ fontWeight: 600 }}>
+                            {c.first_name} {c.last_name}
+                          </td>
                           <td>{cls?.name || '—'}</td>
                           <td>Rs {classFee > 0 ? classFee.toLocaleString() : '—'}</td>
                           <td>
@@ -580,96 +613,136 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                                   ? `${N(c.discount_value)}%`
                                   : `Rs ${N(c.discount_value).toLocaleString()}`}
                               </span>
-                            ) : '—'}
+                            ) : (
+                              '—'
+                            )}
                           </td>
                           <td className="fee-final">Rs {finalFee.toLocaleString()}</td>
                         </tr>
                       );
                     })}
-                    <tr className="fee-row-total">
-                      <td /><td /><td /><td /><td />
-                    </tr>
                   </tbody>
                 </table>
                 <div className="fee-monthly-total">
                   <span className="fee-monthly-total-label">Monthly Fee Total</span>
-                  <span className="fee-monthly-total-amount">Rs {monthlyFee.toLocaleString()}</span>
+                  <span className="fee-monthly-total-amount">
+                    Rs {monthlyFee.toLocaleString()}
+                  </span>
                 </div>
 
-                {/* ═══ Fee Status Grid (admission → current month) ═══ */}
+                {/* ── Month Status Grid ──────────────────────────── */}
                 <div className="fee-section-title">
-                  Fee Status{selectedMonths.size > 0 ? ` (${selectedMonths.size} selected)` : ''}
+                  Fee Status
+                  {selectedMonths.size > 0 && ` (${selectedMonths.size} selected)`}
+                  {payableMonths.length > 0 && (
+                    <span style={{ fontWeight: 400, textTransform: 'none', marginLeft: '0.5rem' }}>
+                      {admissionMonth} → {currentMonthStr()}
+                    </span>
+                  )}
                 </div>
-                <div className="fee-month-grid">
-                  {billableMonths.map(ym => {
-                    const isPaid = paidMonthsSet.has(ym);
-                    const isSelected = selectedMonths.has(ym);
-                    const isSelectable = !isPaid;
-                    const monthIdx = parseInt(ym.split('-')[1], 10) - 1;
 
-                    // Effective fee: monthlyFee + balance from last paid (only for first unpaid after last paid)
-                    let effectiveFee = monthlyFee;
-                    if (!isPaid && lastPaidBill && lastPaidBalance !== 0) {
-                      const nextAfterLast = nextMonthStr(lastPaidBill.billing_month);
-                      if (nextAfterLast === ym) {
-                        effectiveFee = monthlyFee + lastPaidBalance;
+                {payableMonths.length === 0 ? (
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '1.5rem',
+                      color: 'var(--text-muted)',
+                      fontSize: 'var(--font-sm)',
+                    }}
+                  >
+                    No payable months yet.
+                  </div>
+                ) : (
+                  <div className="fee-month-grid">
+                    {payableMonths.map((ym) => {
+                      const isPaid = touchedMonths.has(ym);
+                      const isSelected = selectedMonths.has(ym);
+                      const isSelectable = !isPaid;
+                      const monthIdx = parseInt(ym.split('-')[1], 10) - 1;
+
+                      // Effective fee: first unpaid month absorbs the carried balance
+                      let effectiveFee = monthlyFee;
+                      if (!isPaid && ym === firstUnpaidMonth && paidMonthsBalance !== 0) {
+                        effectiveFee = monthlyFee + paidMonthsBalance;
                       }
-                    }
 
-                    const statusClass = isPaid ? 'paid' : 'pending';
-                    const statusLabel = isPaid ? '✓ Paid' : '○ Due';
-                    const badgeClass = isPaid ? 'paid' : 'due';
+                      const statusClass = isPaid ? 'paid' : 'pending';
+                      const statusLabel = isPaid ? '✓ Paid' : '○ Due';
+                      const badgeClass = isPaid ? 'paid' : 'due';
 
-                    return (
-                      <div
-                        key={ym}
-                        className={`fee-month-card ${statusClass}${isSelected ? ' selected' : ''}${isSelectable ? ' selectable' : ''}`}
-                        onClick={() => isSelectable && toggleMonth(ym)}
-                        style={isSelectable ? { cursor: 'pointer' } : undefined}
-                      >
-                        {isSelected && <div className="fee-month-selected-check"><CheckCircle size={14} /></div>}
-                        <div className="fee-month-name">{MONTH_NAMES[monthIdx]}</div>
-                        <div className="fee-month-fee">Rs {effectiveFee.toLocaleString()}</div>
-                        <div className={`fee-month-badge ${badgeClass}`}>{statusLabel}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* ═══ Payment Summary + Form (shown when months selected) ═══ */}
-                {selectedMonths.size > 0 && (
-                  <div style={{
-                    background: 'var(--bg)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '1rem',
-                    marginTop: '0.5rem',
-                  }}>
-                    {/* Summary */}
-                    <div className="fee-modal-summary">
-                      {balanceBefore !== 0 && (
-                        <div className="fee-modal-summary-row">
-                          <span>{balanceBefore > 0 ? 'Previous Balance' : 'Previous Advance'}</span>
-                          <span>
-                            {balanceBefore > 0
-                              ? `Rs ${balanceBefore.toLocaleString()}`
-                              : `(Rs ${Math.abs(balanceBefore).toLocaleString()})`}
-                          </span>
+                      return (
+                        <div
+                          key={ym}
+                          className={`fee-month-card ${statusClass}${isSelected ? ' selected' : ''}${isSelectable ? ' selectable' : ''}`}
+                          onClick={() => isSelectable && toggleMonth(ym)}
+                          style={isSelectable ? { cursor: 'pointer' } : undefined}
+                        >
+                          {isSelected && (
+                            <div className="fee-month-selected-check">
+                              <CheckCircle size={14} />
+                            </div>
+                          )}
+                          <div className="fee-month-name">{MONTH_NAMES[monthIdx]}</div>
+                          <div className="fee-month-fee">
+                            Rs {Math.max(0, effectiveFee).toLocaleString()}
+                          </div>
+                          {effectiveFee < 0 && !isPaid && (
+                            <div style={{ fontSize: '10px', color: 'var(--primary)', marginTop: 2 }}>
+                              (Rs {Math.abs(effectiveFee).toLocaleString()} advance covers this)
+                            </div>
+                          )}
+                          <div className={`fee-month-badge ${badgeClass}`}>{statusLabel}</div>
                         </div>
-                      )}
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* ── Payment Summary (shown when months selected) ── */}
+                {selectedMonths.size > 0 && (
+                  <div
+                    style={{
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '1rem',
+                      marginTop: '0.5rem',
+                    }}
+                  >
+                    {/* Summary rows */}
+                    <div className="fee-modal-summary">
                       <div className="fee-modal-summary-row">
-                        <span>Fee Total ({selectedMonths.size} month{selectedMonths.size > 1 ? 's' : ''})</span>
+                        <span>
+                          Fee for {selectedMonths.size} month
+                          {selectedMonths.size > 1 ? 's' : ''}
+                        </span>
                         <span>Rs {(monthlyFee * selectedMonths.size).toLocaleString()}</span>
                       </div>
+
+                      {paidMonthsBalance > 0 && (
+                        <div className="fee-modal-summary-row" style={{ color: 'var(--danger)' }}>
+                          <span>Previous Balance</span>
+                          <span>Rs {paidMonthsBalance.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {paidMonthsBalance < 0 && (
+                        <div className="fee-modal-summary-row" style={{ color: 'var(--primary)' }}>
+                          <span>Advance</span>
+                          <span>(Rs {Math.abs(paidMonthsBalance).toLocaleString()})</span>
+                        </div>
+                      )}
+
                       <div className="fee-modal-summary-row total">
                         <span>Total Due</span>
-                        <span>Rs {totalForSelected.toLocaleString()}</span>
+                        <span>Rs {Math.max(0, totalForSelected).toLocaleString()}</span>
                       </div>
                     </div>
 
-                    {/* Remaining indicator */}
+                    {/* Remaining / advance indicator */}
                     {paymentAmount && parseInt(paymentAmount) > 0 && (
-                      <div className={`fee-modal-remaining ${netBalance > 0 ? 'warning' : netBalance < 0 ? 'advance' : netBalance === 0 ? 'paid' : 'neutral'}`}>
+                      <div
+                        className={`fee-modal-remaining ${netBalance > 0 ? 'warning' : netBalance < 0 ? 'advance' : netBalance === 0 ? 'paid' : 'neutral'}`}
+                      >
                         <span>
                           {netBalance > 0
                             ? `⚠ Rs ${Math.abs(netBalance).toLocaleString()} remaining after payment`
@@ -681,9 +754,24 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                     )}
 
                     {/* Form fields */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '0.75rem',
+                        marginTop: '0.75rem',
+                      }}
+                    >
                       <div>
-                        <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
+                        <label
+                          style={{
+                            fontSize: 'var(--font-xs)',
+                            fontWeight: 600,
+                            color: 'var(--text-muted)',
+                            display: 'block',
+                            marginBottom: '0.25rem',
+                          }}
+                        >
                           Amount Paying Now (Rs) *
                         </label>
                         <input
@@ -691,48 +779,104 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                           className="fee-modal-amount-input"
                           placeholder="Enter amount received…"
                           value={paymentAmount}
-                          onChange={e => setPaymentAmount(e.target.value)}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
                           min="1"
                           step="1"
                         />
                       </div>
                       <div>
-                        <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
+                        <label
+                          style={{
+                            fontSize: 'var(--font-xs)',
+                            fontWeight: 600,
+                            color: 'var(--text-muted)',
+                            display: 'block',
+                            marginBottom: '0.25rem',
+                          }}
+                        >
                           Payment Method *
                         </label>
                         <select
                           value={paymentMethod}
-                          onChange={e => setPaymentMethod(e.target.value)}
-                          style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.625rem 0.75rem',
+                            border: '1.5px solid var(--border)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--font-sm)',
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
+                          }}
                         >
-                          {PAYMENT_METHODS.map(m => (
-                            <option key={m} value={m}>{m}</option>
+                          {PAYMENT_METHODS.map((m) => (
+                            <option key={m} value={m}>
+                              {m}
+                            </option>
                           ))}
                         </select>
                       </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '0.75rem',
+                      }}
+                    >
                       <div>
-                        <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
+                        <label
+                          style={{
+                            fontSize: 'var(--font-xs)',
+                            fontWeight: 600,
+                            color: 'var(--text-muted)',
+                            display: 'block',
+                            marginBottom: '0.25rem',
+                          }}
+                        >
                           Payment Date *
                         </label>
                         <input
                           type="date"
                           value={paymentDate}
-                          onChange={e => setPaymentDate(e.target.value)}
-                          style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                          onChange={(e) => setPaymentDate(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.625rem 0.75rem',
+                            border: '1.5px solid var(--border)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--font-sm)',
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ fontSize: 'var(--font-xs)', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>
+                        <label
+                          style={{
+                            fontSize: 'var(--font-xs)',
+                            fontWeight: 600,
+                            color: 'var(--text-muted)',
+                            display: 'block',
+                            marginBottom: '0.25rem',
+                          }}
+                        >
                           Notes (optional)
                         </label>
                         <input
                           type="text"
                           value={paymentNotes}
-                          onChange={e => setPaymentNotes(e.target.value)}
+                          onChange={(e) => setPaymentNotes(e.target.value)}
                           placeholder="Any additional notes…"
-                          style={{ width: '100%', padding: '0.625rem 0.75rem', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-sm)', background: 'var(--surface)', color: 'var(--text)' }}
+                          style={{
+                            width: '100%',
+                            padding: '0.625rem 0.75rem',
+                            border: '1.5px solid var(--border)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--font-sm)',
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
+                          }}
                         />
                       </div>
                     </div>
@@ -750,22 +894,93 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                     </div>
                   </div>
                 )}
+
+                {/* ── Stats bar ───────────────────────────────────── */}
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '1rem',
+                    marginTop: '1.5rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      Payable Months
+                    </div>
+                    <div style={{ fontSize: 'var(--font-xl)', fontWeight: 800, color: 'var(--text)' }}>
+                      {payableMonths.length}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      Paid
+                    </div>
+                    <div style={{ fontSize: 'var(--font-xl)', fontWeight: 800, color: 'var(--success)' }}>
+                      {touchedMonths.size}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      flex: 1,
+                      minWidth: '120px',
+                      background: 'var(--bg)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '0.75rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      Unpaid
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 'var(--font-xl)',
+                        fontWeight: 800,
+                        color: unpaidMonths.length > 0 ? 'var(--warning)' : 'var(--success)',
+                      }}
+                    >
+                      {unpaidMonths.length}
+                    </div>
+                  </div>
+                </div>
               </>
             )}
 
-            {/* ═══ Payment History ═══ */}
+            {/* ── Payment History ─────────────────────────────────── */}
             <div className="fee-section-title">Payment History</div>
             {payments.length === 0 ? (
               <div className="fee-no-payments">No payments recorded yet.</div>
             ) : (
               <div className="fee-payment-history-list">
-                {payments.map(p => (
+                {payments.map((p) => (
                   <div key={p.id} className="fee-payment-row">
                     <span className="fee-payment-date">
                       {new Date(p.payment_date).toLocaleDateString('en-PK')}
                     </span>
                     <span className="fee-payment-months">
-                      {p.months_paid.map(m => shortMonth(m)).join(', ')}
+                      {p.months_paid.map((m) => shortMonth(m)).join(', ')}
                     </span>
                     <span className="fee-payment-amount">Rs {p.amount.toLocaleString()}</span>
                     <span className="fee-payment-method">{p.payment_method}</span>
@@ -782,33 +997,52 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
             )}
 
             {flash && (
-              <div className={`flash ${flash.startsWith('Error') ? 'error' : 'success'}`}>
-                {flash}
-              </div>
+              <div className={`flash ${flash.startsWith('Error') ? 'error' : 'success'}`}>{flash}</div>
             )}
           </div>
         )}
       </div>
 
-      {/* ═══ Delete Confirmation Modal ═══ */}
+      {/* ═══════════════════════════════════════════════════════════
+          DELETE CONFIRMATION MODAL
+          ═══════════════════════════════════════════════════════════ */}
       {deleteTarget && (
         <div className="modal-backdrop" onClick={() => !deleting && setDeleteTarget(null)}>
-          <div className="fee-modal" onClick={e => e.stopPropagation()}>
+          <div className="fee-modal" onClick={(e) => e.stopPropagation()}>
             <div className="fee-modal-head">
               <h3>Delete Payment</h3>
-              <button className="fee-modal-close" onClick={() => setDeleteTarget(null)} disabled={deleting}>✕</button>
+              <button
+                className="fee-modal-close"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+              >
+                ✕
+              </button>
             </div>
             <div className="fee-modal-body">
-              <p style={{ fontSize: 'var(--font-sm)', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                Delete payment of <strong>Rs {deleteTarget.amount.toLocaleString()}</strong> for{' '}
-                <strong>{deleteTarget.months_paid.map(m => shortMonth(m)).join(', ')}</strong>?
+              <p
+                style={{
+                  fontSize: 'var(--font-sm)',
+                  color: 'var(--text-secondary)',
+                  marginBottom: '0.75rem',
+                }}
+              >
+                Delete payment of{' '}
+                <strong>Rs {deleteTarget.amount.toLocaleString()}</strong> for{' '}
+                <strong>
+                  {deleteTarget.months_paid.map((m) => shortMonth(m)).join(', ')}
+                </strong>
+                ?
               </p>
               <p style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>
-                This will remove the payment record and all associated bill entries. The balance will be recalculated.
+                This will remove the payment record. All balances will be recalculated
+                automatically.
               </p>
             </div>
             <div className="fee-modal-foot">
-              <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                Cancel
+              </Button>
               <Button variant="danger" onClick={handleDeletePayment} isLoading={deleting}>
                 <Trash2 size={14} /> Delete
               </Button>
