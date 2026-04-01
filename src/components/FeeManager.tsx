@@ -7,8 +7,7 @@ import {
   CheckCircle, ArrowLeft, Calendar, Users, AlertCircle, FileText,
 } from 'lucide-react';
 import { generateReceiptData, saveReceipt, getReceiptByPayment } from '../lib/receiptGenerator';
-import type { ReceiptData
-} from '../lib/supabase';
+import type { ReceiptData } from '../lib/supabase';
 import { ReceiptPreview } from './receipts/ReceiptPreview';
 import './FeeManager.css';
 import './managers.css';
