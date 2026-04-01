@@ -158,35 +158,29 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
           </tfoot>
         </table>
         
-        {/* Summary */}
-        <div className="r-summary">
-          <div className="r-summary-row">
-            <span>Gross Fee:</span>
-            <span>{formatCurrency(s.gross_fee)}</span>
-          </div>
-          <div className="r-summary-row">
-            <span>Less Discount:</span>
-            <span>-{formatCurrency(s.total_discount)}</span>
-          </div>
-          <div className="r-summary-row highlight">
-            <span>Net Monthly:</span>
-            <span>{formatCurrency(s.net_monthly)}</span>
-          </div>
-          {s.previous_balance > 0 && (
+        {/* PREVIOUS BALANCE */}
+        {s.previous_balance !== 0 && (
+          <div className="r-summary">
             <div className="r-summary-row">
-              <span>Prev. Balance:</span>
-              <span>+{formatCurrency(s.previous_balance)}</span>
-            </div>
-          )}
-          {s.previous_balance < 0 && (
-            <div className="r-summary-row">
-              <span>Prev. Advance:</span>
+              <span>{s.previous_balance > 0 ? "Previous Balance:" : "Previous Advance:"}</span>
               <span>{formatCurrency(Math.abs(s.previous_balance))}</span>
             </div>
-          )}
+          </div>
+        )}
+        
+        {/* MONTHLY FEE */}
+        <div className="r-summary">
+          <div className="r-summary-row highlight">
+            <span>Monthly Fee:</span>
+            <span>{formatCurrency(s.net_monthly)}</span>
+          </div>
+        </div>
+        
+        {/* TOTAL DUE */}
+        <div className="r-summary">
           <div className="r-summary-row total">
-            <span>Total Payable:</span>
-            <span>{formatCurrency(s.total_payable)}</span>
+            <span>Total Due:</span>
+            <span>{formatCurrency((s.previous_balance > 0 ? s.previous_balance : 0) + s.net_monthly)}</span>
           </div>
         </div>
         
@@ -282,37 +276,31 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
         </tfoot>
       </table>
       
-      {/* Summary */}
-      <div className="r-summary">
-        <div className="r-summary-row">
-          <span>Gross Fee:</span>
-          <span>{formatCurrency(s.gross_fee)}</span>
-        </div>
-        <div className="r-summary-row">
-          <span>Less Discount:</span>
-          <span>-{formatCurrency(s.total_discount)}</span>
-        </div>
-        <div className="r-summary-row highlight">
-          <span>Net Monthly:</span>
-          <span>{formatCurrency(s.net_monthly)}</span>
-        </div>
-        {s.previous_balance > 0 && (
-          <div className="r-summary-row">
-            <span>Prev. Balance:</span>
-            <span>+{formatCurrency(s.previous_balance)}</span>
+      {/* PREVIOUS BALANCE */}
+        {s.previous_balance !== 0 && (
+          <div className="r-summary">
+            <div className="r-summary-row">
+              <span>{s.previous_balance > 0 ? "Previous Balance:" : "Previous Advance:"}</span>
+              <span>{formatCurrency(Math.abs(s.previous_balance))}</span>
+            </div>
           </div>
         )}
-        {s.previous_balance < 0 && (
-          <div className="r-summary-row">
-            <span>Prev. Advance:</span>
-            <span>{formatCurrency(Math.abs(s.previous_balance))}</span>
+        
+        {/* MONTHLY FEE */}
+        <div className="r-summary">
+          <div className="r-summary-row highlight">
+            <span>Monthly Fee:</span>
+            <span>{formatCurrency(s.net_monthly)}</span>
           </div>
-        )}
-        <div className="r-summary-row total">
-          <span>Total Payable:</span>
-          <span>{formatCurrency(s.total_payable)}</span>
         </div>
-      </div>
+        
+        {/* TOTAL DUE */}
+        <div className="r-summary">
+          <div className="r-summary-row total">
+            <span>Total Due:</span>
+            <span>{formatCurrency((s.previous_balance > 0 ? s.previous_balance : 0) + s.net_monthly)}</span>
+          </div>
+        </div>
       
       {/* Payment */}
       <div className="r-payment">
