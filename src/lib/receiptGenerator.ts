@@ -132,3 +132,27 @@ export function formatMonth(ym: string): string {
   const m = parseInt(ym.slice(5, 7)) - 1;
   return `${months[m]} ${ym.slice(0, 4)}`;
 }
+
+/**
+ * Fetch existing receipt by payment ID
+ */
+export async function getReceiptByPayment(paymentId: string): Promise<FeeReceipt | null> {
+  try {
+    const { data, error } = await supabase
+      .from('fee_receipts')
+      .select('*')
+      .eq('payment_id', paymentId)
+      .single();
+    
+    if (error) {
+      // No receipt found (PGRST116 = no rows)
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+    
+    return data as FeeReceipt;
+  } catch (error) {
+    console.error('Error fetching receipt:', error);
+    return null;
+  }
+}

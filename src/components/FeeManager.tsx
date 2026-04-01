@@ -6,7 +6,7 @@ import {
   Search, Receipt, Trash2, Phone, CreditCard,
   CheckCircle, ArrowLeft, Calendar, Users, AlertCircle,
 } from 'lucide-react';
-import { generateReceiptData, saveReceipt } from '../lib/receiptGenerator';
+import { generateReceiptData, saveReceipt, getReceiptByPayment } from '../lib/receiptGenerator';
 import type { ReceiptData, FeeReceipt } from '../lib/supabase';
 import { ReceiptPreview } from './receipts/ReceiptPreview';
 import './FeeManager.css';
@@ -452,33 +452,32 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   /* ── record payment ─────────────────────────────────────────────── */
   const recordPayment = useCallback(async () => {
     if (!selectedParent || selectedMonths.size === 0) return;
-    const amt = parseInt(paymentAmount);
-    if (!amt || amt <= 0) {
-      showFlash('Error: Please enter a valid payment amount');
-      return;
-    }
-
     setSaving(true);
     try {
-      const sortedSelectedMonths = Array.from(selectedMonths).sort();
-      const { data: paymentData, error } = await supabase.from('fee_payments').insert({
-        school_id: schoolId,
-        parent_id: selectedParent.id,
-        amount: amt,
-        months_paid: sortedSelectedMonths,
-        months_count: sortedSelectedMonths.length,
-        payment_date: paymentDate || todayStr,
-        payment_method: paymentMethod,
-        notes: paymentNotes || null,
-      }).select().single();
+      // Calculate amount from selected months
+      const amount = selectedMonths.size * monthlyFee + paidMonthsBalance;
+      const monthsArray = Array.from(selectedMonths).sort();
 
-      if (error) throw error;
+      const { data: paymentData, error: paymentError } = await supabase
+        .from('fee_payments')
+        .insert({
+          school_id: schoolId,
+          parent_id: selectedParent.id,
+          amount: Math.max(0, amount),
+          months_paid: monthsArray,
+          months_count: monthsArray.length,
+          payment_date: paymentDate,
+          payment_method: paymentMethod,
+          notes: paymentNotes || null,
+        })
+        .select()
+        .single();
 
-      showFlash(
-        `Payment of Rs ${amt.toLocaleString()} recorded for ${sortedSelectedMonths.length} month(s)!`,
-      );
-      
-      // Generate receipt
+      if (paymentError) throw paymentError;
+
+      showFlash('Payment recorded successfully');
+
+      // Generate and save receipt
       if (paymentData) {
         const receiptData = await generateReceiptData(paymentData.id, schoolId);
         if (receiptData) {
@@ -509,6 +508,21 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     paymentMethod, paymentNotes, schoolId, todayStr,
     loadParentDetail, loadParents, showFlash,
   ]);
+
+  /* ── load receipt from payment ──────────────────────────────────── */
+  const loadReceiptFromPayment = useCallback(async (paymentId: string) => {
+    try {
+      const { data: receipt } = await getReceiptByPayment(paymentId);
+      if (receipt) {
+        setCurrentReceipt(receipt.receipt_data);
+        setShowReceipt(true);
+      } else {
+        showFlash('Receipt not found for this payment');
+      }
+    } catch (err: any) {
+      showFlash('Error loading receipt: ' + err.message);
+    }
+  }, [showFlash]);
 
   /* ── delete payment ─────────────────────────────────────────────── */
   const handleDeletePayment = useCallback(async () => {
