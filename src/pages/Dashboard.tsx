@@ -27,7 +27,7 @@ const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: str
   { id: 'teachers',   label: 'Teachers',        icon: GraduationCap },
   { id: 'parents',    label: 'Parents',         icon: Users2 },
   { id: 'students',  label: 'Students',        icon: GraduationCap },
-  { id: 'fee',        label: 'Fee Collection',   icon: Receipt },
+  // Fee Collection removed from sidebar - now in Quick Actions
   { id: 'income',     label: 'Income',          icon: DollarSign },
   { id: 'expense',    label: 'Expenses',        icon: Truck },
   { id: 'suppliers',  label: 'Suppliers',       icon: Store },
@@ -40,7 +40,7 @@ const PAGE_TITLES: Record<Tab, string> = {
   classes:   'Classes',
   teachers:  'Teachers & Staff',
   parents:   'Parents & Guardians',
-  fee:       'Fee Collection',
+  fee:       'Add Fee',
   income:    'Income',
   expense:   'Expenses',
   suppliers: 'Suppliers',
@@ -226,7 +226,8 @@ export const Dashboard = () => {
                 {[
                   { id: 'parents'   as Tab, icon: Users2,        color: 'purple', label: 'Add Parent',    sub: 'Register guardian' },
                   { id: 'students'  as Tab, icon: GraduationCap, color: 'green',  label: 'Add Student',   sub: 'Enroll a student' },
-                  { id: 'income'    as Tab, icon: DollarSign,    color: 'cyan',   label: 'Record Income', sub: 'Fee & payments' },
+                  { id: 'fee'       as Tab, icon: Receipt,       color: 'rose',   label: 'Add Fee',       sub: 'Collect from parents' },
+                  { id: 'income'    as Tab, icon: DollarSign,    color: 'cyan',   label: 'Record Income', sub: 'Other income' },
                   { id: 'expense'   as Tab, icon: Truck,         color: 'amber',  label: 'Add Expense',   sub: 'Track spending' },
                 ].map(qa => (
                   <div key={qa.id} className="qa-card" onClick={() => setTab(qa.id)}>
