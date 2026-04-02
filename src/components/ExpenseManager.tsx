@@ -141,8 +141,14 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
         showFlash('Error updating expense: ' + updateError.message);
         return;
       }
+      showFlash('Expense updated successfully');
     } else {
-      await supabase.from('expenses').insert(expenseData);
+      const { error: insertError } = await supabase.from('expenses').insert(expenseData);
+      if (insertError) {
+        showFlash('Error creating expense: ' + insertError.message);
+        return;
+      }
+      showFlash('Expense recorded successfully');
     }
 
     resetForm();

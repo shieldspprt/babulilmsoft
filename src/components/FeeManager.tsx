@@ -581,12 +581,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     <div className="fee-shell">
       {/* ─── LEFT PANEL ─────────────────────────────────────────────── */}
       <div
-        className="fee-parents-panel"
-        style={
-          mobileShowDetail
-            ? { display: 'none' }
-            : undefined
-        }
+        className={`fee-parents-panel${mobileShowDetail ? ' hidden-mobile' : ''}`}
       >
         <div className="fee-parents-search">
           <div className="manager-search-bar" style={{ maxWidth: '100%' }}>
@@ -650,12 +645,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
 
       {/* ─── RIGHT PANEL ────────────────────────────────────────────── */}
       <div
-        className="fee-detail-panel"
-        style={
-          !mobileShowDetail && typeof window !== 'undefined' && window.innerWidth <= 768
-            ? { display: 'none' }
-            : undefined
-        }
+        className={`fee-detail-panel${!mobileShowDetail ? ' hidden-mobile' : ''}`}
       >
         {!selectedParent ? (
           <div className="fee-detail-empty">

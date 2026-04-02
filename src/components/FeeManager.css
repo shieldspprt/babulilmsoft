@@ -211,17 +211,7 @@
 
 /* Mobile back button */
 .fee-detail-back {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0;
-  margin-bottom: 0.75rem;
-  background: none;
-  border: none;
-  color: var(--primary);
-  cursor: pointer;
-  font-size: var(--font-sm);
-  font-weight: 600;
+  display: none;
 }
 
 /* ─── Parent Header ───────────────────────────────────────────────── */
@@ -801,6 +791,14 @@
 
   .fee-detail-panel {
     padding: 1rem;
+  }
+
+  .fee-detail-panel.hidden-mobile {
+    display: none;
+  }
+
+  .fee-parents-panel.hidden-mobile {
+    display: none;
   }
 
   .fee-detail-back {

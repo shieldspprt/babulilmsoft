@@ -66,8 +66,17 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    await supabase.from('teachers').update({ is_active: false }).eq('id', deleteTarget.id);
-    setDeleting(false); setDeleteTarget(null); load();
+    try {
+      const { error } = await supabase.from('teachers').update({ is_active: false }).eq('id', deleteTarget.id);
+      if (error) throw error;
+      showFlash(`${deleteTarget.type} "${deleteTarget.name}" removed successfully`);
+      setDeleteTarget(null);
+      load();
+    } catch (err: any) {
+      showFlash('Error removing ' + deleteTarget.type.toLowerCase() + ': ' + err.message);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filtered = useMemo(() => {
