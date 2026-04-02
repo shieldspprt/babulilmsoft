@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Plus, X, BookOpen, Search, Edit2, Trash2, Users, Loader2 } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -17,7 +18,8 @@ type Class = {
   created_at: string;
 };
 
-export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
+export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
+  const isOwner = !role || role === 'owner';
   const [classes, setClasses] = useState<Class[]>([]);
   const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -157,9 +159,11 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
             <Search size={16} />
             <input placeholder="Search classes…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <Button onClick={() => { setNewName(''); setNewFee(''); setShowAddModal(true); }}>
-            <Plus size={18} /> Add Class
-          </Button>
+          {isOwner && (
+            <Button onClick={() => { setNewName(''); setNewFee(''); setShowAddModal(true); }}>
+              <Plus size={18} /> Add Class
+            </Button>
+          )}
         </div>
       </div>
 
@@ -170,7 +174,7 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
           <BookOpen size={52} />
           <p>{classes.length === 0 ? 'No classes yet' : 'No results found'}</p>
           <small>{classes.length === 0 ? 'Add your first class using the button above' : ''}</small>
-          {classes.length === 0 && <Button onClick={() => setShowAddModal(true)}><Plus size={18} /> Add First Class</Button>}
+          {classes.length === 0 && isOwner && <Button onClick={() => setShowAddModal(true)}><Plus size={18} /> Add First Class</Button>}
         </div>
       ) : (
         <div className="table-wrap">
@@ -196,14 +200,16 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
                     </span>
                   </td>
                   <td>
-                    <div className="row-actions">
-                      <button className="action-btn edit" title="Edit" onClick={() => openEdit(c)}>
-                        <Edit2 size={14} />
-                      </button>
-                      <button className="action-btn delete" title="Delete" onClick={() => handleDelete(c.id)} disabled={deletingId === c.id}>
-                        {deletingId === c.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
-                      </button>
-                    </div>
+                    {isOwner && (
+                      <div className="row-actions">
+                        <button className="action-btn edit" title="Edit" onClick={() => openEdit(c)}>
+                          <Edit2 size={14} />
+                        </button>
+                        <button className="action-btn delete" title="Delete" onClick={() => handleDelete(c.id)} disabled={deletingId === c.id}>
+                          {deletingId === c.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

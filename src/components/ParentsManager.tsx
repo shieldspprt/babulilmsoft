@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -27,7 +28,8 @@ const EMPTY_STUDENT = { first_name: '', last_name: '', cnic: '', date_of_birth: 
 
 const PAGE_SIZE = 25;
 
-export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
+export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
+  const isOwner = !role || role === 'owner';
   const [records, setRecords]       = useState<Parent[]>([]);
   const [loading, setLoading]       = useState(true);
   const [showModal, setShowModal]   = useState(false);
@@ -366,12 +368,16 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                         <button className="action-btn add-child" title="Add Child" onClick={() => openAddChild(r)}>
                           <UserPlus size={14} />
                         </button>
-                        <button className="action-btn edit" title="Edit" onClick={() => openEdit(r)}>
-                          <Edit2 size={14} />
-                        </button>
-                        <button className="action-btn delete" title="Delete" onClick={() => setDeleteTarget(r)}>
-                          <Trash2 size={14} />
-                        </button>
+                        {isOwner && (
+                          <button className="action-btn edit" title="Edit" onClick={() => openEdit(r)}>
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+                        {isOwner && (
+                          <button className="action-btn delete" title="Delete" onClick={() => setDeleteTarget(r)}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

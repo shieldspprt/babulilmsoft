@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
 import {
@@ -180,7 +181,8 @@ function maskCnic(cnic: string): string {
    COMPONENT
    ═══════════════════════════════════════════════════════════════════ */
 
-export const FeeManager = ({ schoolId }: { schoolId: string }) => {
+export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
+  const isOwner = !role || role === 'owner';
   const { flash, showFlash } = useFlashMessage(4000);
 
   /* ── state ──────────────────────────────────────────────────────── */
@@ -993,13 +995,15 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                       <span className="fee-payment-row-method">
                         {p.payment_method}
                       </span>
-                      <button
-                        className="fee-payment-delete"
-                        onClick={() => setDeleteTarget(p)}
-                        title="Delete payment"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {isOwner && (
+                        <button
+                          className="fee-payment-delete"
+                          onClick={() => setDeleteTarget(p)}
+                          title="Delete payment"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                       <button
                         className="fee-payment-view"
                         onClick={() => loadReceiptFromPayment(p.id)}

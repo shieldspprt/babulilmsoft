@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import {
   Plus, X, GraduationCap, Briefcase, Phone,
@@ -23,7 +24,8 @@ const EMPTY = {
   address: '', education: '', salary: '', notes: '',
 };
 
-export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
+export const TeachersManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
+  const isOwner = !role || role === 'owner';
   const [records, setRecords]       = useState<Teacher[]>([]);
   const [loading, setLoading]       = useState(true);
   const [showModal, setShowModal]   = useState(false);
@@ -150,9 +152,11 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
                   {r.address   && <span><MapPin size={12} /> {r.address}</span>}
                 </div>
               </div>
-              <button className="record-delete" title="Remove" onClick={() => setDeleteTarget(r)}>
-                <Trash2 size={13} />
-              </button>
+              {isOwner && (
+                <button className="record-delete" title="Remove" onClick={() => setDeleteTarget(r)}>
+                  <Trash2 size={13} />
+                </button>
+              )}
             </div>
           ))}
         </div>

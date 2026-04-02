@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
 import { Plus, Store, Phone, MapPin, ArrowLeft, ArrowUpCircle, ArrowDownCircle, BookOpen, Trash2 } from 'lucide-react';
@@ -31,7 +32,8 @@ type SupplierTransaction = {
 
 type ViewType = 'list' | 'add' | 'payment' | 'bill' | 'ledger';
 
-export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
+export const SuppliersManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
+  const isOwner = !role || role === 'owner';
   const { flash, showFlash } = useFlashMessage(4000);
   const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -307,9 +309,11 @@ export const SuppliersManager = ({ schoolId }: { schoolId: string }) => {
                     <Button variant="ghost" onClick={() => selectSupplier(supplier, 'ledger')}>
                       <BookOpen size={16} /> View Ledger
                     </Button>
-                    <Button variant="danger" onClick={() => handleDeleteSupplier(supplier.id)}>
-                      Delete
-                    </Button>
+                    {isOwner && (
+                      <Button variant="danger" onClick={() => handleDeleteSupplier(supplier.id)}>
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 </div>
               );

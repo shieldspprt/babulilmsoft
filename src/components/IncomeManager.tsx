@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
 import { Plus, Trash2, Edit2, Save, X, DollarSign, Calendar, FileText, CreditCard, Search, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -29,13 +30,15 @@ export type IncomeRecord = {
 
 type IncomeManagerProps = {
   schoolId: string;
+  role?: Role;
 };
 
 const DEFAULT_CATEGORIES = ['Book Sales', 'Notebook Sales', 'Canteen', 'Other Income'];
 const PAGE_SIZE = 25;
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'EasyPaisa', 'JazzCash'];
 
-export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
+export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
+  const isOwner = !role || role === 'owner';
   const { flash, showFlash } = useFlashMessage(4000);
   const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [categories, setCategories] = useState<IncomeCategory[]>([]);
@@ -284,7 +287,7 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
           {categories.map(cat => (
             <span key={cat.id} className={`category-tag ${cat.is_default ? 'default' : 'custom'}`}>
               {cat.name}
-              {!cat.is_default && (
+              {isOwner && !cat.is_default && (
                 <button onClick={() => deleteCategory(cat.id)} title="Delete"><X size={10} /></button>
               )}
             </span>
@@ -449,8 +452,12 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
                   <div className="record-notes">{record.additional_notes}</div>
                 )}
                 <div className="record-actions">
-                  <button className="btn-icon" onClick={() => startEdit(record)}><Edit2 size={14} /></button>
-                  <button className="btn-icon danger" onClick={() => handleDelete(record.id)}><Trash2 size={14} /></button>
+                  {isOwner && (
+                    <button className="btn-icon" onClick={() => startEdit(record)}><Edit2 size={14} /></button>
+                  )}
+                  {isOwner && (
+                    <button className="btn-icon danger" onClick={() => handleDelete(record.id)}><Trash2 size={14} /></button>
+                  )}
                 </div>
               </div>
             ))

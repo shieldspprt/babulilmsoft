@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Plus, X, Search, Trash2, Edit2, ChevronLeft, ChevronRight, GraduationCap, BookOpen } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -47,7 +48,8 @@ const EMPTY_FORM = {
 
 const PAGE_SIZE = 25;
 
-export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
+export const StudentsManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
+  const isOwner = !role || role === 'owner';
   const [students, setStudents]       = useState<Student[]>([]);
   const [classes, setClasses]         = useState<Class[]>([]);
   const [parents, setParents]         = useState<Parent[]>([]);
@@ -297,12 +299,16 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
                     </td>
                     <td>
                       <div className="row-actions">
-                        <button className="action-btn edit" title="Edit" onClick={() => openEdit(s)}>
-                          <Edit2 size={14} />
-                        </button>
-                        <button className="action-btn delete" title="Delete" onClick={() => setDeleteTarget(s)}>
-                          <Trash2 size={14} />
-                        </button>
+                        {isOwner && (
+                          <button className="action-btn edit" title="Edit" onClick={() => openEdit(s)}>
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+                        {isOwner && (
+                          <button className="action-btn delete" title="Delete" onClick={() => setDeleteTarget(s)}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

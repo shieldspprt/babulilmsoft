@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
 import { Plus, Trash2, Edit2, Save, X, DollarSign, FileText, CreditCard, Search, User, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -30,12 +31,14 @@ export type Expense = {
 
 type ExpenseManagerProps = {
   schoolId: string;
+  role?: Role;
 };
 
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'Easy Paisa', 'Jazz Cash'];
 const PAGE_SIZE = 25;
 
-export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
+export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
+  const isOwner = !role || role === 'owner';
   const { flash, showFlash } = useFlashMessage(4000);
   const [confirmAction, setConfirmAction] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -403,7 +406,7 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
           {categories.map(cat => (
             <div key={cat.id} className={`category-tag ${cat.is_default ? 'default' : 'custom'}`}>
               {cat.name}
-              {!cat.is_default && (
+              {isOwner && !cat.is_default && (
                 <button onClick={() => deleteCategory(cat.id, cat.is_default)}>
                   <X size={14} />
                 </button>
@@ -470,10 +473,14 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
                   <td>{expense.payment_method}</td>
                   <td className="notes-cell">{expense.additional_notes || '-'}</td>
                   <td className="actions-cell">
-                    <button onClick={() => handleEdit(expense)} disabled={processingId === expense.id}><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(expense.id)} disabled={processingId === expense.id}>
-                      {processingId === expense.id ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
-                    </button>
+                    {isOwner && (
+                      <button onClick={() => handleEdit(expense)} disabled={processingId === expense.id}><Edit2 size={16} /></button>
+                    )}
+                    {isOwner && (
+                      <button onClick={() => handleDelete(expense.id)} disabled={processingId === expense.id}>
+                        {processingId === expense.id ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

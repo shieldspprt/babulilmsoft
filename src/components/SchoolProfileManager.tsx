@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import type { Role } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
@@ -14,7 +15,8 @@ import './SchoolProfile.css';
 
 const MAX_LOGO_SIZE = 512 * 1024; // 512 KB
 
-export const SchoolProfileManager = ({ schoolId }: { schoolId: string }) => {
+export const SchoolProfileManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
+  const isOwner = !role || role === 'owner';
   const { profile, refreshProfile } = useAuth();
   const { flash, showFlash } = useFlashMessage(5000);
 
@@ -165,44 +167,43 @@ export const SchoolProfileManager = ({ schoolId }: { schoolId: string }) => {
       <div className="profile-card">
         {/* Logo Section */}
         <div className="profile-logo-section">
-          <div
-            className="profile-logo-preview"
-            onClick={() => fileInputRef.current?.click()}
-            title="Click to upload logo"
-          >
+          <div className="profile-logo-preview" title="School Logo">
             {form.logo_url ? (
               <img src={form.logo_url} alt="School Logo" className="profile-logo-img" />
             ) : (
               <div className="profile-logo-placeholder">
                 <Camera size={28} />
-                <span>Upload Logo</span>
+                <span>No Logo</span>
               </div>
             )}
-            {uploading && <div className="profile-logo-uploading"><div className="spinner" /></div>}
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/svg+xml,image/webp"
-            onChange={handleLogoSelect}
-            style={{ display: 'none' }}
-          />
-          <div className="profile-logo-actions">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              isLoading={uploading}
-            >
-              <Upload size={14} /> {form.logo_url ? 'Change Logo' : 'Upload Logo'}
-            </Button>
-            {form.logo_url && (
-              <Button size="sm" variant="ghost" onClick={handleRemoveLogo}>
-                Remove
-              </Button>
-            )}
-          </div>
-          <span className="profile-logo-hint">PNG, JPG, or SVG · Max 512 KB</span>
+          {isOwner && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                onChange={handleLogoSelect}
+                style={{ display: 'none' }}
+              />
+              <div className="profile-logo-actions">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  isLoading={uploading}
+                >
+                  <Upload size={14} /> {form.logo_url ? 'Change Logo' : 'Upload Logo'}
+                </Button>
+                {form.logo_url && (
+                  <Button size="sm" variant="ghost" onClick={handleRemoveLogo}>
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <span className="profile-logo-hint">PNG, JPG, or SVG · Max 512 KB</span>
+            </>
+          )}
         </div>
 
         {/* Divider */}
@@ -211,60 +212,83 @@ export const SchoolProfileManager = ({ schoolId }: { schoolId: string }) => {
         {/* Form */}
         <div className="profile-form">
           <div className="form-section-label">School Information</div>
-          <div className="form-grid">
-            <div className="span-2">
+          {isOwner ? (
+            <div className="form-grid">
+              <div className="span-2">
+                <Input
+                  label="School Name"
+                  placeholder="Enter school name"
+                  value={form.school_name}
+                  onChange={handleChange('school_name')}
+                  required
+                />
+              </div>
               <Input
-                label="School Name"
-                placeholder="Enter school name"
-                value={form.school_name}
-                onChange={handleChange('school_name')}
-                required
+                label="Phone / Contact"
+                placeholder="e.g. 0311-1234567"
+                value={form.contact}
+                onChange={handleChange('contact')}
               />
-            </div>
-            <Input
-              label="Phone / Contact"
-              placeholder="e.g. 0311-1234567"
-              value={form.contact}
-              onChange={handleChange('contact')}
-            />
-            <Input
-              label="Email"
-              type="email"
-              placeholder="e.g. school@example.com"
-              value={form.email}
-              onChange={handleChange('email')}
-            />
-            <div className="span-2">
-              <label className="form-label">Address</label>
-              <textarea
-                className="form-textarea"
-                rows={3}
-                placeholder="Enter full school address"
-                value={form.address}
-                onChange={handleChange('address')}
+              <Input
+                label="Email"
+                type="email"
+                placeholder="e.g. school@example.com"
+                value={form.email}
+                onChange={handleChange('email')}
               />
+              <div className="span-2">
+                <label className="form-label">Address</label>
+                <textarea
+                  className="form-textarea"
+                  rows={3}
+                  placeholder="Enter full school address"
+                  value={form.address}
+                  onChange={handleChange('address')}
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="profile-info-grid">
+              <div className="profile-info-item">
+                <span className="profile-info-label">School Name</span>
+                <span className="profile-info-value">{form.school_name || '—'}</span>
+              </div>
+              <div className="profile-info-item">
+                <span className="profile-info-label">Phone / Contact</span>
+                <span className="profile-info-value">{form.contact || '—'}</span>
+              </div>
+              <div className="profile-info-item">
+                <span className="profile-info-label">Email</span>
+                <span className="profile-info-value">{form.email || '—'}</span>
+              </div>
+              <div className="profile-info-item">
+                <span className="profile-info-label">Address</span>
+                <span className="profile-info-value">{form.address || '—'}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Divider */}
         <div className="profile-divider" />
 
         {/* Save Button */}
-        <div className="profile-save-row">
-          <Button
-            onClick={handleSave}
-            isLoading={saving}
-            disabled={!hasChanges}
-            size="lg"
-          >
-            <CheckCircle size={18} />
-            {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
-          {!hasChanges && (
-            <span className="profile-no-changes">All changes saved</span>
-          )}
-        </div>
+        {isOwner && (
+          <div className="profile-save-row">
+            <Button
+              onClick={handleSave}
+              isLoading={saving}
+              disabled={!hasChanges}
+              size="lg"
+            >
+              <CheckCircle size={18} />
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+            {!hasChanges && (
+              <span className="profile-no-changes">All changes saved</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Account Info (read-only) */}

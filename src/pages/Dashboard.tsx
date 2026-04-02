@@ -56,7 +56,7 @@ const PAGE_TITLES: Record<Tab, string> = {
 };
 
 export const Dashboard = () => {
-  const { profile, refreshProfile, signOut } = useAuth();
+  const { profile, role, refreshProfile, signOut } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
 
@@ -253,16 +253,16 @@ export const Dashboard = () => {
           )}
 
           {/* Feature tabs */}
-          {tab === 'classes'   && <ClassesManager   schoolId={profile.id} />}
-          {tab === 'teachers'  && <TeachersManager  schoolId={profile.id} />}
-          {tab === 'parents'   && <ParentsManager   schoolId={profile.id} />}
-          {tab === 'students'  && <StudentsManager  schoolId={profile.id} />}
-          {tab === 'fee'       && <FeeManager       schoolId={profile.id} />}
-          {tab === 'income'    && <IncomeManager    schoolId={profile.id} />}
-          {tab === 'expense'   && <ExpenseManager   schoolId={profile.id} />}
-          {tab === 'suppliers' && <SuppliersManager schoolId={profile.id} />}
+          {tab === 'classes'   && <ClassesManager   schoolId={profile.id} role={role || undefined} />}
+          {tab === 'teachers'  && <TeachersManager  schoolId={profile.id} role={role || undefined} />}
+          {tab === 'parents'   && <ParentsManager   schoolId={profile.id} role={role || undefined} />}
+          {tab === 'students'  && <StudentsManager  schoolId={profile.id} role={role || undefined} />}
+          {tab === 'fee'       && <FeeManager       schoolId={profile.id} role={role || undefined} />}
+          {tab === 'income'    && <IncomeManager    schoolId={profile.id} role={role || undefined} />}
+          {tab === 'expense'   && <ExpenseManager   schoolId={profile.id} role={role || undefined} />}
+          {tab === 'suppliers' && <SuppliersManager schoolId={profile.id} role={role || undefined} />}
           {tab === 'team'      && <TeamManager schoolId={profile.id} />}
-          {tab === 'profile'   && <SchoolProfileManager schoolId={profile.id} />}
+          {tab === 'profile'   && <SchoolProfileManager schoolId={profile.id} role={role || undefined} />}
 
           {/* Buy Credits */}
           {tab === 'buy' && (
