@@ -455,7 +455,9 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
     setSaving(true);
     try {
       // Calculate amount from selected months
-      const amount = selectedMonths.size * monthlyFee + paidMonthsBalance;
+      const enteredAmount = parseInt(paymentAmount) || 0;
+      const calculatedAmount = selectedMonths.size * monthlyFee + paidMonthsBalance;
+      const amount = enteredAmount > 0 ? enteredAmount : Math.max(0, calculatedAmount);
       const monthsArray = Array.from(selectedMonths).sort();
 
       const { data: paymentData, error: paymentError } = await supabase
