@@ -78,16 +78,21 @@ export const Dashboard = () => {
 
   const loadOverviewStats = async () => {
     if (!profile) return;
-    const [parentsRes, studentsRes, classesRes] = await Promise.all([
-      supabase.from('parents').select('id', { count: 'exact', head: true }).eq('school_id', profile.id),
-      supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', profile.id),
-      supabase.from('classes').select('id', { count: 'exact', head: true }).eq('school_id', profile.id),
-    ]);
-    setOverviewStats({
-      parents: parentsRes.count || 0,
-      students: studentsRes.count || 0,
-      classes: classesRes.count || 0,
-    });
+    try {
+      const [parentsRes, studentsRes, classesRes] = await Promise.all([
+        supabase.from('parents').select('id', { count: 'exact', head: true }).eq('school_id', profile.id),
+        supabase.from('students').select('id', { count: 'exact', head: true }).eq('school_id', profile.id),
+        supabase.from('classes').select('id', { count: 'exact', head: true }).eq('school_id', profile.id),
+      ]);
+      setOverviewStats({
+        parents: parentsRes.count || 0,
+        students: studentsRes.count || 0,
+        classes: classesRes.count || 0,
+      });
+    } catch (err: any) {
+      console.error('Error loading overview stats:', err.message);
+      setOverviewStats({ parents: 0, students: 0, classes: 0 });
+    }
   };
 
   const loadHistory = async () => {

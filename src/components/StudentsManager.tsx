@@ -63,15 +63,25 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
 
   const load = async () => {
     setLoading(true);
-    const [studentsRes, classesRes, parentsRes] = await Promise.all([
-      supabase.from('students').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
-      supabase.from('classes').select('id, name, monthly_fee, active').eq('school_id', schoolId).eq('active', true).order('name'),
-      supabase.from('parents').select('id, first_name, last_name').eq('school_id', schoolId).order('first_name'),
-    ]);
-    setStudents(studentsRes.data || []);
-    setClasses(classesRes.data || []);
-    setParents(parentsRes.data || []);
-    setLoading(false);
+    try {
+      const [studentsRes, classesRes, parentsRes] = await Promise.all([
+        supabase.from('students').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
+        supabase.from('classes').select('id, name, monthly_fee, active').eq('school_id', schoolId).eq('active', true).order('name'),
+        supabase.from('parents').select('id, first_name, last_name').eq('school_id', schoolId).order('first_name'),
+      ]);
+      
+      if (studentsRes.error) throw studentsRes.error;
+      if (classesRes.error) throw classesRes.error;
+      if (parentsRes.error) throw parentsRes.error;
+      
+      setStudents(studentsRes.data || []);
+      setClasses(classesRes.data || []);
+      setParents(parentsRes.data || []);
+    } catch (err: any) {
+      showFlash('Error loading data: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [schoolId]);

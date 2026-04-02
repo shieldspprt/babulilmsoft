@@ -529,7 +529,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
                 )}
                 <div>
                   <label className="form-label">Final Monthly Fee (Rs)</label>
-                  <div className="fee-display{childForm.discount_value ? ' discounted' : ''}">
+                  <div className={`fee-display${childForm.discount_value ? ' discounted' : ''}`}>
                     Rs {getFinalFee().toLocaleString()}
                     {childForm.discount_value > 0 && <span className="fee-original">(was Rs {childForm.monthly_fee.toLocaleString()})</span>}
                   </div>
