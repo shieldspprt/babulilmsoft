@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
+import { isValidCNIC } from '../lib/validation';
 import '../components/managers.css';
 
 type Teacher = {
@@ -32,6 +33,7 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
   const [search, setSearch]         = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Teacher | null>(null);
   const [deleting, setDeleting]     = useState(false);
+  const [cnicError, setCnicError]   = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -49,10 +51,20 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
 
   useEffect(() => { load(); }, [schoolId]);
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: string) => {
+    setForm(f => ({ ...f, [k]: v }));
+    if (k === 'cnic') setCnicError('');
+  };
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.personal_contact.trim()) return;
+    
+    // Validate CNIC format if provided
+    if (form.cnic && !isValidCNIC(form.cnic)) {
+      setCnicError('Invalid CNIC format. Use XXXXX-XXXXXXX-X (e.g., 12345-1234567-1)');
+      return;
+    }
+    
     setSaving(true);
     const { error } = await supabase.from('teachers').insert({
       school_id: schoolId, is_active: true,
@@ -60,7 +72,7 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
     });
     setSaving(false);
     if (error) { showFlash('Error: ' + error.message); }
-    else       { showFlash(`${form.type} "${form.name}" added!`); setShowModal(false); setForm({ ...EMPTY }); load(); }
+    else       { showFlash(`${form.type} "${form.name}" added!`); setShowModal(false); setForm({ ...EMPTY }); setCnicError(''); load(); }
   };
 
   const handleDelete = async () => {
@@ -188,9 +200,15 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
                     <option>Male</option><option>Female</option>
                   </select>
                 </div>
-                <Input label="CNIC" placeholder="XXXXX-XXXXXXX-X" value={form.cnic} onChange={e => set('cnic', e.target.value)} />
+                <Input 
+                  label="CNIC" 
+                  placeholder="XXXXX-XXXXXXX-X" 
+                  value={form.cnic} 
+                  onChange={e => set('cnic', e.target.value)}
+                  error={cnicError}
+                />
                 <Input label="Education" placeholder="e.g. BA, BEd, MSc" value={form.education} onChange={e => set('education', e.target.value)} />
-                <Input label="Monthly Salary (Rs)" type="number" placeholder="e.g. 25000" value={form.salary} onChange={e => set('salary', e.target.value)} />
+                <Input label="Monthly Salary (Rs)" type="number" placeholder="e.g. 25000" value={form.salary || ''} onChange={e => set('salary', String(parseInt(e.target.value) || 0))} />
                 <div className="span-2">
                   <label className="form-label">Address</label>
                   <textarea className="form-textarea" rows={2} placeholder="Full address" value={form.address} onChange={e => set('address', e.target.value)} />

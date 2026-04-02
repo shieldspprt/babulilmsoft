@@ -4,6 +4,7 @@ import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Plus, X, Search, Trash2, Edit2, ChevronLeft, ChevronRight, GraduationCap, BookOpen } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { isValidCNIC } from '../lib/validation';
 import '../components/managers.css';
 
 type Student = {
@@ -141,20 +142,13 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
     }
   };
 
-  // Validate CNIC format (Pakistani format: XXXXX-XXXXXXX-X)
-  const isValidCNIC = (cnic: string): boolean => {
-    if (!cnic) return true; // Optional field
-    const cnicRegex = /^\d{5}-\d{7}-\d$/;
-    return cnicRegex.test(cnic);
-  };
-
   const handleSave = async () => {
     if (!form.parent_id || !form.first_name.trim() || !form.last_name.trim()) {
       showFlash('Error: Parent, first name and last name are required');
       return;
     }
     
-    // Validate CNIC format if provided
+    // Validate CNIC format if provided (uses shared utility)
     if (form.cnic && !isValidCNIC(form.cnic)) {
       showFlash('Error: CNIC must be in format XXXXX-XXXXXXX-X (e.g., 12345-1234567-1)');
       return;

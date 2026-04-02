@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { SchoolProfile } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
@@ -103,14 +103,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (user) {
       await fetchProfile(user.id);
     }
-  };
+  }, [user]);
+
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    session,
+    user,
+    profile,
+    loading,
+    signOut,
+    refreshProfile,
+  }), [session, user, profile, loading, signOut, refreshProfile]);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
