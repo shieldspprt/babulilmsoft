@@ -199,11 +199,17 @@ export function formatMonth(ym: string): string {
  * Fetch existing receipt by payment ID
  */
 export async function getReceiptByPayment(paymentId: string): Promise<FeeReceipt | null> {
+  // Input validation
+  if (!paymentId || typeof paymentId !== 'string' || paymentId.trim() === '') {
+    console.error('Invalid paymentId: must be a non-empty string');
+    return null;
+  }
+
   try {
     const { data, error } = await supabase
       .from('fee_receipts')
       .select('*')
-      .eq('payment_id', paymentId)
+      .eq('payment_id', paymentId.trim())
       .single();
     
     if (error) {

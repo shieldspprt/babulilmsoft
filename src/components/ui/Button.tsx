@@ -33,6 +33,8 @@ export const Button: React.FC<ButtonProps> = ({
       className={classes}
       disabled={disabled || isLoading}
       type={type}
+      aria-busy={isLoading}
+      aria-disabled={disabled || isLoading}
       {...props}
     >
       {children}

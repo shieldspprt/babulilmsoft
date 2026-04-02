@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { AlertTriangle, Clock, CreditCard, Lock } from 'lucide-react';
@@ -14,6 +14,11 @@ export const CreditGuard: React.FC<{ children: React.ReactNode }> = ({ children 
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
+
+  // Memoize navigation handler to prevent re-renders
+  const handleBuyCredits = useCallback(() => {
+    navigate('/dashboard', { state: { showBuyCredits: true } });
+  }, [navigate]);
 
   // Memoize status calculation to prevent unnecessary re-renders
   const status = useMemo<CreditStatus | null>(() => {
@@ -45,7 +50,7 @@ export const CreditGuard: React.FC<{ children: React.ReactNode }> = ({ children 
         <div className="cg-icon"><Lock size={40} /></div>
         <h2>Account Locked</h2>
         <p>Your credits have expired. Purchase credits to continue using ilmsoft.</p>
-        <Button size="lg" onClick={() => navigate('/dashboard', { state: { showBuyCredits: true } })}>
+        <Button size="lg" onClick={handleBuyCredits}>
           <CreditCard size={18} /> Buy Credits Now
         </Button>
       </div>
