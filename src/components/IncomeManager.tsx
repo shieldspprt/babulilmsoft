@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
@@ -59,13 +59,7 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
     additional_notes: ''
   });
 
-  const loadData = async () => {
-    setLoading(true);
-    await Promise.all([loadCategories(), loadRecords()]);
-    setLoading(false);
-  };
-
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     const { data, error } = await supabase
       .from('income_categories')
       .select('*')
@@ -94,9 +88,9 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
     } else {
       setCategories(data || []);
     }
-  };
+  }, [schoolId]);
 
-  const loadRecords = async () => {
+  const loadRecords = useCallback(async () => {
     const { data, error } = await supabase
       .from('income_records')
       .select(`*, category:category_id(name)`)
@@ -113,11 +107,17 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
       category_name: r.category?.name || 'Unknown'
     }));
     setRecords(formatted as IncomeRecord[]);
-  };
+  }, [schoolId]);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([loadCategories(), loadRecords()]);
+    setLoading(false);
+  }, [loadCategories, loadRecords]);
 
   useEffect(() => {
     loadData();
-  }, [schoolId]);
+  }, [loadData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

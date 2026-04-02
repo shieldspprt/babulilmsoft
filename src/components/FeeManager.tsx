@@ -214,7 +214,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   const [currentReceipt, setCurrentReceipt] = useState<ReceiptData | null>(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const cm = useMemo(currentMonthStr, []);
+  const cm = useMemo(() => currentMonthStr(), []);
 
   /* ── load parents (left panel) ──────────────────────────────────── */
   const loadParents = useCallback(async () => {
