@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
@@ -38,7 +38,11 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   const [editFee, setEditFee] = useState('');
   const [editActive, setEditActive] = useState(true);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    if (!schoolId?.trim()) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [classRes, studentRes] = await Promise.all([
@@ -68,9 +72,11 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     } finally {
       setLoading(false);
     }
-  };
+  }, [schoolId]);
 
-  useEffect(() => { load(); }, [schoolId]);
+  useEffect(() => { 
+    load(); 
+  }, [load]);
 
   const handleAdd = async () => {
     if (!newName.trim() || !newFee.trim()) return;

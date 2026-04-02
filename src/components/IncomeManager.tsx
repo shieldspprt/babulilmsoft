@@ -244,6 +244,14 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
   const totalIncome = filteredRecords.reduce((sum, r) => sum + r.amount, 0);
 
   const totalPages = Math.ceil(filteredRecords.length / PAGE_SIZE);
+  
+  // Reset to valid page if filters changed and current page is out of bounds
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [totalPages, page]);
+
   const paginated = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     return filteredRecords.slice(start, start + PAGE_SIZE);
