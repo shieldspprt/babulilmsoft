@@ -9,6 +9,8 @@ if (!supabaseUrl || !supabaseKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
+export type Role = 'owner' | 'manager';
+
 export type SchoolProfile = {
   id: string;
   user_id: string;
@@ -19,6 +21,18 @@ export type SchoolProfile = {
   total_credits: number;
   credit_expires_at: string | null;
   created_at: string;
+};
+
+export type SchoolMember = {
+  id: string;
+  school_id: string;
+  user_id: string | null;
+  email: string;
+  role: Role;
+  status: 'active' | 'pending' | 'removed';
+  invite_token: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type CreditRequest = {

@@ -1,13 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { SchoolProfile } from '../lib/supabase';
+import type { SchoolProfile, Role } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
 type AuthContextType = {
   session: Session | null;
   user: User | null;
   profile: SchoolProfile | null;
+  role: Role | null;
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -17,23 +18,55 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   user: null,
   profile: null,
+  role: null,
   loading: true,
   signOut: async () => {},
   refreshProfile: async () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<SchoolProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession]       = useState<Session | null>(null);
+  const [user, setUser]             = useState<User | null>(null);
+  const [profile, setProfile]       = useState<SchoolProfile | null>(null);
+  const [role, setRole]             = useState<Role | null>(null);
+  const [loading, setLoading]       = useState(true);
   const userIdRef = useRef<string | null>(null);
 
   const MAX_RETRIES = 2;
   const RETRY_DELAY = 1000;
 
+  /**
+   * Fetch user profile with role detection:
+   * 1. Check school_members — if user is an active member, use that school
+   * 2. Fallback: check schools.user_id — existing owner behavior
+   */
   const fetchProfile = async (userId: string, attempt = 1): Promise<void> => {
     try {
+      // Step 1: Check if user is a member (owner or manager) of any school
+      const { data: member } = await supabase
+        .from('school_members')
+        .select('school_id, role, status')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .maybeSingle();
+
+      if (member) {
+        setRole(member.role as Role);
+        const { data: school, error: schoolError } = await supabase
+          .from('schools')
+          .select('*')
+          .eq('id', member.school_id)
+          .single();
+
+        if (school) {
+          setProfile(school as SchoolProfile);
+        } else if (schoolError) {
+          console.error('Error fetching school by member:', schoolError.message);
+        }
+        return;
+      }
+
+      // Step 2: Fallback — check if user owns a school (backward compat)
       const { data, error } = await supabase
         .from('schools')
         .select('*')
@@ -41,7 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) {
-        // Retry on network errors or 5xx server errors
         const shouldRetry = attempt <= MAX_RETRIES && (
           error.message?.includes('network') ||
           error.message?.includes('timeout') ||
@@ -55,8 +87,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         console.error('Error fetching profile:', error.message);
-      } else {
+      } else if (data) {
         setProfile(data as SchoolProfile);
+        setRole('owner');
       }
     } catch (err) {
       if (attempt <= MAX_RETRIES) {
@@ -92,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         userIdRef.current = null;
         setProfile(null);
+        setRole(null);
         setLoading(false);
       }
     });
@@ -114,10 +148,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     user,
     profile,
+    role,
     loading,
     signOut,
     refreshProfile,
-  }), [session, user, profile, loading, signOut, refreshProfile]);
+  }), [session, user, profile, role, loading, signOut, refreshProfile]);
 
   return (
     <AuthContext.Provider value={contextValue}>
