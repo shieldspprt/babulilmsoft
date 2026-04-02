@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { AlertTriangle, Clock, CreditCard, Lock } from 'lucide-react';
@@ -13,23 +13,27 @@ type CreditStatus = {
 export const CreditGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<CreditStatus | null>(null);
   const [checking, setChecking] = useState(true);
 
-  useEffect(() => {
-    if (!profile) { setTimeout(() => setChecking(false), 0); return; }
+  // Memoize status calculation to prevent unnecessary re-renders
+  const status = useMemo<CreditStatus | null>(() => {
+    if (!profile) return null;
     const now      = new Date();
     const exp      = profile.credit_expires_at ? new Date(profile.credit_expires_at) : null;
     const expired  = !!exp && exp <= now;
     const warning  = !!exp && exp.getTime() - now.getTime() < 7 * 86400000;
     const days     = exp ? Math.max(0, Math.ceil((exp.getTime() - now.getTime()) / 86400000)) : profile.total_credits;
-    setStatus({
+    return {
       hasCredits: profile.total_credits > 0 && (!exp || exp > now),
       totalCredits: profile.total_credits, daysRemaining: days,
       expiresAt: profile.credit_expires_at, expired, warning,
-    });
-    setChecking(false);
-  }, [profile]);
+    };
+  }, [profile?.total_credits, profile?.credit_expires_at]);
+
+  useEffect(() => {
+    // Allow a tick for status to compute
+    setTimeout(() => setChecking(false), 0);
+  }, []);
 
   if (checking || !status) return (
     <div className="cg-loading"><div className="spinner" /> Checking access…</div>
@@ -55,18 +59,22 @@ export const CreditDisplay: React.FC = () => {
   const { profile } = useAuth();
   if (!profile) return null;
 
-  const now      = new Date();
-  const exp      = profile.credit_expires_at ? new Date(profile.credit_expires_at) : null;
-  const expired  = !!exp && exp <= now;
-  const warning  = !!exp && exp.getTime() - now.getTime() < 7 * 86400000;
-  const days     = exp ? Math.max(0, Math.ceil((exp.getTime() - now.getTime()) / 86400000)) : profile.total_credits;
-  const label    = expired ? 'Expired' : days <= 7 ? `${days}d` : `${profile.total_credits}`;
-  const cls      = expired ? 'credits-badge expired' : warning ? 'credits-badge warning' : 'credits-badge';
+  // Memoize display calculations
+  const display = useMemo(() => {
+    const now      = new Date();
+    const exp      = profile.credit_expires_at ? new Date(profile.credit_expires_at) : null;
+    const expired  = !!exp && exp <= now;
+    const warning  = !!exp && exp.getTime() - now.getTime() < 7 * 86400000;
+    const days     = exp ? Math.max(0, Math.ceil((exp.getTime() - now.getTime()) / 86400000)) : profile.total_credits;
+    const label    = expired ? 'Expired' : days <= 7 ? `${days}d` : `${profile.total_credits}`;
+    const cls      = expired ? 'credits-badge expired' : warning ? 'credits-badge warning' : 'credits-badge';
+    return { label, cls, expired, warning, days };
+  }, [profile.total_credits, profile.credit_expires_at]);
 
   return (
-    <span className={cls} title={expired ? 'Credits expired' : `${days} days remaining`}>
-      {expired ? <AlertTriangle size={11} /> : <Clock size={11} />}
-      {label}
+    <span className={display.cls} title={display.expired ? 'Credits expired' : `${display.days} days remaining`}>
+      {display.expired ? <AlertTriangle size={11} /> : <Clock size={11} />}
+      {display.label}
     </span>
   );
 };
