@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Home } from './pages/Home';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { JoinInvite } from './pages/JoinInvite';
 import { Dashboard } from './pages/Dashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
 import './App.css';
@@ -31,6 +32,7 @@ function AppContent() {
           <Route path="/"        element={<Home />} />
           <Route path="/login"   element={<Login />} />
           <Route path="/signup"  element={<Signup />} />
+          <Route path="/join/:token" element={<JoinInvite />} />
           <Route path="/dashboard/*" element={<ProtectedRoute><CreditGuard><Dashboard /></CreditGuard></ProtectedRoute>} />
           <Route path="/admin/*"     element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         </Routes>
