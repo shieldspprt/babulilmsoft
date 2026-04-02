@@ -33,13 +33,17 @@ CREATE POLICY "Public invite token lookup"
   USING (invite_token IS NOT NULL AND status = 'pending');
 
 -- Authenticated users can read members of their own school
+-- Uses SECURITY DEFINER function to avoid self-referencing recursion
+CREATE OR REPLACE FUNCTION user_school_ids()
+RETURNS SETOF UUID AS $$
+  SELECT id FROM schools WHERE user_id = auth.uid()
+  UNION
+  SELECT school_id FROM school_members WHERE user_id = auth.uid() AND status = 'active';
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 CREATE POLICY "Read own school members"
   ON school_members FOR SELECT
-  USING (
-    school_id IN (SELECT id FROM schools WHERE user_id = auth.uid())
-    OR
-    school_id IN (SELECT school_id FROM school_members WHERE user_id = auth.uid() AND status = 'active')
-  );
+  USING (school_id IN (SELECT user_school_ids()));
 
 -- School owners can insert new members
 CREATE POLICY "Owners insert members"
