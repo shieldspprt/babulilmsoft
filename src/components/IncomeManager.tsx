@@ -240,7 +240,7 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
     return filteredRecords.slice(start, start + PAGE_SIZE);
   }, [filteredRecords, page]);
 
-  useEffect(() => { setPage(1); }, [searchQuery]);
+  useEffect(() => { setPage(1); }, [searchQuery, filterCategory]);
 
   if (loading) return <div className="loading">Loading income data...</div>;
 

@@ -104,10 +104,16 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
     e.preventDefault();
     if (!formData.category_id || !formData.amount || !formData.description || !formData.paid_by) return;
 
+    const amountValue = parseInt(formData.amount, 10);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      showFlash('Amount must be a positive number');
+      return;
+    }
+
     const expenseData = {
       school_id: schoolId,
       category_id: formData.category_id,
-      amount: parseInt(formData.amount),
+      amount: amountValue,
       expense_date: formData.expense_date,
       payment_method: formData.payment_method,
       description: formData.description,
@@ -217,7 +223,7 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
     return filteredExpenses.slice(start, start + PAGE_SIZE);
   }, [filteredExpenses, page]);
 
-  useEffect(() => { setPage(1); }, [searchTerm]);
+  useEffect(() => { setPage(1); }, [searchTerm, filterCategory]);
 
   if (loading) return <div className="loading">Loading expenses...</div>;
 

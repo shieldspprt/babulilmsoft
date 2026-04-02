@@ -422,7 +422,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
   }, [selectedMonths.size, monthlyFee, paidMonthsBalance]);
 
   const netBalance = useMemo(() => {
-    const amt = parseInt(paymentAmount) || 0;
+    const amt = parseInt(paymentAmount, 10) || 0;
     return totalForSelected - amt;
   }, [totalForSelected, paymentAmount]);
 
@@ -885,7 +885,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                 </div>
 
                 {/* Live remaining/advance indicator */}
-                {paymentAmount && parseInt(paymentAmount) > 0 && (
+                {paymentAmount && parseInt(paymentAmount, 10) > 0 && (
                   <div
                     className={
                       'fee-modal-remaining ' +
@@ -954,7 +954,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                     onClick={recordPayment}
                     isLoading={saving}
                     disabled={
-                      !paymentAmount || parseInt(paymentAmount) <= 0
+                      !paymentAmount || parseInt(paymentAmount, 10) <= 0
                     }
                     fullWidth
                     size="lg"
