@@ -176,13 +176,11 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
             <span>Payment Received ({receipt.payment.method}):</span>
             <span>{formatCurrency(s.payment_received)}</span>
           </div>
-          {/* Show new balance after payment */}
-          {Math.abs(s.previous_balance) > 0 && (
-            <div className="r-summary-row" style={{ fontWeight: 700, borderTop: '1px solid #ddd', marginTop: '4px', paddingTop: '4px' }}>
-              <span>{s.previous_balance - s.payment_received > 0 ? 'New Balance Due:' : s.previous_balance - s.payment_received < 0 ? 'New Advance:' : ''}</span>
-              <span>{formatCurrency(Math.abs(s.previous_balance - s.payment_received))}</span>
-            </div>
-          )}
+          {/* New balance after payment — always visible */}
+          <div className="r-summary-row" style={{ fontWeight: 700, borderTop: '1px solid #ddd', marginTop: '4px', paddingTop: '4px' }}>
+            <span>{s.new_balance > 0 ? 'New Balance Due:' : s.new_balance < 0 ? 'New Advance:' : 'Balance Cleared'}</span>
+            <span>{s.new_balance === 0 ? 'Rs 0' : formatCurrency(Math.abs(s.new_balance))}</span>
+          </div>
         </div>
 
         {/* Footer */}
@@ -277,13 +275,11 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
           <span>Payment Received ({receipt.payment.method}):</span>
           <span>{formatCurrency(s.payment_received)}</span>
         </div>
-        {/* Show new balance after payment */}
-        {Math.abs(s.previous_balance) > 0 && (
-          <div className="r-summary-row total">
-            <span>{s.previous_balance - s.payment_received > 0 ? 'New Balance Due:' : s.previous_balance - s.payment_received < 0 ? 'New Advance:' : ''}</span>
-            <span>{formatCurrency(Math.abs(s.previous_balance - s.payment_received))}</span>
-          </div>
-        )}
+        {/* New balance after payment — always visible */}
+        <div className="r-summary-row total">
+          <span>{s.new_balance > 0 ? 'New Balance Due:' : s.new_balance < 0 ? 'New Advance:' : 'Balance Cleared'}</span>
+          <span>{s.new_balance === 0 ? 'Rs 0' : formatCurrency(Math.abs(s.new_balance))}</span>
+        </div>
       </div>
 
       {/* Footer - Signature only */}

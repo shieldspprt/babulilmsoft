@@ -74,14 +74,28 @@ export async function generateReceiptData(
     const totalDiscount = receiptStudents.reduce((sum, s) => sum + s.discount_value, 0);
     const netMonthly = grossFee - totalDiscount;
 
-        // CORRECT BALANCE CALCULATION - Match FeeManager exactly
+    // ═══ BALANCE CALCULATION — Matches FeeManager's fee-balance-badge exactly ═══
+    //
+    // FeeManager displays: runningBalance = totalOwed − totalPaid
+    //   where  totalOwed   = payableMonths.length × netMonthly
+    //          totalPaid   = Σ(all payment amounts)
+    //
+    // The receipt is generated AFTER the payment is inserted, so allPayments
+    // already includes this payment.  To recover the balance the user saw
+    // on the parent page BEFORE paying, we subtract this payment back out.
+    //
+    //   previousBalance  = totalOwed − (totalPaid − thisPayment)
+    //                    = totalOwed − totalPaid + thisPayment
+    //   newBalance       = previousBalance − thisPayment
+    //                    = totalOwed − totalPaid   ← what badge shows after refresh
+
     // Get admission months from all students
     const admissionMonths = (students || [])
       .map((s: any) => s.date_of_admission?.slice(0, 7))
       .filter((m: string | null): m is string => !!m)
       .sort();
     const firstAdmissionMonth = admissionMonths[0] || new Date().toISOString().slice(0, 7);
-    
+
     // Calculate payable months (same as FeeManager's getBillableMonths)
     const currentMonth = new Date().toISOString().slice(0, 7);
     const [startY, startM] = firstAdmissionMonth.split('-').map(Number);
@@ -93,39 +107,33 @@ export async function generateReceiptData(
       m++;
       if (m > 12) { m = 1; y++; }
     }
-    
-    // Get ALL payments for this parent (same logic as FeeManager)
+
+    // Get ALL payments for this parent (includes the payment just recorded)
     const { data: allPayments } = await supabase
       .from('fee_payments')
-      .select('amount, months_paid')
+      .select('amount')
       .eq('parent_id', payment.parent_id)
       .eq('school_id', schoolId);
 
-    // Same calculation as FeeManager:
-    // touched months = union of all months paid across all payments
-    const touchedMonths = new Set<string>();
-    allPayments?.forEach((p: any) => {
-      (p.months_paid || []).forEach((m: string) => touchedMonths.add(m));
-    });
-    
-    // unpaid months = payable months not in touchedMonths
-    const unpaidMonths = payableMonths.filter(m => !touchedMonths.has(m));
-    
-    // paidMonthsBalance = unpaid months × netMonthly (what's still owed)
-    // THIS is the previous balance - same as FeeManager shows
-    const paidMonthsBalance = unpaidMonths.length * netMonthly;
-    
-    // Previous balance = what parent owes (paidMonthsBalance)
-    const previousBalance = paidMonthsBalance;
-    
-    // This payment
-    const totalPaymentReceived = Number(payment.amount);
-    
-    // Total Payable = previous balance (before this payment)
-    const totalPayable = previousBalance;
-    
-    // New Balance = previous balance - this payment
+    // Safe numeric coercion (PostgreSQL numeric comes as string)
+    const toNum = (v: unknown): number => {
+      if (typeof v === 'number') return v;
+      if (typeof v === 'string') { const n = parseFloat(v); return Number.isNaN(n) ? 0 : n; }
+      return 0;
+    };
+
+    const totalOwed = payableMonths.length * netMonthly;
+    const totalPaid = (allPayments || []).reduce((sum: number, p: any) => sum + toNum(p.amount), 0);
+    const totalPaymentReceived = toNum(payment.amount);
+
+    // Previous balance = what the fee-balance-badge showed BEFORE this payment
+    const previousBalance = totalOwed - totalPaid + totalPaymentReceived;
+
+    // New balance = what the badge will show AFTER this payment
     const newBalance = previousBalance - totalPaymentReceived;
+
+    // Total payable = previous balance (the amount that was due before payment)
+    const totalPayable = previousBalance;
 
 
     const receiptData: ReceiptData = {
