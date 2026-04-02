@@ -69,12 +69,24 @@ export const ExpenseManager = ({ schoolId }: ExpenseManagerProps) => {
   };
 
   const loadCategories = async () => {
-    const { data } = await supabase
-      .from('expense_categories')
-      .select('*')
-      .eq('school_id', schoolId)
-      .order('name');
-    if (data) setCategories(data);
+    try {
+      const { data, error } = await supabase
+        .from('expense_categories')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('name');
+      
+      if (error) {
+        console.error('Error loading categories:', error);
+        showFlash('Error loading categories: ' + error.message);
+        return;
+      }
+      
+      if (data) setCategories(data);
+    } catch (err: any) {
+      console.error('Unexpected error loading categories:', err);
+      showFlash('Error loading categories: ' + err.message);
+    }
   };
 
   const loadExpenses = async () => {

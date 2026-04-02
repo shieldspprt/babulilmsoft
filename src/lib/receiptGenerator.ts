@@ -162,6 +162,24 @@ export async function generateReceiptData(
  * Save receipt to database
  */
 export async function saveReceipt(receiptData: ReceiptData, paymentId: string, schoolId: string, parentId: string): Promise<FeeReceipt | null> {
+  // Input validation
+  if (!paymentId || typeof paymentId !== 'string' || paymentId.trim() === '') {
+    console.error('Invalid paymentId: must be a non-empty string');
+    return null;
+  }
+  if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
+    console.error('Invalid schoolId: must be a non-empty string');
+    return null;
+  }
+  if (!parentId || typeof parentId !== 'string' || parentId.trim() === '') {
+    console.error('Invalid parentId: must be a non-empty string');
+    return null;
+  }
+  if (!receiptData || typeof receiptData !== 'object') {
+    console.error('Invalid receiptData: must be an object');
+    return null;
+  }
+
   try {
     const { data: receiptNo, error: rpcError } = await supabase.rpc('generate_receipt_no', { p_school_id: schoolId });
     if (rpcError) throw rpcError;
