@@ -35,10 +35,16 @@ export const TeachersManager = ({ schoolId }: { schoolId: string }) => {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from('teachers').select('*')
-      .eq('school_id', schoolId).eq('is_active', true).order('type').order('name');
-    setRecords(data || []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.from('teachers').select('*')
+        .eq('school_id', schoolId).eq('is_active', true).order('type').order('name');
+      if (error) throw error;
+      setRecords(data || []);
+    } catch (err: any) {
+      showFlash('Error loading teachers: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [schoolId]);

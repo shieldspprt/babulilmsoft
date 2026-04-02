@@ -38,25 +38,34 @@ export const ClassesManager = ({ schoolId }: { schoolId: string }) => {
 
   const load = async () => {
     setLoading(true);
-    const [classRes, studentRes] = await Promise.all([
-      supabase.from('classes').select('*')
-        .eq('school_id', schoolId)
-        .order('display_order', { ascending: true })
-        .order('name'),
-      supabase.from('students').select('admission_class_id')
-        .eq('school_id', schoolId)
-        .eq('active', true)
-    ]);
-    setClasses(classRes.data || []);
-    // Count students per class
-    const counts: Record<string, number> = {};
-    (studentRes.data || []).forEach(s => {
-      if (s.admission_class_id) {
-        counts[s.admission_class_id] = (counts[s.admission_class_id] || 0) + 1;
-      }
-    });
-    setStudentCounts(counts);
-    setLoading(false);
+    try {
+      const [classRes, studentRes] = await Promise.all([
+        supabase.from('classes').select('*')
+          .eq('school_id', schoolId)
+          .order('display_order', { ascending: true })
+          .order('name'),
+        supabase.from('students').select('admission_class_id')
+          .eq('school_id', schoolId)
+          .eq('active', true)
+      ]);
+      
+      if (classRes.error) throw classRes.error;
+      if (studentRes.error) throw studentRes.error;
+      
+      setClasses(classRes.data || []);
+      // Count students per class
+      const counts: Record<string, number> = {};
+      (studentRes.data || []).forEach(s => {
+        if (s.admission_class_id) {
+          counts[s.admission_class_id] = (counts[s.admission_class_id] || 0) + 1;
+        }
+      });
+      setStudentCounts(counts);
+    } catch (err: any) {
+      showFlash('Error loading classes: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [schoolId]);

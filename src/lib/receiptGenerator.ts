@@ -9,28 +9,29 @@ export async function generateReceiptData(
   schoolId: string
 ): Promise<ReceiptData | null> {
   try {
-    // Fetch payment
-    const { data: payment } = await supabase
+    // Fetch payment first since we need it for parent_id lookup
+    const { data: payment, error: paymentError } = await supabase
       .from('fee_payments')
       .select('*')
       .eq('id', paymentId)
       .single();
-    if (!payment) return null;
+    
+    if (paymentError || !payment) return null;
 
-    // Fetch school
-    const { data: school } = await supabase
-      .from('schools')
-      .select('school_name, contact')
-      .eq('id', schoolId)
-      .single();
-
-    // Fetch parent
-    const { data: parent } = await supabase
-      .from('parents')
-      .select('first_name, last_name, contact, cnic')
-      .eq('id', payment.parent_id)
-      .single();
-
+    // Fetch school and parent in parallel now that we have payment.parent_id
+    const [{ data: school }, { data: parent }] = await Promise.all([
+      supabase
+        .from('schools')
+        .select('school_name, contact')
+        .eq('id', schoolId)
+        .single(),
+      supabase
+        .from('parents')
+        .select('first_name, last_name, contact, cnic')
+        .eq('id', payment.parent_id)
+        .single()
+    ]);
+    
     // Fetch students with classes
     const { data: students } = await supabase
       .from('students')
