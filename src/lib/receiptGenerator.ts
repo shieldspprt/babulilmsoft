@@ -32,7 +32,7 @@ export async function generateReceiptData(
     const [{ data: school }, { data: parent }] = await Promise.all([
       supabase
         .from('schools')
-        .select('school_name, contact')
+        .select('school_name, contact, logo_url')
         .eq('id', schoolId)
         .single(),
       supabase
@@ -144,7 +144,7 @@ export async function generateReceiptData(
     const receiptData: ReceiptData = {
       receipt_no: '',
       date: payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }),
-      school: { name: school?.school_name || '—', address: school?.contact || '—', contact: school?.contact || '—' },
+      school: { name: school?.school_name || '—', address: school?.contact || '—', contact: school?.contact || '—', logo_url: school?.logo_url || '' },
       parent: { name: `${parent?.first_name || ''} ${parent?.last_name || ''}`.trim(), contact: parent?.contact || '—', cnic: parent?.cnic || '—' },
       students: receiptStudents,
       summary: { gross_fee: grossFee, total_discount: totalDiscount, net_monthly: netMonthly, previous_balance: previousBalance, total_payable: totalPayable, payment_received: totalPaymentReceived, new_balance: newBalance, is_cleared: newBalance <= 0 },

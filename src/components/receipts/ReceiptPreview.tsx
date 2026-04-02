@@ -101,25 +101,29 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
       
       {/* Receipt */}
       <div className="receipt-single">
-        {/* Header */}
+        {/* Header — Logo on right */}
         <div className="r-header">
           <div className="r-school">
             <div className="r-school-name">{receipt.school.name}</div>
-            
             <div className="r-school-phone">Ph: {receipt.school.contact}</div>
           </div>
-          <div className="r-meta">
-            <div className="r-receipt-no">#{receipt.receipt_no}</div>
-            <div className="r-date">{receipt.date}</div>
-          </div>
+          {receipt.school.logo_url && (
+            <div className="r-logo">
+              <img src={receipt.school.logo_url} alt="School Logo" />
+            </div>
+          )}
         </div>
         
-        {/* Parent Info */}
+        {/* Parent Info — Receipt# and Date on right */}
         <div className="r-parent">
           <div>
             <div className="r-parent-label">Parent</div>
             <div className="r-parent-name">{receipt.parent.name}</div>
             <div className="r-parent-contact">{receipt.parent.contact}</div>
+          </div>
+          <div className="r-meta">
+            <div className="r-receipt-no">#{receipt.receipt_no}</div>
+            <div className="r-date">{receipt.date}</div>
           </div>
         </div>
         
@@ -202,24 +206,30 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
   
   return (
     <div className="receipt-single">
-      {/* Header */}
+      {/* Header — Logo on right */}
       <div className="r-header">
         <div className="r-school">
           <div className="r-school-name">{receipt.school.name}</div>
-          
           <div className="r-school-phone">Ph: {receipt.school.contact}</div>
+        </div>
+        {receipt.school.logo_url && (
+          <div className="r-logo">
+            <img src={receipt.school.logo_url} alt="School Logo" />
+          </div>
+        )}
+      </div>
+      
+      {/* Parent — Receipt# and Date on right */}
+      <div className="r-parent">
+        <div>
+          <div className="r-parent-label">Parent</div>
+          <div className="r-parent-name">{receipt.parent.name}</div>
+          <div className="r-parent-contact">{receipt.parent.contact}</div>
         </div>
         <div className="r-meta">
           <div className="r-receipt-no">#{receipt.receipt_no}</div>
           <div className="r-date">{receipt.date}</div>
         </div>
-      </div>
-      
-      {/* Parent */}
-      <div className="r-parent">
-        <div className="r-parent-label">Parent</div>
-        <div className="r-parent-name">{receipt.parent.name}</div>
-        <div className="r-parent-contact">{receipt.parent.contact}</div>
       </div>
       
       {/* Students Table */}

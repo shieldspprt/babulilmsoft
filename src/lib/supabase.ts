@@ -130,6 +130,7 @@ export type ReceiptData = {
     name: string;
     address: string;
     contact: string;
+    logo_url?: string;
   };
   
   // Parent Info
