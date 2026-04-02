@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ClassesManager }   from '../components/ClassesManager';
-import { TeachersManager }  from '../components/TeachersManager';
 import { IncomeManager }    from '../components/IncomeManager';
 import { ExpenseManager }   from '../components/ExpenseManager';
 import { SuppliersManager } from '../components/SuppliersManager';
@@ -17,42 +16,48 @@ import { Input }  from '../components/ui/Input';
 import {
   LayoutDashboard, GraduationCap, DollarSign, Truck, Store,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
-  CheckCircle, XCircle, Banknote, BookOpen, Receipt, Settings
+  CheckCircle, XCircle, Banknote, BookOpen, Receipt
 } from 'lucide-react';
 import './Dashboard.css';
 
-type Tab = 'overview' | 'classes' | 'teachers' | 'parents' | 'students' | 'fee' | 'income' | 'expense' | 'suppliers' | 'team' | 'buy' | 'history' | 'profile';
+type Tab = 'overview' | 'classes' | 'people' | 'people-students' | 'people-parents' | 'finances' | 'finances-income' | 'finances-expense' | 'finances-suppliers' | 'fee' | 'team' | 'profile' | 'buy' | 'history';
 
-const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: string }[] = [
-  { id: 'overview',   label: 'Overview',       icon: LayoutDashboard, section: 'MAIN' },
-  { id: 'classes',    label: 'Classes',         icon: BookOpen },
-  { id: 'teachers',   label: 'Teachers',        icon: GraduationCap },
-  { id: 'parents',    label: 'Parents',         icon: Users2 },
-  { id: 'students',  label: 'Students',        icon: GraduationCap },
-  // Fee Collection removed from sidebar - now in Quick Actions
-  { id: 'income',     label: 'Income',          icon: DollarSign },
-  { id: 'expense',    label: 'Expenses',        icon: Truck },
-  { id: 'suppliers',  label: 'Suppliers',       icon: Store },
-  { id: 'team',       label: 'Team',           icon: Users2,     section: 'ACCOUNT' },
-  { id: 'buy',        label: 'Buy Credits',     icon: CreditCard  },
-  { id: 'profile',    label: 'School Profile',  icon: Settings },
-  { id: 'history',    label: 'Payment History', icon: History },
+const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: 'overview',  label: 'Overview',  icon: LayoutDashboard },
+  { id: 'people',   label: 'People',    icon: Users2 },
+  { id: 'classes',  label: 'Classes',   icon: BookOpen },
+  { id: 'finances', label: 'Finances',  icon: DollarSign },
+  { id: 'team',     label: 'Team',      icon: GraduationCap },
+];
+
+// Sub-nav for People
+const PEOPLE_NAV = [
+  { id: 'people-parents'   as Tab, label: 'Parents',   icon: Users2 },
+  { id: 'people-students'  as Tab, label: 'Students',  icon: GraduationCap },
+];
+
+// Sub-nav for Finances
+const FINANCES_NAV = [
+  { id: 'finances-income'   as Tab, label: 'Income',    icon: DollarSign },
+  { id: 'finances-expense'  as Tab, label: 'Expenses',  icon: Truck },
+  { id: 'finances-suppliers' as Tab, label: 'Suppliers', icon: Store },
 ];
 
 const PAGE_TITLES: Record<Tab, string> = {
-  overview:  '',  // Title shown as Welcome {school_name} in the component
+  overview:  '',
   classes:   'Classes',
-  teachers:  'Teachers & Staff',
-  parents:   'Parents & Guardians',
-  fee:       'Add Fee',
-  income:    'Income',
-  expense:   'Expenses',
-  suppliers: 'Suppliers',
-  students:  'Students',
   team:      'Team Management',
   buy:       'Buy Credits',
   profile:   'School Profile',
   history:   'Payment History',
+  people:       'People',
+  'people-parents':   'Parents & Guardians',
+  'people-students':  'Students',
+  finances:     'Finances',
+  'finances-income':    'Income',
+  'finances-expense':   'Expenses',
+  'finances-suppliers': 'Suppliers',
+  fee:       'Add Fee',
 };
 
 export const Dashboard = () => {
@@ -96,7 +101,8 @@ export const Dashboard = () => {
         classes: classesRes.count || 0,
       });
     } catch (err: any) {
-      console.error('Error loading overview stats:', err.message);
+      console.error('Error loading overview stats:', err);
+      setMsg({ text: 'Failed to load dashboard statistics', type: 'error' });
       setOverviewStats({ parents: 0, students: 0, classes: 0 });
     }
   };
@@ -150,27 +156,47 @@ export const Dashboard = () => {
 
         {/* Nav */}
         <nav className="sidebar-nav">
-          {NAV.map((item, i) => {
-            const prevSection = i > 0 ? NAV[i - 1].section : undefined;
-            const showLabel   = item.section && item.section !== prevSection;
-            return (
-              <React.Fragment key={item.id}>
-                {showLabel && <div className="sidebar-section-label">{item.section}</div>}
-                <button
-                  className={`sidebar-nav-item${tab === item.id ? ' active' : ''}`}
-                  onClick={() => setTab(item.id)}
-                >
-                  <item.icon size={18} />
-                  {item.label}
-                </button>
-              </React.Fragment>
-            );
-          })}
+          {NAV.map(item => (
+            <button
+              key={item.id}
+              className={`sidebar-nav-item${tab === item.id ? ' active' : ''}${tab.startsWith(item.id + '-') && item.id !== 'overview' ? ' active' : ''}`}
+              onClick={() => setTab(item.id)}
+            >
+              <item.icon size={18} />
+              {item.label}
+            </button>
+          ))}
+
+          {/* Sub-nav for People */}
+          {tab.startsWith('people') && PEOPLE_NAV.map(item => (
+            <button
+              key={item.id}
+              className={`sidebar-nav-item sub${tab === item.id ? ' active' : ''}`}
+              onClick={() => setTab(item.id)}
+            >
+              <item.icon size={18} />
+              {item.label}
+            </button>
+          ))}
+
+          {/* Sub-nav for Finances */}
+          {tab.startsWith('finances') && FINANCES_NAV.map(item => (
+            <button
+              key={item.id}
+              className={`sidebar-nav-item sub${tab === item.id ? ' active' : ''}`}
+              onClick={() => setTab(item.id)}
+            >
+              <item.icon size={18} />
+              {item.label}
+            </button>
+          ))}
         </nav>
 
         {/* Bottom */}
         <div className="sidebar-bottom">
-          <div className="sidebar-school-name">{profile.school_name}</div>
+          <button className="sidebar-nav-item buy-credit-link" onClick={() => setTab('buy')}>
+            <CreditCard size={16} /> Buy Credits
+          </button>
           <button className="sidebar-logout" onClick={handleLogout}>
             <LogOut size={16} /> Logout
           </button>
@@ -235,10 +261,10 @@ export const Dashboard = () => {
               <div className="overview-section-title">Quick Actions</div>
               <div className="quick-actions">
                 {[
-                  { id: 'parents'   as Tab, icon: Users2,        color: 'purple', label: 'Add Parent',    sub: 'Register guardian' },
-                  { id: 'fee'       as Tab, icon: Receipt,       color: 'rose',   label: 'Add Fee',       sub: 'Collect from parents' },
-                  { id: 'income'    as Tab, icon: DollarSign,    color: 'cyan',   label: 'Record Income', sub: 'Other income' },
-                  { id: 'expense'   as Tab, icon: Truck,         color: 'amber',  label: 'Add Expense',   sub: 'Track spending' },
+                  { id: 'people-parents'  as Tab, icon: Users2,      color: 'purple', label: 'Add Parent',      sub: 'Register guardian' },
+                  { id: 'fee'            as Tab, icon: Receipt,     color: 'rose',   label: 'Add Fee',        sub: 'Collect from parents' },
+                  { id: 'finances-income' as Tab, icon: DollarSign, color: 'cyan',   label: 'Record Income',  sub: 'Other income' },
+                  { id: 'finances-expense' as Tab, icon: Truck,     color: 'amber',  label: 'Add Expense',    sub: 'Track spending' },
                 ].map(qa => (
                   <div key={qa.id} className="qa-card" onClick={() => setTab(qa.id)}>
                     <div className={`qa-icon ${qa.color}`}><qa.icon size={22} /></div>
@@ -254,13 +280,12 @@ export const Dashboard = () => {
 
           {/* Feature tabs */}
           {tab === 'classes'   && <ClassesManager   schoolId={profile.id} role={role || undefined} />}
-          {tab === 'teachers'  && <TeachersManager  schoolId={profile.id} role={role || undefined} />}
-          {tab === 'parents'   && <ParentsManager   schoolId={profile.id} role={role || undefined} />}
-          {tab === 'students'  && <StudentsManager  schoolId={profile.id} role={role || undefined} />}
-          {tab === 'fee'       && <FeeManager       schoolId={profile.id} role={role || undefined} />}
-          {tab === 'income'    && <IncomeManager    schoolId={profile.id} role={role || undefined} />}
-          {tab === 'expense'   && <ExpenseManager   schoolId={profile.id} role={role || undefined} />}
-          {tab === 'suppliers' && <SuppliersManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'people-parents'   && <ParentsManager   schoolId={profile.id} role={role || undefined} />}
+          {tab === 'people-students'  && <StudentsManager  schoolId={profile.id} role={role || undefined} />}
+          {tab === 'fee'            && <FeeManager       schoolId={profile.id} role={role || undefined} />}
+          {tab === 'finances-income'    && <IncomeManager    schoolId={profile.id} role={role || undefined} />}
+          {tab === 'finances-expense'   && <ExpenseManager   schoolId={profile.id} role={role || undefined} />}
+          {tab === 'finances-suppliers' && <SuppliersManager schoolId={profile.id} role={role || undefined} />}
           {tab === 'team'      && <TeamManager schoolId={profile.id} />}
           {tab === 'profile'   && <SchoolProfileManager schoolId={profile.id} role={role || undefined} />}
 

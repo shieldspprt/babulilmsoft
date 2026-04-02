@@ -129,12 +129,6 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
       return;
     }
 
-    // Validate category is selected
-    if (!formData.category_id || formData.category_id === '') {
-      showFlash('Please select an income category');
-      return;
-    }
-
     const amountValue = parseInt(formData.amount);
     if (isNaN(amountValue) || amountValue <= 0) {
       showFlash('Amount must be a positive number');

@@ -50,15 +50,15 @@ export function isNotEmpty(value: string | null | undefined): boolean {
 /**
  * Validates a positive number
  * @param value - The number to validate
- * @returns boolean indicating if the value is a positive number
+ * @returns boolean indicating if the value is a positive finite number
  */
 export function isPositiveNumber(value: unknown): boolean {
   if (typeof value === 'string') {
     const num = parseFloat(value);
-    return !Number.isNaN(num) && num > 0;
+    return !Number.isNaN(num) && num > 0 && Number.isFinite(num);
   }
   if (typeof value === 'number') {
-    return !Number.isNaN(value) && value > 0;
+    return !Number.isNaN(value) && value > 0 && Number.isFinite(value);
   }
   return false;
 }

@@ -48,39 +48,6 @@
 
 .sidebar-logo-text em { font-style: normal; color: #60a5fa; }
 
-/* Credit pill in sidebar */
-.sidebar-credit-pill {
-  margin: 0.75rem 1rem;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius-md);
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-.scp-label {
-  font-size: var(--font-xs);
-  color: #64748b;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.scp-value {
-  font-size: var(--font-xl);
-  font-weight: 800;
-  color: #f8fafc;
-  margin: 2px 0;
-}
-
-.scp-sub {
-  font-size: var(--font-xs);
-  color: #64748b;
-}
-
-.scp-value.expired { color: var(--danger); }
-.scp-sub.warning   { color: var(--warning); font-weight: 600; }
-.scp-sub.expired   { color: var(--danger); font-weight: 600; }
-
 /* Nav section label */
 .sidebar-section-label {
   padding: 1rem 1rem 0.35rem;
@@ -125,6 +92,12 @@
 }
 
 .sidebar-nav-item svg { flex-shrink: 0; }
+
+/* Sub-nav items */
+.sidebar-nav-item.sub {
+  padding-left: 2.5rem;
+  font-size: var(--font-sm);
+}
 
 /* Bottom of sidebar */
 .sidebar-bottom {
@@ -531,7 +504,6 @@
   .dash-shell { flex-direction: column; height: auto; min-height: 100vh; }
   .dash-sidebar { width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; }
   .sidebar-logo { flex: 0 0 auto; }
-  .sidebar-credit-pill { display: none; }
   .sidebar-nav { flex-direction: row; flex-wrap: wrap; padding: 0.5rem; flex: 1; }
   .sidebar-nav-item { min-height: 38px; font-size: var(--font-xs); gap: 6px; padding: 0.5rem 0.75rem; flex: 0 0 auto; }
   .sidebar-bottom { display: none; }
@@ -544,4 +516,14 @@
 @media (max-width: 480px) {
   .overview-stats { grid-template-columns: 1fr 1fr; }
   .quick-actions  { grid-template-columns: 1fr 1fr; }
+}
+
+/* Buy credit link */
+.buy-credit-link {
+  color: var(--text-muted) !important;
+  font-size: var(--font-sm) !important;
+}
+
+.buy-credit-link:hover {
+  color: var(--primary) !important;
 }
