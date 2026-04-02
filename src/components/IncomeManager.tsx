@@ -126,10 +126,16 @@ export const IncomeManager = ({ schoolId }: IncomeManagerProps) => {
       return;
     }
 
+    const amountValue = parseInt(formData.amount);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      showFlash('Amount must be a positive number');
+      return;
+    }
+
     const payload = {
       school_id: schoolId,
       category_id: formData.category_id,
-      amount: parseInt(formData.amount),
+      amount: amountValue,
       date: formData.date,
       payment_method: formData.payment_method,
       description: formData.description,

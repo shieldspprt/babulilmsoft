@@ -115,11 +115,41 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
     setShowModal(true);
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.from('students').delete().eq('id', deleteTarget.id);
+      if (error) throw error;
+      showFlash(`Student "${deleteTarget.first_name} ${deleteTarget.last_name}" removed successfully`);
+      setDeleteTarget(null);
+      load();
+    } catch (err: any) {
+      showFlash('Error deleting student: ' + err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Validate CNIC format (Pakistani format: XXXXX-XXXXXXX-X)
+  const isValidCNIC = (cnic: string): boolean => {
+    if (!cnic) return true; // Optional field
+    const cnicRegex = /^\d{5}-\d{7}-\d$/;
+    return cnicRegex.test(cnic);
+  };
+
   const handleSave = async () => {
     if (!form.parent_id || !form.first_name.trim() || !form.last_name.trim()) {
       showFlash('Error: Parent, first name and last name are required');
       return;
     }
+    
+    // Validate CNIC format if provided
+    if (form.cnic && !isValidCNIC(form.cnic)) {
+      showFlash('Error: CNIC must be in format XXXXX-XXXXXXX-X (e.g., 12345-1234567-1)');
+      return;
+    }
+    
     setSaving(true);
     const payload = {
       school_id: schoolId,
@@ -150,13 +180,6 @@ export const StudentsManager = ({ schoolId }: { schoolId: string }) => {
       showFlash(`Student "${form.first_name} ${form.last_name}" ${editStudent ? 'updated' : 'added'}!`);
       setShowModal(false); setForm({ ...EMPTY_FORM }); setEditStudent(null); load();
     }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    await supabase.from('students').delete().eq('id', deleteTarget.id);
-    setDeleting(false); setDeleteTarget(null); load();
   };
 
   const getParentName = (parentId: string) => {

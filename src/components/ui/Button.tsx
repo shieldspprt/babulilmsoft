@@ -16,6 +16,7 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth,
   className = '',
   disabled,
+  type = 'button', // Default to button to prevent accidental form submissions
   ...props
 }) => {
   const classes = [
@@ -31,6 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
     <button
       className={classes}
       disabled={disabled || isLoading}
+      type={type}
       {...props}
     >
       {children}
