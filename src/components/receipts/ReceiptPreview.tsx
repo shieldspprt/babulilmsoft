@@ -173,8 +173,8 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
             </div>
           )}
           <div className="r-summary-row total">
-            <span>Payment Received</span>
-            <span>{formatCurrency(s.payment_received)} {receipt.payment.method}</span>
+            <span>Payment Received ({receipt.payment.method}):</span>
+            <span>{formatCurrency(s.payment_received)}</span>
           </div>
         </div>
 
@@ -267,26 +267,13 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
           </div>
         )}
         <div className="r-summary-row">
-          <span>Payment Received:</span>
+          <span>Payment Received ({receipt.payment.method}):</span>
           <span>{formatCurrency(s.payment_received)}</span>
-        </div>
-        <div className="r-summary-row total">
-          <span>Total Due ({receipt.payment.method}):</span>
-          <span>{formatCurrency(Math.max(0, s.previous_balance - s.payment_received))}</span>
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer - Signature only */}
       <div className="r-footer">
-        <div className="r-balance-note">
-          {s.is_cleared ? (
-            <span className="cleared">✓ Account Cleared</span>
-          ) : s.new_balance > 0 ? (
-            <span>Balance Due: {formatCurrency(s.new_balance)}</span>
-          ) : s.new_balance < 0 ? (
-            <span>Advance: {formatCurrency(Math.abs(s.new_balance))}</span>
-          ) : null}
-        </div>
         <div className="r-signature">
           <div className="r-signature-line"></div>
           <span>Authorized</span>
