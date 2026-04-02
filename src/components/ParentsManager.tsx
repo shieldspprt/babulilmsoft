@@ -206,8 +206,20 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    await supabase.from('parents').delete().eq('id', deleteTarget.id);
-    setDeleting(false); setDeleteTarget(null); load();
+    try {
+      const { error } = await supabase.from('parents').delete().eq('id', deleteTarget.id);
+      if (error) {
+        showFlash('Error deleting parent: ' + error.message);
+      } else {
+        showFlash(`Parent "${deleteTarget.first_name} ${deleteTarget.last_name}" removed`);
+        setDeleteTarget(null);
+        load();
+      }
+    } catch (err: any) {
+      showFlash('Error: ' + (err.message || 'Failed to delete parent'));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const openAddChild = (parent: Parent) => {
@@ -259,7 +271,7 @@ export const ParentsManager = ({ schoolId }: { schoolId: string }) => {
     );
   }, [records, search]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const totalPages = useMemo(() => Math.ceil(filtered.length / PAGE_SIZE), [filtered]);
   const paginated = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
