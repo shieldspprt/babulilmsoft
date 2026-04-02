@@ -45,7 +45,7 @@ export async function generateReceiptData(
     // Fetch students with classes
     const { data: students } = await supabase
       .from('students')
-      .select('first_name, last_name, monthly_fee, discount_type, discount_value, classes(name, monthly_fee)')
+      .select('first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, classes(name, monthly_fee)')
       .eq('parent_id', payment.parent_id)
       .eq('active', true)
       .eq('school_id', schoolId);
