@@ -616,6 +616,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
                   (selectedParent?.id === p.id ? ' active' : '')
                 }
                 onClick={() => selectParent(p)}
+                aria-label={`Select ${p.first_name} ${p.last_name}`}
               >
                 <div className="fee-parent-avatar">
                   {p.first_name.charAt(0).toUpperCase()}
@@ -670,6 +671,7 @@ export const FeeManager = ({ schoolId }: { schoolId: string }) => {
             {/* Mobile Back Button */}
             <button
               className="fee-detail-back"
+              aria-label="Back to parents list"
               onClick={() => setMobileShowDetail(false)}
             >
               <ArrowLeft size={16} /> Back to Parents
