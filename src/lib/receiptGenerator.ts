@@ -8,6 +8,16 @@ export async function generateReceiptData(
   paymentId: string,
   schoolId: string
 ): Promise<ReceiptData | null> {
+  // Input validation
+  if (!paymentId || typeof paymentId !== 'string' || paymentId.trim() === '') {
+    console.error('Invalid paymentId: must be a non-empty string');
+    return null;
+  }
+  if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
+    console.error('Invalid schoolId: must be a non-empty string');
+    return null;
+  }
+
   try {
     // Fetch payment first since we need it for parent_id lookup
     const { data: payment, error: paymentError } = await supabase

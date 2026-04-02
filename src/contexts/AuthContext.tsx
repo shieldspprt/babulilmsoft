@@ -29,7 +29,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const userIdRef = useRef<string | null>(null);
 
-  const fetchProfile = async (userId: string) => {
+  const MAX_RETRIES = 2;
+  const RETRY_DELAY = 1000;
+
+  const fetchProfile = async (userId: string, attempt = 1): Promise<void> => {
     try {
       const { data, error } = await supabase
         .from('schools')
@@ -38,11 +41,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) {
+        // Retry on network errors or 5xx server errors
+        const shouldRetry = attempt <= MAX_RETRIES && (
+          error.message?.includes('network') ||
+          error.message?.includes('timeout') ||
+          error.code?.startsWith('5')
+        );
+        
+        if (shouldRetry) {
+          console.log(`Profile fetch failed (attempt ${attempt}/${MAX_RETRIES + 1}), retrying...`);
+          await new Promise(r => setTimeout(r, RETRY_DELAY * attempt));
+          return fetchProfile(userId, attempt + 1);
+        }
+        
         console.error('Error fetching profile:', error.message);
       } else {
         setProfile(data as SchoolProfile);
       }
     } catch (err) {
+      if (attempt <= MAX_RETRIES) {
+        console.log(`Profile fetch error (attempt ${attempt}/${MAX_RETRIES + 1}), retrying...`);
+        await new Promise(r => setTimeout(r, RETRY_DELAY * attempt));
+        return fetchProfile(userId, attempt + 1);
+      }
       console.error('Unexpected error fetching profile', err);
     }
   };
