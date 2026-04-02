@@ -11,6 +11,7 @@ import { ParentsManager }   from '../components/ParentsManager';
 import { StudentsManager }  from '../components/StudentsManager';
 import { FeeManager }           from '../components/FeeManager';
 import { SchoolProfileManager } from '../components/SchoolProfileManager';
+import { TeamManager }           from '../components/TeamManager';
 import { Button } from '../components/ui/Button';
 import { Input }  from '../components/ui/Input';
 import {
@@ -20,7 +21,7 @@ import {
 } from 'lucide-react';
 import './Dashboard.css';
 
-type Tab = 'overview' | 'classes' | 'teachers' | 'parents' | 'students' | 'fee' | 'income' | 'expense' | 'suppliers' | 'buy' | 'history' | 'profile';
+type Tab = 'overview' | 'classes' | 'teachers' | 'parents' | 'students' | 'fee' | 'income' | 'expense' | 'suppliers' | 'team' | 'buy' | 'history' | 'profile';
 
 const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: string }[] = [
   { id: 'overview',   label: 'Overview',       icon: LayoutDashboard, section: 'MAIN' },
@@ -32,7 +33,8 @@ const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: str
   { id: 'income',     label: 'Income',          icon: DollarSign },
   { id: 'expense',    label: 'Expenses',        icon: Truck },
   { id: 'suppliers',  label: 'Suppliers',       icon: Store },
-  { id: 'buy',        label: 'Buy Credits',     icon: CreditCard,  section: 'ACCOUNT' },
+  { id: 'team',       label: 'Team',           icon: Users2,     section: 'ACCOUNT' },
+  { id: 'buy',        label: 'Buy Credits',     icon: CreditCard  },
   { id: 'profile',    label: 'School Profile',  icon: Settings },
   { id: 'history',    label: 'Payment History', icon: History },
 ];
@@ -47,6 +49,7 @@ const PAGE_TITLES: Record<Tab, string> = {
   expense:   'Expenses',
   suppliers: 'Suppliers',
   students:  'Students',
+  team:      'Team Management',
   buy:       'Buy Credits',
   profile:   'School Profile',
   history:   'Payment History',
@@ -258,6 +261,7 @@ export const Dashboard = () => {
           {tab === 'income'    && <IncomeManager    schoolId={profile.id} />}
           {tab === 'expense'   && <ExpenseManager   schoolId={profile.id} />}
           {tab === 'suppliers' && <SuppliersManager schoolId={profile.id} />}
+          {tab === 'team'      && <TeamManager schoolId={profile.id} />}
           {tab === 'profile'   && <SchoolProfileManager schoolId={profile.id} />}
 
           {/* Buy Credits */}
