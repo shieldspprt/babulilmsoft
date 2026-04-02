@@ -258,22 +258,39 @@ export const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="overview-section-title">Quick Actions</div>
-              <div className="quick-actions">
-                {[
-                  { id: 'people-parents'  as Tab, icon: Users2,      color: 'purple', label: 'Add Parent',      sub: 'Register guardian' },
-                  { id: 'fee'            as Tab, icon: Receipt,     color: 'rose',   label: 'Add Fee',        sub: 'Collect from parents' },
-                  { id: 'finances-income' as Tab, icon: DollarSign, color: 'cyan',   label: 'Record Income',  sub: 'Other income' },
-                  { id: 'finances-expense' as Tab, icon: Truck,     color: 'amber',  label: 'Add Expense',    sub: 'Track spending' },
-                ].map(qa => (
-                  <div key={qa.id} className="qa-card" onClick={() => setTab(qa.id)}>
-                    <div className={`qa-icon ${qa.color}`}><qa.icon size={22} /></div>
-                    <div>
-                      <div className="qa-label">{qa.label}</div>
-                      <div className="qa-sub">{qa.sub}</div>
+              {/* Quick Actions - Hero Section */}
+              <div className="overview-hero-actions">
+                <h3 className="overview-hero-title">Quick Actions</h3>
+                <div className="hero-actions">
+                  <button className="hero-action-btn purple" onClick={() => setTab('people-parents')}>
+                    <div className="hero-action-icon"><Users2 size={28} /></div>
+                    <div className="hero-action-content">
+                      <span className="hero-action-label">Add Parent</span>
+                      <span className="hero-action-sub">Register a guardian</span>
                     </div>
-                  </div>
-                ))}
+                  </button>
+                  <button className="hero-action-btn blue" onClick={() => setTab('people-students')}>
+                    <div className="hero-action-icon"><GraduationCap size={28} /></div>
+                    <div className="hero-action-content">
+                      <span className="hero-action-label">Add Student</span>
+                      <span className="hero-action-sub">Enroll a student</span>
+                    </div>
+                  </button>
+                  <button className="hero-action-btn rose" onClick={() => setTab('fee')}>
+                    <div className="hero-action-icon"><Receipt size={28} /></div>
+                    <div className="hero-action-content">
+                      <span className="hero-action-label">Collect Fee</span>
+                      <span className="hero-action-sub">Record a payment</span>
+                    </div>
+                  </button>
+                  <button className="hero-action-btn cyan" onClick={() => setTab('finances-income')}>
+                    <div className="hero-action-icon"><DollarSign size={28} /></div>
+                    <div className="hero-action-content">
+                      <span className="hero-action-label">Record Income</span>
+                      <span className="hero-action-sub">Log other income</span>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           )}

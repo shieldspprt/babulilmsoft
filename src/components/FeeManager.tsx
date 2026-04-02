@@ -589,6 +589,9 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
           <div className="manager-search-bar" style={{ maxWidth: '100%' }}>
             <Search size={16} />
             <input
+              type="text"
+              role="searchbox"
+              aria-label="Search parents by name, CNIC, or contact"
               placeholder="Search by name, CNIC, contact…"
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -904,6 +907,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
                       <input
                         type="number"
                         min="1"
+                        max="99999999"
                         value={paymentAmount}
                         onChange={e => setPaymentAmount(e.target.value)}
                         placeholder="Enter amount"
