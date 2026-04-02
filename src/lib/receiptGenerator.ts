@@ -51,18 +51,21 @@ export async function generateReceiptData(
       .eq('school_id', schoolId);
 
     // Build student array
+    // Discount is calculated on the CLASS fee — same as FeeManager (line 728-729)
     const receiptStudents: ReceiptStudent[] = (students || []).map((s: any) => {
+      const classFee = Number(s.classes?.monthly_fee) || Number(s.monthly_fee) || 0;
       const baseFee = Number(s.monthly_fee) || 0;
       let discount = 0;
       if (s.discount_type === 'percentage') {
-        discount = baseFee * (Number(s.discount_value) || 0) / 100;
-      } else if (s.discount_type === 'fixed') {
+        // Percentage of CLASS fee (matches FeeManager's calculation)
+        discount = classFee * (Number(s.discount_value) || 0) / 100;
+      } else if (s.discount_type === 'fixed' || s.discount_type === 'amount') {
         discount = Number(s.discount_value) || 0;
       }
       return {
         name: `${s.first_name} ${s.last_name}`,
         class_name: s.classes?.name || '—',
-        monthly_fee: Number(s.classes?.monthly_fee) || baseFee,
+        monthly_fee: classFee,
         discount_type: s.discount_type,
         discount_value: discount,
         final_fee: baseFee  // Student's actual monthly fee
@@ -72,7 +75,9 @@ export async function generateReceiptData(
     // Calculate totals
     const grossFee = receiptStudents.reduce((sum, s) => sum + s.monthly_fee, 0);
     const totalDiscount = receiptStudents.reduce((sum, s) => sum + s.discount_value, 0);
-    const netMonthly = grossFee - totalDiscount;
+    // netMonthly uses the student's actual fees (sum of final_fee)
+    // This matches FeeManager's: monthlyFee = children.reduce((s, c) => s + N(c.monthly_fee), 0)
+    const netMonthly = receiptStudents.reduce((sum, s) => sum + s.final_fee, 0);
 
     // ═══ BALANCE CALCULATION — Matches FeeManager's fee-balance-badge exactly ═══
     //
