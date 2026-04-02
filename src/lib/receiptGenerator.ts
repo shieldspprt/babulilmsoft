@@ -64,56 +64,63 @@ export async function generateReceiptData(
     const totalDiscount = receiptStudents.reduce((sum, s) => sum + s.discount_value, 0);
     const netMonthly = grossFee - totalDiscount;
 
-        // CORRECT BALANCE CALCULATION
-    // Step 1: Calculate payable months from admission to current month
-    const { data: studentsWithAdmissions } = await supabase
-      .from('students')
-      .select('date_of_admission, monthly_fee, discount_type, discount_value, classes(name, monthly_fee)')
-      .eq('parent_id', payment.parent_id)
-      .eq('active', true)
-      .eq('school_id', schoolId);
-    
-    // Get earliest admission month
-    const admissionMonths = (studentsWithAdmissions || [])
+        // CORRECT BALANCE CALCULATION - Match FeeManager exactly
+    // Get admission months from all students
+    const admissionMonths = (students || [])
       .map((s: any) => s.date_of_admission?.slice(0, 7))
       .filter((m: string | null): m is string => !!m)
       .sort();
     const firstAdmissionMonth = admissionMonths[0] || new Date().toISOString().slice(0, 7);
     
-    // Calculate months from admission to now
+    // Calculate payable months (same as FeeManager's getBillableMonths)
     const currentMonth = new Date().toISOString().slice(0, 7);
     const [startY, startM] = firstAdmissionMonth.split('-').map(Number);
     const [endY, endM] = currentMonth.split('-').map(Number);
-    let payableMonthsCount = 0;
+    const payableMonths: string[] = [];
     let y = startY, m = startM;
     while (y < endY || (y === endY && m <= endM)) {
-      payableMonthsCount++;
+      payableMonths.push(`${y}-${String(m).padStart(2, '0')}`);
       m++;
       if (m > 12) { m = 1; y++; }
     }
     
-    // Step 2: Get all payments before this one
+    // Get this payment's months
+    const thisPaymentMonths = new Set(payment.months_paid || []);
+    
+    // Calculate which months were paid BEFORE this payment
+    // We need to look at all previous payments
     const { data: allPayments } = await supabase
       .from('fee_payments')
-      .select('id, amount, created_at')
+      .select('id, amount, months_paid, created_at')
       .eq('parent_id', payment.parent_id)
       .eq('school_id', schoolId)
       .order('created_at', { ascending: true });
     
-    // Calculate total paid BEFORE this payment (by ID or by creation time)
+    // Get payments before this one
     const currentPaymentIndex = allPayments?.findIndex((p: any) => p.id === payment.id) ?? -1;
     const paymentsBefore = currentPaymentIndex >= 0 
       ? allPayments?.slice(0, currentPaymentIndex) 
-      : allPayments?.filter((p: any) => new Date(p.created_at) < new Date(payment.created_at));
+      : [];
     
-    const totalPaidBefore = paymentsBefore?.reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0;
+    // Calculate which months were covered by previous payments
+    const coveredMonths = new Set<string>();
+    paymentsBefore?.forEach((p: any) => {
+      (p.months_paid || []).forEach((m: string) => coveredMonths.add(m));
+    });
     
-    // Step 3: Calculate balances
+    // Previous balance = (payable months not yet covered) × netMonthly
+    const uncoveredMonths = payableMonths.filter(m => !coveredMonths.has(m));
+    const previousBalance = uncoveredMonths.length * netMonthly;
+    
+    // Payment received
     const totalPaymentReceived = Number(payment.amount);
-    const totalOwedTillNow = payableMonthsCount * netMonthly;
-    const previousBalance = totalOwedTillNow - totalPaidBefore;
+    
+    // After payment, what's left to pay?
+    // Remove this payment's months from uncovered
+    const stillUncovered = uncoveredMonths.filter(m => !thisPaymentMonths.has(m));
+    // Total payable = previous balance (what was due before)
     const totalPayable = previousBalance;
-    const newBalance = previousBalance - totalPaymentReceived;
+    const newBalance = stillUncovered.length * netMonthly;
 
     const receiptData: ReceiptData = {
       receipt_no: '',
