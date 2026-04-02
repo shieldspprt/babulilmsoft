@@ -9,17 +9,18 @@ import { ExpenseManager }   from '../components/ExpenseManager';
 import { SuppliersManager } from '../components/SuppliersManager';
 import { ParentsManager }   from '../components/ParentsManager';
 import { StudentsManager }  from '../components/StudentsManager';
-import { FeeManager }       from '../components/FeeManager';
+import { FeeManager }           from '../components/FeeManager';
+import { SchoolProfileManager } from '../components/SchoolProfileManager';
 import { Button } from '../components/ui/Button';
 import { Input }  from '../components/ui/Input';
 import {
   LayoutDashboard, GraduationCap, DollarSign, Truck, Store,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
-  CheckCircle, XCircle, Banknote, BookOpen, Receipt
+  CheckCircle, XCircle, Banknote, BookOpen, Receipt, Settings
 } from 'lucide-react';
 import './Dashboard.css';
 
-type Tab = 'overview' | 'classes' | 'teachers' | 'parents' | 'students' | 'fee' | 'income' | 'expense' | 'suppliers' | 'buy' | 'history';
+type Tab = 'overview' | 'classes' | 'teachers' | 'parents' | 'students' | 'fee' | 'income' | 'expense' | 'suppliers' | 'buy' | 'history' | 'profile';
 
 const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: string }[] = [
   { id: 'overview',   label: 'Overview',       icon: LayoutDashboard, section: 'MAIN' },
@@ -32,6 +33,7 @@ const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard; section?: str
   { id: 'expense',    label: 'Expenses',        icon: Truck },
   { id: 'suppliers',  label: 'Suppliers',       icon: Store },
   { id: 'buy',        label: 'Buy Credits',     icon: CreditCard,  section: 'ACCOUNT' },
+  { id: 'profile',    label: 'School Profile',  icon: Settings },
   { id: 'history',    label: 'Payment History', icon: History },
 ];
 
@@ -46,6 +48,7 @@ const PAGE_TITLES: Record<Tab, string> = {
   suppliers: 'Suppliers',
   students:  'Students',
   buy:       'Buy Credits',
+  profile:   'School Profile',
   history:   'Payment History',
 };
 
@@ -255,6 +258,7 @@ export const Dashboard = () => {
           {tab === 'income'    && <IncomeManager    schoolId={profile.id} />}
           {tab === 'expense'   && <ExpenseManager   schoolId={profile.id} />}
           {tab === 'suppliers' && <SuppliersManager schoolId={profile.id} />}
+          {tab === 'profile'   && <SchoolProfileManager schoolId={profile.id} />}
 
           {/* Buy Credits */}
           {tab === 'buy' && (
