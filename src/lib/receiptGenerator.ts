@@ -84,43 +84,39 @@ export async function generateReceiptData(
       if (m > 12) { m = 1; y++; }
     }
     
-    // Get this payment's months
-    const thisPaymentMonths = new Set(payment.months_paid || []);
-    
-    // Calculate which months were paid BEFORE this payment
-    // We need to look at all previous payments
+    // Get ALL payments for this parent (same logic as FeeManager)
     const { data: allPayments } = await supabase
       .from('fee_payments')
-      .select('id, amount, months_paid, created_at')
+      .select('amount, months_paid')
       .eq('parent_id', payment.parent_id)
-      .eq('school_id', schoolId)
-      .order('created_at', { ascending: true });
-    
-    // Get payments before this one
-    const currentPaymentIndex = allPayments?.findIndex((p: any) => p.id === payment.id) ?? -1;
-    const paymentsBefore = currentPaymentIndex >= 0 
-      ? allPayments?.slice(0, currentPaymentIndex) 
-      : [];
-    
-    // Calculate which months were covered by previous payments
-    const coveredMonths = new Set<string>();
-    paymentsBefore?.forEach((p: any) => {
-      (p.months_paid || []).forEach((m: string) => coveredMonths.add(m));
+      .eq('school_id', schoolId);
+
+    // Same calculation as FeeManager:
+    // touched months = union of all months paid across all payments
+    const touchedMonths = new Set<string>();
+    allPayments?.forEach((p: any) => {
+      (p.months_paid || []).forEach((m: string) => touchedMonths.add(m));
     });
     
-    // Previous balance = (payable months not yet covered) × netMonthly
-    const uncoveredMonths = payableMonths.filter(m => !coveredMonths.has(m));
-    const previousBalance = uncoveredMonths.length * netMonthly;
+    // unpaid months = payable months not in touchedMonths
+    const unpaidMonths = payableMonths.filter(m => !touchedMonths.has(m));
     
-    // Payment received
+    // paidMonthsBalance = unpaid months × netMonthly (what's still owed)
+    // THIS is the previous balance - same as FeeManager shows
+    const paidMonthsBalance = unpaidMonths.length * netMonthly;
+    
+    // Previous balance = what parent owes (paidMonthsBalance)
+    const previousBalance = paidMonthsBalance;
+    
+    // This payment
     const totalPaymentReceived = Number(payment.amount);
     
-    // After payment, what's left to pay?
-    // Remove this payment's months from uncovered
-    const stillUncovered = uncoveredMonths.filter(m => !thisPaymentMonths.has(m));
-    // Total payable = previous balance (what was due before)
+    // Total Payable = previous balance (before this payment)
     const totalPayable = previousBalance;
-    const newBalance = stillUncovered.length * netMonthly;
+    
+    // New Balance = previous balance - this payment
+    const newBalance = previousBalance - totalPaymentReceived;
+
 
     const receiptData: ReceiptData = {
       receipt_no: '',
