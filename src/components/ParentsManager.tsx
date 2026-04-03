@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
@@ -57,7 +57,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   const [monthlyTotals, setMonthlyTotals] = useState<Record<string, number>>({});
   const [discountTotals, setDiscountTotals] = useState<Record<string, number>>({});
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const [{ data: parents }, { data: students }] = await Promise.all([
@@ -97,9 +97,9 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     } finally {
       setLoading(false);
     }
-  };
+  }, [schoolId, showFlash]);
 
-  const loadClasses = async () => {
+  const loadClasses = useCallback(async () => {
     try {
       const { data } = await supabase.from('classes').select('id, name, monthly_fee').eq('school_id', schoolId).eq('active', true).order('name');
       setClasses(data || []);
@@ -107,8 +107,8 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       showFlash('Error loading classes: ' + err.message);
       setClasses([]);
     }
-  };
-  useEffect(() => { load(); }, [schoolId]);
+  }, [schoolId, showFlash]);
+  useEffect(() => { load(); }, [load, schoolId]);
 
   const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
