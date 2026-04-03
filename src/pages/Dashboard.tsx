@@ -16,7 +16,8 @@ import { Input }  from '../components/ui/Input';
 import {
   LayoutDashboard, GraduationCap, DollarSign, Truck, Store,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
-  CheckCircle, XCircle, Banknote, BookOpen, Receipt
+  CheckCircle, XCircle, Banknote, BookOpen, Receipt, Search,
+  CheckCircle2, X, ArrowLeft
 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -75,6 +76,81 @@ export const Dashboard = () => {
   const [creditExpired, setCreditExpired] = useState(false);
   const [daysLeft, setDaysLeft]     = useState(0);
   const [overviewStats, setOverviewStats] = useState({ parents: 0, students: 0, classes: 0 });
+
+  // Quick Fee Modal state
+  const [showQuickFee, setShowQuickFee] = useState(false);
+  const [qfSearch, setQfSearch] = useState('');
+  const [qfParents, setQfParents] = useState<any[]>([]);
+  const [qfSelectedParent, setQfSelectedParent] = useState<any>(null);
+  const [qfChildren, setQfChildren] = useState<any[]>([]);
+  const [qfAmount, setQfAmount] = useState('');
+  const [qfMethod, setQfMethod] = useState('Cash');
+  const [qfSaving, setQfSaving] = useState(false);
+  const [qfSuccess, setQfSuccess] = useState(false);
+
+  // Quick Fee: search parents as user types
+  useEffect(() => {
+    if (!showQuickFee || !profile) return;
+    const timer = setTimeout(async () => {
+      let query = supabase.from('parents').select('*').eq('school_id', profile.id);
+      if (qfSearch.trim()) {
+        query = query.or(`first_name.ilike.%${qfSearch}%,last_name.ilike.%${qfSearch}%,cnic.ilike.%${qfSearch}%`);
+      }
+      const { data } = await query.order('first_name').limit(10);
+      setQfParents(data || []);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [qfSearch, showQuickFee, profile]);
+
+  // Quick Fee: load children when parent selected
+  useEffect(() => {
+    if (!qfSelectedParent || !profile) return;
+    supabase.from('students').select('*, classes:name').eq('parent_id', qfSelectedParent.id).eq('school_id', profile.id).eq('active', true)
+      .then(({ data }) => {
+        setQfChildren(data || []);
+        if (data && data.length > 0) {
+          const totalMonthly = data.reduce((sum: number, s: any) => sum + (parseFloat(s.monthly_fee) || 0), 0);
+          setQfAmount(String(totalMonthly));
+        }
+      });
+  }, [qfSelectedParent, profile]);
+
+  const openQuickFee = () => {
+    setShowQuickFee(true);
+    setQfSearch('');
+    setQfParents([]);
+    setQfSelectedParent(null);
+    setQfChildren([]);
+    setQfAmount('');
+    setQfMethod('Cash');
+    setQfSuccess(false);
+  };
+
+  const recordQuickFee = async () => {
+    if (!qfSelectedParent || !qfAmount || !profile) return;
+    setQfSaving(true);
+    const today = new Date().toISOString().split('T')[0];
+    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const { error } = await supabase.from('fee_payments').insert({
+      school_id: profile.id,
+      parent_id: qfSelectedParent.id,
+      amount: parseFloat(qfAmount),
+      months_paid: [currentMonth],
+      months_count: 1,
+      payment_date: today,
+      payment_method: qfMethod,
+    });
+    setQfSaving(false);
+    if (error) {
+      setMsg({ text: 'Error: ' + error.message, type: 'error' });
+    } else {
+      setQfSuccess(true);
+      setTimeout(() => {
+        setShowQuickFee(false);
+        setQfSuccess(false);
+      }, 1500);
+    }
+  };
 
   const checkCredits = () => {
     if (!profile) return;
@@ -282,7 +358,7 @@ export const Dashboard = () => {
                       <span className="hero-action-sub">Enroll a student</span>
                     </div>
                   </button>
-                  <button className="hero-action-btn rose" onClick={() => setTab('fee')}>
+                  <button className="hero-action-btn rose" onClick={openQuickFee}>
                     <div className="hero-action-icon"><Receipt size={28} /></div>
                     <div className="hero-action-content">
                       <span className="hero-action-label">Collect Fee</span>
@@ -434,6 +510,94 @@ export const Dashboard = () => {
 
         </div>
       </div>
+
+      {/* ─── Quick Fee Modal ──────────────────────────────────────── */}
+      {showQuickFee && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowQuickFee(false)}>
+          <div className="quick-fee-modal">
+            <div className="qfm-header">
+              <div className="qfm-title">
+                <Receipt size={20} />
+                Collect Fee
+              </div>
+              <button className="qfm-close" onClick={() => setShowQuickFee(false)}><X size={18} /></button>
+            </div>
+
+            {qfSuccess ? (
+              <div className="qfm-success">
+                <CheckCircle2 size={48} color="var(--success)" />
+                <p>Payment recorded!</p>
+              </div>
+            ) : !qfSelectedParent ? (
+              <div className="qfm-search-step">
+                <p className="qfm-step-label">Step 1 — Find Parent</p>
+                <div className="qfm-search-box">
+                  <Search size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search by name or CNIC…"
+                    value={qfSearch}
+                    onChange={e => setQfSearch(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                <div className="qfm-parent-list">
+                  {qfParents.map(p => (
+                    <button key={p.id} className="qfm-parent-item" onClick={() => setQfSelectedParent(p)}>
+                      <div className="qfm-parent-avatar">{p.first_name[0]}{p.last_name[0]}</div>
+                      <div className="qfm-parent-info">
+                        <span className="qfm-parent-name">{p.first_name} {p.last_name}</span>
+                        <span className="qfm-parent-contact">{p.contact || p.cnic}</span>
+                      </div>
+                    </button>
+                  ))}
+                  {qfParents.length === 0 && qfSearch && (
+                    <p className="qfm-empty">No parents found</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="qfm-pay-step">
+                <div className="qfm-selected-parent">
+                  <button className="qfm-back-btn" onClick={() => setQfSelectedParent(null)}>
+                    <ArrowLeft size={14} /> Change parent
+                  </button>
+                  <div className="qfm-parent-badge">
+                    <div className="qfm-parent-avatar sm">{qfSelectedParent.first_name[0]}{qfSelectedParent.last_name[0]}</div>
+                    <span>{qfSelectedParent.first_name} {qfSelectedParent.last_name}</span>
+                  </div>
+                </div>
+                {qfChildren.length > 0 && (
+                  <div className="qfm-children-info">
+                    {qfChildren.map((c: any) => (
+                      <span key={c.id} className="qfm-child-chip">{c.first_name} ({c.classes?.name || 'N/A'})</span>
+                    ))}
+                  </div>
+                )}
+                <div className="qfm-form">
+                  <div className="qfm-form-group">
+                    <label>Amount (Rs)</label>
+                    <input type="number" value={qfAmount} onChange={e => setQfAmount(e.target.value)} placeholder="0" />
+                  </div>
+                  <div className="qfm-form-group">
+                    <label>Method</label>
+                    <select value={qfMethod} onChange={e => setQfMethod(e.target.value)}>
+                      <option>Cash</option>
+                      <option>Bank Transfer</option>
+                      <option>JazzCash</option>
+                      <option>EasyPaisa</option>
+                    </select>
+                  </div>
+                </div>
+                <Button size="lg" fullWidth isLoading={qfSaving} onClick={recordQuickFee} disabled={!qfAmount}>
+                  <CreditCard size={16} /> Record Payment
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

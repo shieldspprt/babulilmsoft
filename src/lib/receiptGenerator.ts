@@ -74,7 +74,7 @@ export async function generateReceiptData(
 
     // Calculate totals
     const grossFee = receiptStudents.reduce((sum, s) => sum + s.monthly_fee, 0);
-    const totalDiscount = receiptStudents.reduce((sum, s) => sum + s.discount_value, 0);
+    const totalDiscount = receiptStudents.reduce((sum, s) => sum + (s.discount_value || 0), 0);
     // netMonthly uses the student's actual fees (sum of final_fee)
     // This matches FeeManager's: monthlyFee = children.reduce((s, c) => s + N(c.monthly_fee), 0)
     const netMonthly = receiptStudents.reduce((sum, s) => sum + s.final_fee, 0);

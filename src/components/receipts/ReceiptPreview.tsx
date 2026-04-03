@@ -147,7 +147,7 @@ function ReceiptPrintItem({ receipt }: { receipt: ReceiptData }) {
                 <td>{student.name}</td>
                 <td>{student.class_name}</td>
                 <td>{formatCurrency(student.monthly_fee)}</td>
-                <td>{student.discount_value > 0 ? `-${formatCurrency(student.discount_value)}` : '-'}</td>
+                <td>{(student.discount_value || 0) > 0 ? `-${formatCurrency(student.discount_value || 0)}` : '-'}</td>
                 <td>{formatCurrency(student.final_fee)}</td>
               </tr>
             ))}
@@ -252,7 +252,7 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
               <td>{student.name}</td>
               <td>{student.class_name}</td>
               <td>{formatCurrency(student.monthly_fee)}</td>
-              <td>{student.discount_value > 0 ? `-${formatCurrency(student.discount_value)}` : '-'}</td>
+              <td>{(student.discount_value || 0) > 0 ? `-${formatCurrency(student.discount_value || 0)}` : '-'}</td>
               <td>{formatCurrency(student.final_fee)}</td>
             </tr>
           ))}
@@ -261,7 +261,7 @@ export function ReceiptContent({ receipt }: { receipt: ReceiptData }) {
           <tr>
             <td colSpan={3}>Total</td>
             <td>{formatCurrency(receipt.students.reduce((sum, s) => sum + s.monthly_fee, 0))}</td>
-            <td>-{formatCurrency(receipt.students.reduce((sum, s) => sum + s.discount_value, 0))}</td>
+            <td>-{formatCurrency(receipt.students.reduce((sum, s) => sum + (s.discount_value || 0), 0))}</td>
             <td>{formatCurrency(receipt.students.reduce((sum, s) => sum + s.final_fee, 0))}</td>
           </tr>
         </tfoot>

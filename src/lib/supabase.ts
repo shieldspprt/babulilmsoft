@@ -182,6 +182,6 @@ export type ReceiptStudent = {
   class_name: string;
   monthly_fee: number;
   discount_type: string | null;
-  discount_value: number;
+  discount_value: number | null;
   final_fee: number;
 };

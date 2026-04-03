@@ -6,6 +6,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   fullWidth?: boolean;
+  'aria-label'?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -16,7 +17,8 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth,
   className = '',
   disabled,
-  type = 'button', // Default to button to prevent accidental form submissions
+  type = 'button',
+  'aria-label': ariaLabel,
   ...props
 }) => {
   const classes = [
@@ -35,6 +37,7 @@ export const Button: React.FC<ButtonProps> = ({
       type={type}
       aria-busy={isLoading}
       aria-disabled={disabled || isLoading}
+      aria-label={ariaLabel}
       {...props}
     >
       {children}
