@@ -14,14 +14,31 @@ import { TeamManager }           from '../components/TeamManager';
 import { Button } from '../components/ui/Button';
 import { Input }  from '../components/ui/Input';
 import {
-  LayoutDashboard, GraduationCap, DollarSign, Truck, Store,
+  LayoutDashboard, GraduationCap, DollarSign,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
-  CheckCircle, XCircle, Banknote, BookOpen, Receipt, Search,
-  CheckCircle2, X, ArrowLeft
+  CheckCircle, XCircle, BookOpen,
+  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote,
+  Truck, Store
 } from 'lucide-react';
 import './Dashboard.css';
 
 type Tab = 'overview' | 'classes' | 'people' | 'people-students' | 'people-parents' | 'finances' | 'finances-income' | 'finances-expense' | 'finances-suppliers' | 'fee' | 'team' | 'profile' | 'buy' | 'history';
+
+type Parent = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  cnic: string;
+  contact: string;
+};
+
+type Student = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  monthly_fee: number;
+  classes?: { name: string };
+};
 
 const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview',  label: 'Overview',  icon: LayoutDashboard },
@@ -80,9 +97,9 @@ export const Dashboard = () => {
   // Quick Fee Modal state
   const [showQuickFee, setShowQuickFee] = useState(false);
   const [qfSearch, setQfSearch] = useState('');
-  const [qfParents, setQfParents] = useState<any[]>([]);
-  const [qfSelectedParent, setQfSelectedParent] = useState<any>(null);
-  const [qfChildren, setQfChildren] = useState<any[]>([]);
+  const [qfParents, setQfParents] = useState<Parent[]>([]);
+  const [qfSelectedParent, setQfSelectedParent] = useState<Parent | null>(null);
+  const [qfChildren, setQfChildren] = useState<Student[]>([]);
   const [qfAmount, setQfAmount] = useState('');
   const [qfMethod, setQfMethod] = useState('Cash');
   const [qfSaving, setQfSaving] = useState(false);

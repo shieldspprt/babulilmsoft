@@ -87,6 +87,11 @@
 .sidebar-nav-item.sub {
   padding-left: 1.75rem;
   font-size: var(--font-xs);
+  opacity: 0.75;
+}
+
+.sidebar-nav-item.sub:hover {
+  opacity: 1;
 }
 
 /* Bottom of sidebar */
