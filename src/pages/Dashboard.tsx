@@ -270,7 +270,7 @@ export const Dashboard = () => {
             <button
               key={item.id}
               className={`sidebar-nav-item${tab === item.id ? ' active' : ''}${tab.startsWith(item.id + '-') && item.id !== 'overview' ? ' active' : ''}`}
-              onClick={() => setTab(item.id)}
+              onClick={() => setTab(item.id === 'people' ? 'people-parents' : item.id === 'finances' ? 'finances-income' : item.id)}
             >
               <item.icon size={18} />
               {item.label}
