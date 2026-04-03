@@ -2,54 +2,54 @@
 
 /* ─── Design Tokens ──────────────────────────────────────────────────── */
 :root {
-  /* Brand */
-  --primary:        #2563eb;
-  --primary-dark:   #1d4ed8;
-  --primary-light:  #dbeafe;
-  --primary-muted:  #eff6ff;
+  /* Brand — distinctive indigo/violet */
+  --primary:        #6366f1;
+  --primary-dark:   #4f46e5;
+  --primary-light:  #e0e7ff;
+  --primary-muted:  #eef2ff;
 
-  /* Semantic */
-  --success:        #059669;
+  /* Semantic — clean and modern */
+  --success:        #10b981;
   --success-light:  #d1fae5;
-  --warning:        #d97706;
+  --warning:        #f59e0b;
   --warning-light:  #fef3c7;
-  --danger:         #dc2626;
+  --danger:         #ef4444;
   --danger-light:   #fee2e2;
-  --info:           #0891b2;
+  --info:           #06b6d4;
   --info-light:     #cffafe;
 
   /* Surfaces */
-  --bg:             #f1f5f9;
+  --bg:             #f8fafc;
   --surface:        #ffffff;
-  --surface-hover:  #f8fafc;
-  --sidebar-bg:     #1e293b;
-  --sidebar-hover:  #334155;
-  --sidebar-active: #2563eb;
-  --sidebar-text:   #94a3b8;
+  --surface-hover:  #f1f5f9;
+  --sidebar-bg:     #1e1b2e;
+  --sidebar-hover:  #2d2a3e;
+  --sidebar-active: #6366f1;
+  --sidebar-text:   #a1a1aa;
   --sidebar-text-active: #ffffff;
 
   /* Text */
-  --text:           #0f172a;
-  --text-secondary: #334155;
-  --text-muted:     #64748b;
-  --text-placeholder: #94a3b8;
+  --text:           #18181b;
+  --text-secondary: #3f3f46;
+  --text-muted:     #71717a;
+  --text-placeholder: #a1a1aa;
 
   /* Borders */
-  --border:         #e2e8f0;
-  --border-focus:   #2563eb;
+  --border:         #e4e4e7;
+  --border-focus:   #6366f1;
 
-  /* Shadows */
-  --shadow-xs:  0 1px 2px rgba(15,23,42,0.06);
-  --shadow-sm:  0 1px 3px rgba(15,23,42,0.1), 0 1px 2px rgba(15,23,42,0.06);
-  --shadow-md:  0 4px 6px -1px rgba(15,23,42,0.08), 0 2px 4px -2px rgba(15,23,42,0.05);
-  --shadow-lg:  0 10px 15px -3px rgba(15,23,42,0.08), 0 4px 6px -4px rgba(15,23,42,0.05);
-  --shadow-xl:  0 20px 25px -5px rgba(15,23,42,0.08), 0 8px 10px -6px rgba(15,23,42,0.05);
+  /* Shadows — subtle, layered */
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -1px rgba(0,0,0,0.04);
+  --shadow-lg:  0 10px 15px -3px rgba(0,0,0,0.06), 0 4px 6px -2px rgba(0,0,0,0.04);
+  --shadow-xl:  0 20px 25px -5px rgba(0,0,0,0.07), 0 10px 10px -5px rgba(0,0,0,0.03);
 
   /* Radius */
   --radius-sm:  6px;
   --radius-md:  10px;
   --radius-lg:  14px;
-  --radius-xl:  20px;
+  --radius-xl:  18px;
   --radius-2xl: 24px;
 
   /* Spacing */

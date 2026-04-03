@@ -1,12 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreditDisplay } from '../CreditGuard';
 import { Button } from '../ui/Button';
 import { LogOut, GraduationCap, LayoutDashboard } from 'lucide-react';
 import './Navbar.css';
 
 export const Navbar = () => {
-  const { session, profile, signOut } = useAuth();
+  const { session, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -27,12 +26,6 @@ export const Navbar = () => {
         <div className="nav-actions">
           {session ? (
             <>
-              {profile && (
-                <div className="nav-school-info">
-                  <span className="nav-school-name">{profile.school_name}</span>
-                  <CreditDisplay />
-                </div>
-              )}
               <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
                 <LayoutDashboard size={16} /> Dashboard
               </Button>

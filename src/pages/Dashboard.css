@@ -188,37 +188,37 @@
 }
 
 .ov-stat-card {
-  background: var(--surface);
+  background: #fff;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1.25rem 1.25rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  box-shadow: var(--shadow-xs);
-  transition: box-shadow 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s, transform 0.2s;
 }
 
-.ov-stat-card:hover { box-shadow: var(--shadow-md); }
+.ov-stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
 
-.ov-stat-card.danger  { border-color: var(--danger);  background: var(--danger-light); }
-.ov-stat-card.warning { border-color: var(--warning); background: var(--warning-light); }
-.ov-stat-card.blue    { border-color: var(--primary); background: var(--primary-muted); }
-.ov-stat-card.green   { border-color: #059669; background: #d1fae5; }
-.ov-stat-card.purple  { border-color: #7c3aed; background: #f3e8ff; }
-
+/* icon circle — all use a soft tinted background */
 .ov-stat-icon {
-  width: 40px; height: 40px;
-  border-radius: var(--radius-md);
+  width: 36px; height: 36px;
+  border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  background: var(--primary-light);
-  color: var(--primary);
+  margin-bottom: 0.25rem;
 }
 
-.ov-stat-card.danger  .ov-stat-icon { background: var(--danger-light);  color: var(--danger); }
-.ov-stat-card.warning .ov-stat-icon { background: var(--warning-light); color: var(--warning); }
-.ov-stat-card.green   .ov-stat-icon { background: #d1fae5; color: #059669; }
-.ov-stat-card.purple  .ov-stat-icon { background: #f3e8ff; color: #7c3aed; }
+.ov-stat-card.blue   .ov-stat-icon { background: #eff6ff; color: #3b82f6; }
+.ov-stat-card.green  .ov-stat-icon { background: #f0fdf4; color: #22c55e; }
+.ov-stat-card.purple .ov-stat-icon { background: #faf5ff; color: #a855f7; }
+.ov-stat-card.danger .ov-stat-icon { background: #fef2f2; color: #ef4444; }
+.ov-stat-card.rose   .ov-stat-icon { background: #fff1f2; color: #f43f5e; }
+.ov-stat-card.cyan   .ov-stat-icon { background: #ecfeff; color: #06b6d4; }
+.ov-stat-card.amber  .ov-stat-icon { background: #fffbeb; color: #f59e0b; }
 
 .ov-stat-label {
   font-size: var(--font-xs);

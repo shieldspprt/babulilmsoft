@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useFlashMessage } from '../hooks/useFlashMessage';
@@ -25,7 +25,7 @@ export const TeamManager = ({ schoolId }: { schoolId: string }) => {
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
   /* ── Load Members ──────────────────────────────────────────── */
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -44,9 +44,9 @@ export const TeamManager = ({ schoolId }: { schoolId: string }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [schoolId, showFlash]);
 
-  useEffect(() => { loadMembers(); }, [schoolId]);
+  useEffect(() => { loadMembers(); }, [loadMembers]);
 
   /* ── Invite Manager ────────────────────────────────────────── */
   const handleInvite = async (e: React.FormEvent) => {
