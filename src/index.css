@@ -5,23 +5,23 @@
   /* Brand — distinctive indigo/violet */
   --primary:        #6366f1;
   --primary-dark:   #4f46e5;
-  --primary-light:  #e0e7ff;
-  --primary-muted:  #eef2ff;
+  --primary-light:  rgba(99,102,241,0.15);
+  --primary-muted:  rgba(99,102,241,0.10);
 
   /* Semantic — clean and modern */
   --success:        #10b981;
-  --success-light:  #d1fae5;
+  --success-light:  rgba(16,185,129,0.15);
   --warning:        #f59e0b;
-  --warning-light:  #fef3c7;
+  --warning-light:  rgba(245,158,11,0.15);
   --danger:         #ef4444;
-  --danger-light:   #fee2e2;
+  --danger-light:   rgba(239,68,68,0.15);
   --info:           #06b6d4;
-  --info-light:     #cffafe;
+  --info-light:     rgba(6,182,212,0.15);
 
   /* Surfaces */
-  --bg:             #f8fafc;
-  --surface:        #ffffff;
-  --surface-hover:  #f1f5f9;
+  --bg:             #12121e;
+  --surface:        #1a1a2e;
+  --surface-hover:  #22223a;
   --sidebar-bg:     #1e1b2e;
   --sidebar-hover:  #2d2a3e;
   --sidebar-active: #6366f1;
@@ -29,13 +29,13 @@
   --sidebar-text-active: #ffffff;
 
   /* Text */
-  --text:           #18181b;
-  --text-secondary: #3f3f46;
-  --text-muted:     #71717a;
-  --text-placeholder: #a1a1aa;
+  --text:           #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --text-placeholder: #475569;
 
   /* Borders */
-  --border:         #e4e4e7;
+  --border:         #2d2d4a;
   --border-focus:   #6366f1;
 
   /* Shadows — subtle, layered */
@@ -206,7 +206,7 @@ input, button, textarea, select { font: inherit; }
   /* accent (purple) */
   --accent:             #7c3aed;
   --accent-hover:       #6d28d9;
-  --accent-light:       #f3e8ff;
+  --accent-light:       rgba(124,58,237,0.15);
 
   /* primary aliases */
   --primary-hover:      var(--primary-dark);

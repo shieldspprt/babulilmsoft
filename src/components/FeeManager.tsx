@@ -14,6 +14,7 @@ import { ReceiptPreview } from './receipts/ReceiptPreview';
 import './FeeManager.css';
 import './managers.css';
 import { isPositiveNumber } from '../lib/validation';
+import { sanitizeHtml } from '../lib/sanitization';
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
@@ -347,7 +348,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
         setDetailLoading(false);
       }
     },
-    [schoolId, showFlash, todayStr],
+    [schoolId, showFlash],
   );
 
   /* ── select parent ──────────────────────────────────────────────── */
@@ -1004,6 +1005,13 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
                       <span className="fee-payment-row-method">
                         {p.payment_method}
                       </span>
+                      {p.notes && (
+                        <span 
+                          className="fee-payment-row-notes" 
+                          title={p.notes}
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(p.notes) }}
+                        />
+                      )}
                       {isOwner && (
                         <button
                           className="fee-payment-delete"
