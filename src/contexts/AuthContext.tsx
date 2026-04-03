@@ -24,6 +24,10 @@ const AuthContext = createContext<AuthContextType>({
   refreshProfile: async () => {},
 });
 
+// Constants defined outside component to prevent recreation on every render
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 1000;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession]       = useState<Session | null>(null);
   const [user, setUser]             = useState<User | null>(null);
@@ -31,9 +35,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole]             = useState<Role | null>(null);
   const [loading, setLoading]       = useState(true);
   const userIdRef = useRef<string | null>(null);
-
-  const MAX_RETRIES = 2;
-  const RETRY_DELAY = 1000;
 
   /**
    * Fetch user profile with role detection:
@@ -61,7 +62,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (school) {
           setProfile(school as SchoolProfile);
         } else if (schoolError) {
-          console.error('Error fetching school by member:', schoolError.message);
+          // Only log in development
+          if (import.meta.env.DEV) {
+            console.error('Error fetching school by member:', schoolError.message);
+          }
         }
         return;
       }
@@ -81,23 +85,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
         
         if (shouldRetry) {
-          console.log(`Profile fetch failed (attempt ${attempt}/${MAX_RETRIES + 1}), retrying...`);
           await new Promise(r => setTimeout(r, RETRY_DELAY * attempt));
           return fetchProfile(userId, attempt + 1);
         }
         
-        console.error('Error fetching profile:', error.message);
+        // Only log in development
+        if (import.meta.env.DEV) {
+          console.error('Error fetching profile:', error.message);
+        }
       } else if (data) {
         setProfile(data as SchoolProfile);
         setRole('owner');
       }
     } catch (err) {
       if (attempt <= MAX_RETRIES) {
-        console.log(`Profile fetch error (attempt ${attempt}/${MAX_RETRIES + 1}), retrying...`);
         await new Promise(r => setTimeout(r, RETRY_DELAY * attempt));
         return fetchProfile(userId, attempt + 1);
       }
-      console.error('Unexpected error fetching profile', err);
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.error('Unexpected error fetching profile', err);
+      }
     }
   }, []);
 

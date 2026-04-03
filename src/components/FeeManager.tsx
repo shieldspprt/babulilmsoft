@@ -514,16 +514,20 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
 
   /* ── load receipt from payment ──────────────────────────────────── */
   const loadReceiptFromPayment = useCallback(async (paymentId: string) => {
+    if (!paymentId?.trim()) {
+      showFlash('Invalid payment ID');
+      return;
+    }
     try {
-      const receipt = await getReceiptByPayment(paymentId);
-      if (receipt) {
+      const receipt = await getReceiptByPayment(paymentId.trim());
+      if (receipt?.receipt_data) {
         setCurrentReceipt(receipt.receipt_data);
         setShowReceipt(true);
       } else {
         showFlash('Receipt not found for this payment');
       }
     } catch (err: any) {
-      showFlash('Error loading receipt: ' + err.message);
+      showFlash('Error loading receipt: ' + (err?.message || 'Unknown error'));
     }
   }, [showFlash]);
 
