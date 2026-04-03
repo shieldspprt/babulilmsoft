@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
@@ -65,13 +65,8 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
   const [newCategory, setNewCategory] = useState('');
   const [showCategoryForm, setShowCategoryForm] = useState(false);
 
-  const loadData = async () => {
-    setLoading(true);
-    await Promise.all([loadCategories(), loadExpenses()]);
-    setLoading(false);
-  };
-
-  const loadCategories = async () => {
+  // Performance optimization: wrap load functions in useCallback
+  const loadCategories = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('expense_categories')
@@ -90,30 +85,54 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
       console.error('Unexpected error loading categories:', err);
       showFlash('Error loading categories: ' + err.message);
     }
-  };
+    // Note: showFlash dependency - need to handle this since useFlashMessage returns stable fn
+  }, [schoolId]); // showFlash is stable from hook, omit to avoid warning
 
-  const loadExpenses = async () => {
-    const { data } = await supabase
-      .from('expenses')
-      .select(`
-        *,
-        categories:category_id (name)
-      `)
-      .eq('school_id', schoolId)
-      .order('expense_date', { ascending: false });
-    
-    if (data) {
-      const formatted = data.map((e: any) => ({
-        ...e,
-        category_name: e.categories?.name || 'Unknown'
-      }));
-      setExpenses(formatted as Expense[]);
+  const loadExpenses = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select(`
+          *,
+          categories:category_id (name)
+        `)
+        .eq('school_id', schoolId)
+        .order('expense_date', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading expenses:', error);
+        showFlash('Error loading expenses: ' + error.message);
+        return;
+      }
+      
+      if (data) {
+        const formatted = data.map((e: any) => ({
+          ...e,
+          category_name: e.categories?.name || 'Unknown'
+        }));
+        setExpenses(formatted as Expense[]);
+      }
+    } catch (err: any) {
+      console.error('Unexpected error loading expenses:', err);
+      showFlash('Error loading expenses: ' + err.message);
     }
-  };
+  }, [schoolId]); // showFlash is stable
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      await Promise.all([loadCategories(), loadExpenses()]);
+    } catch (err: any) {
+      console.error('Error loading data:', err);
+      showFlash('Error loading data: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadCategories, loadExpenses]); // showFlash is stable
 
   useEffect(() => {
     loadData();
-  }, [schoolId]);
+  }, [loadData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
