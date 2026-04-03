@@ -62,3 +62,43 @@ export function isPositiveNumber(value: unknown): boolean {
   }
   return false;
 }
+
+/**
+ * Validates an amount is within reasonable limits (1 to 999,999,999)
+ * Prevents database overflow and UI display issues
+ * @param value - The amount to validate
+ * @returns boolean indicating if the value is a valid amount
+ */
+export function isValidAmount(value: unknown): boolean {
+  const MAX_AMOUNT = 999999999;
+  if (typeof value === 'string') {
+    const num = parseFloat(value);
+    return !Number.isNaN(num) && num > 0 && num <= MAX_AMOUNT && Number.isFinite(num);
+  }
+  if (typeof value === 'number') {
+    return !Number.isNaN(value) && value > 0 && value <= MAX_AMOUNT && Number.isFinite(value);
+  }
+  return false;
+}
+
+/**
+ * Validates an amount is within reasonable limits (1 to 999,999,999)
+ * Prevents database overflow and UI display issues
+ * @param value - The amount to validate
+ * @returns { valid: boolean; error?: string } object with validation result
+ */
+export function validateAmount(value: unknown): { valid: boolean; error?: string } {
+  const MAX_AMOUNT = 999999999;
+  const num = typeof value === 'string' ? parseFloat(value) : Number(value);
+  
+  if (Number.isNaN(num) || num <= 0) {
+    return { valid: false, error: 'Amount must be a positive number' };
+  }
+  if (!Number.isFinite(num)) {
+    return { valid: false, error: 'Amount is not a valid number' };
+  }
+  if (num > MAX_AMOUNT) {
+    return { valid: false, error: `Amount cannot exceed Rs ${MAX_AMOUNT.toLocaleString()}` };
+  }
+  return { valid: true };
+}
