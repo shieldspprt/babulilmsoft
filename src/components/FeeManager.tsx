@@ -13,6 +13,7 @@ import type { ReceiptData } from '../lib/supabase';
 import { ReceiptPreview } from './receipts/ReceiptPreview';
 import './FeeManager.css';
 import './managers.css';
+import { isPositiveNumber } from '../lib/validation';
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
@@ -456,53 +457,49 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
   /* ── record payment ─────────────────────────────────────────────── */
   const recordPayment = useCallback(async () => {
     if (!selectedParent || selectedMonths.size === 0) return;
+    
+    // Validate payment amount is positive
+    if (!isPositiveNumber(paymentAmount)) {
+      showFlash('Please enter a valid positive amount');
+      return;
+    }
+
     setSaving(true);
     try {
-      // Calculate amount from selected months
-      const enteredAmount = parseInt(paymentAmount) || 0;
-      const calculatedAmount = selectedMonths.size * monthlyFee + paidMonthsBalance;
-      const amount = enteredAmount > 0 ? enteredAmount : Math.max(0, calculatedAmount);
+      // Validate against computed total for selected months
+      const amountVal = parseInt(paymentAmount, 10);
       const monthsArray = Array.from(selectedMonths).sort();
 
-      const { data: paymentData, error: paymentError } = await supabase
+      // Insert payment
+      const { data: payment, error: payErr } = await supabase
         .from('fee_payments')
         .insert({
           school_id: schoolId,
           parent_id: selectedParent.id,
-          amount: Math.max(0, amount),
+          amount: amountVal,
           months_paid: monthsArray,
-          months_count: monthsArray.length,
+          months_count: selectedMonths.size,
           payment_date: paymentDate,
           payment_method: paymentMethod,
-          notes: paymentNotes || null,
+          notes: paymentNotes.trim() || null,
         })
         .select()
         .single();
 
-      if (paymentError) throw paymentError;
-
-      showFlash('Payment recorded successfully');
+      if (payErr) throw payErr;
 
       // Generate and save receipt
-      if (paymentData) {
-        const receiptData = await generateReceiptData(paymentData.id, schoolId);
-        if (receiptData) {
-          const savedReceipt = await saveReceipt(
-            receiptData,
-            paymentData.id,
-            schoolId,
-            selectedParent.id
-          );
-          if (savedReceipt) {
-            setCurrentReceipt(savedReceipt.receipt_data);
-            setShowReceipt(true);
-          }
-        }
+      const receiptData = await generateReceiptData(payment.id, schoolId);
+      if (receiptData) {
+        await saveReceipt(receiptData, payment.id, schoolId, selectedParent.id);
+        setCurrentReceipt(receiptData);
+        setShowReceipt(true);
       }
 
-      setSelectedMonths(new Set());
       setPaymentAmount('');
+      setSelectedMonths(new Set());
       setPaymentNotes('');
+      showFlash('Payment recorded successfully');
       await Promise.all([loadParentDetail(selectedParent), loadParents()]);
     } catch (err: any) {
       showFlash('Error recording payment: ' + err.message);
@@ -511,7 +508,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
     }
   }, [
     selectedParent, selectedMonths, paymentAmount, paymentDate,
-    paymentMethod, paymentNotes, schoolId, todayStr,
+    paymentMethod, paymentNotes, schoolId,
     loadParentDetail, loadParents, showFlash,
   ]);
 

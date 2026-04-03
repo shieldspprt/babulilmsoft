@@ -6,6 +6,7 @@ import { Plus, X, BookOpen, Search, Edit2, Trash2, Users, Loader2 } from 'lucide
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
 import '../components/managers.css';
+import { isPositiveNumber } from '../lib/validation';
 
 type Class = {
   id: string;
@@ -79,7 +80,10 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   }, [load]);
 
   const handleAdd = async () => {
-    if (!newName.trim() || !newFee.trim()) return;
+    if (!newName.trim() || !isPositiveNumber(newFee)) {
+      showFlash('Please enter a valid positive fee amount');
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from('classes').insert({
       school_id: schoolId,
@@ -103,6 +107,10 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
 
   const handleEdit = async () => {
     if (!editingClass || !editName.trim()) return;
+    if (!isPositiveNumber(editFee)) {
+      showFlash('Please enter a valid positive fee amount');
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from('classes').update({
       name: editName.trim(),
