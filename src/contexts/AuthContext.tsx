@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * 1. Check school_members — if user is an active member, use that school
    * 2. Fallback: check schools.user_id — existing owner behavior
    */
-  const fetchProfile = async (userId: string, attempt = 1): Promise<void> => {
+  const fetchProfile = useCallback(async (userId: string, attempt = 1): Promise<void> => {
     try {
       // Step 1: Check if user is a member (owner or manager) of any school
       const { data: member } = await supabase
@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       console.error('Unexpected error fetching profile', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -131,17 +131,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchProfile]);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-  };
+  }, []);
 
   const refreshProfile = useCallback(async () => {
     if (user) {
       await fetchProfile(user.id);
     }
-  }, [user]);
+  }, [user, fetchProfile]);
 
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -169,7 +169,7 @@ export const Dashboard = () => {
     }
   };
 
-  const checkCredits = () => {
+  const checkCredits = useCallback(() => {
     if (!profile) return;
     const now = new Date();
     const exp = profile.credit_expires_at ? new Date(profile.credit_expires_at) : null;
@@ -178,9 +178,9 @@ export const Dashboard = () => {
     setCreditExpired(expired || profile.total_credits <= 0);
     setDaysLeft(days);
     if (expired || profile.total_credits <= 0) setTab('buy');
-  };
+  }, [profile]);
 
-  const loadOverviewStats = async () => {
+  const loadOverviewStats = useCallback(async () => {
     if (!profile) return;
     try {
       const [parentsRes, studentsRes, classesRes] = await Promise.all([
@@ -198,9 +198,9 @@ export const Dashboard = () => {
       setMsg({ text: 'Failed to load dashboard statistics', type: 'error' });
       setOverviewStats({ parents: 0, students: 0, classes: 0 });
     }
-  };
+  }, [profile]);
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     if (!profile) return;
     try {
       const { data } = await supabase.from('credit_requests').select('*').eq('school_id', profile.id).order('created_at', { ascending: false });
@@ -210,10 +210,10 @@ export const Dashboard = () => {
       setMsg({ text: 'Failed to load payment history', type: 'error' });
       setHistory([]);
     }
-  };
+  }, [profile]);
 
-  useEffect(() => { if (profile) { checkCredits(); loadOverviewStats(); } }, [profile]);
-  useEffect(() => { if (tab === 'history' && profile) loadHistory(); }, [tab, profile]);
+  useEffect(() => { if (profile) { checkCredits(); loadOverviewStats(); } }, [profile, checkCredits, loadOverviewStats]);
+  useEffect(() => { if (tab === 'history' && profile) loadHistory(); }, [tab, profile, loadHistory]);
   useEffect(() => {
     const s = location.state as { showBuyCredits?: boolean };
     if (s?.showBuyCredits) { setTab('buy'); navigate('/dashboard', { replace: true, state: {} }); }
@@ -235,7 +235,7 @@ export const Dashboard = () => {
     }
   };
 
-  const handleLogout = async () => { await signOut(); navigate('/'); };
+  const handleLogout = useCallback(async () => { await signOut(); navigate('/'); }, [signOut, navigate]);
 
   if (!profile) return (
     <div className="dash-loading">
