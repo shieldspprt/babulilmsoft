@@ -87,9 +87,15 @@
 .sidebar-section-header { display: flex; flex-direction: column; }
 .sidebar-nav-item.has-sub { justify-content: flex-start; }
 .sidebar-nav-item.has-sub .sub-chevron { margin-left: auto; transition: transform 0.2s; }
-.sidebar-sub-items { display: none; flex-direction: column; padding-left: 1.5rem; gap: 1px; }
-.sidebar-section-header:has(.sidebar-nav-item.active) .sidebar-sub-items,
-.sidebar-sub-items { display: flex; }
+.sidebar-sub-items {
+  display: none;
+  flex-direction: column;
+  padding-left: 1.5rem;
+  gap: 1px;
+}
+.sidebar-section-header.is-open .sidebar-sub-items {
+  display: flex;
+}
 .sidebar-sub-item {
   display: flex;
   align-items: center;

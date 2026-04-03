@@ -181,9 +181,22 @@ export async function saveReceipt(receiptData: ReceiptData, paymentId: string, s
   }
 
   try {
-    const { data: receiptNo, error: rpcError } = await supabase.rpc('generate_receipt_no', { p_school_id: schoolId });
-    if (rpcError) throw rpcError;
+    // Generate receipt number client-side (no RPC needed)
+    let nextNum = 1;
+    try {
+      const { data: lastReceipt } = await supabase
+        .from('fee_receipts')
+        .select('receipt_no')
+        .eq('school_id', schoolId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (lastReceipt && lastReceipt.length > 0 && lastReceipt[0].receipt_no) {
+        const match = lastReceipt[0].receipt_no.match(/\d+$/);
+        if (match) nextNum = parseInt(match[0], 10) + 1;
+      }
+    } catch (_) { /* first receipt */ }
 
+    const receiptNo = `R${String(nextNum).padStart(5, '0')}`;
     const finalData = { ...receiptData, receipt_no: receiptNo };
     const { data, error } = await supabase.from('fee_receipts').insert({
       receipt_no: receiptNo, school_id: schoolId, parent_id: parentId, payment_id: paymentId, receipt_data: finalData, sent_via: []

@@ -109,3 +109,10 @@ What changed: This scheduled agent run re-read Dashboard.tsx and Dashboard.css t
 Files verified:
 - `file 'src/pages/Dashboard.tsx'`
 - `file 'src/pages/Dashboard.css'`
+
+## 2026-04-03 17:10 Completed: Sidebar Cleanup (Fixed Sub-items)
+What changed: Fixed sidebar sub-items visibility. Changed from broken `:has()` CSS selector to a proper `openSections` Set state. Both People and Finances section headers now conditionally apply `is-open` class to show/hide sub-items. Clicking a section header toggles its expanded state and navigates to the first sub-tab. No more always-visible sub-items clutter.
+
+Files modified:
+- `file 'src/pages/Dashboard.tsx'` — Added `openSections` state, toggle logic on section headers, conditional `is-open` class
+- `file 'src/pages/Dashboard.css'` — Changed `.sidebar-sub-items` to show only when `.sidebar-section-header.is-open .sidebar-sub-items`

@@ -62,6 +62,7 @@ export const Dashboard = () => {
   const location  = useLocation();
 
   const [tab, setTab]               = useState<Tab>('overview');
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(['people', 'finances']));
   const [payMethod, setPayMethod]   = useState<'JazzCash' | 'Bank'>('JazzCash');
   const [plan, setPlan]             = useState<{ credits: number; pkr: number } | null>(null);
   const [reference, setReference]   = useState('');
@@ -267,10 +268,14 @@ export const Dashboard = () => {
 
           {/* People section */}
           <div className="sidebar-section">
-            <div className="sidebar-section-header">
+            <div className={`sidebar-section-header${openSections.has('people') ? ' is-open' : ''}`}>
               <button
                 className={`sidebar-nav-item has-sub${tab.startsWith('people') ? ' active' : ''}`}
-                onClick={() => setTab('people-parents')}
+                onClick={() => {
+                  const current = openSections.has('people') ? new Set([...openSections].filter(s => s !== 'people')) : new Set([...openSections, 'people']);
+                  setOpenSections(current);
+                  if (current.has('people')) setTab('people-parents');
+                }}
               >
                 <Users2 size={18} /> People <ChevronDown size={14} className="sub-chevron" />
               </button>
@@ -287,10 +292,14 @@ export const Dashboard = () => {
 
           {/* Finances section */}
           <div className="sidebar-section">
-            <div className="sidebar-section-header">
+            <div className={`sidebar-section-header${openSections.has('finances') ? ' is-open' : ''}`}>
               <button
                 className={`sidebar-nav-item has-sub${tab.startsWith('finances') || tab === 'fee' ? ' active' : ''}`}
-                onClick={() => setTab('finances-income')}
+                onClick={() => {
+                  const current = openSections.has('finances') ? new Set([...openSections].filter(s => s !== 'finances')) : new Set([...openSections, 'finances']);
+                  setOpenSections(current);
+                  if (current.has('finances')) setTab('finances-income');
+                }}
               >
                 <DollarSign size={18} /> Finances <ChevronDown size={14} className="sub-chevron" />
               </button>
