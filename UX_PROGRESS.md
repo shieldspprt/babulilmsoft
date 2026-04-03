@@ -1,5 +1,11 @@
 # UX Improvement Progress
 
+## 2026-04-03 14:10 Completed: Sidebar Cleanup
+What changed: Reduced sidebar from 12 items to exactly 5 main items (Overview, People, Classes, Finances, Team). Removed sub-nav item rendering (People → Parents/Students, Finances → Income/Expense/Suppliers are now accessed via their dedicated tabs). Buy Credits moved to sidebar bottom as small link. No section labels. Removed unused Truck and Store icon imports. Removed unused .sidebar-nav-item.sub CSS.
+Files modified:
+- `file 'src/pages/Dashboard.tsx'` — Removed sub-nav rendering from sidebar JSX, removed Truck/Store imports
+- `file 'src/pages/Dashboard.css'` — Removed .sidebar-nav-item.sub styles
+
 ## 2026-04-03 09:10 Completed: Sidebar Cleanup
 What changed: Reduced sidebar from 12+ items to 5 main items (Overview, People, Classes, Finances, Team). Merged Students+Parents into "People" with sub-nav. Merged Income/Expense/Suppliers into "Finances" with sub-nav. Moved "Buy Credits" to sidebar bottom as a small link. Sub-nav items now have reduced opacity when not active, creating visual hierarchy without section labels.
 

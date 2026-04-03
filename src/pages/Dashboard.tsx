@@ -17,8 +17,7 @@ import {
   LayoutDashboard, GraduationCap, DollarSign,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
   CheckCircle, XCircle, BookOpen,
-  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote,
-  Truck, Store
+  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote
 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -46,19 +45,6 @@ const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'classes',  label: 'Classes',   icon: BookOpen },
   { id: 'finances', label: 'Finances',  icon: DollarSign },
   { id: 'team',     label: 'Team',      icon: GraduationCap },
-];
-
-// Sub-nav for People
-const PEOPLE_NAV = [
-  { id: 'people-parents'   as Tab, label: 'Parents',   icon: Users2 },
-  { id: 'people-students'  as Tab, label: 'Students',  icon: GraduationCap },
-];
-
-// Sub-nav for Finances
-const FINANCES_NAV = [
-  { id: 'finances-income'   as Tab, label: 'Income',    icon: DollarSign },
-  { id: 'finances-expense'  as Tab, label: 'Expenses',  icon: Truck },
-  { id: 'finances-suppliers' as Tab, label: 'Suppliers', icon: Store },
 ];
 
 const PAGE_TITLES: Record<Tab, string> = {
@@ -143,15 +129,28 @@ export const Dashboard = () => {
     setQfSuccess(false);
   };
 
+  // Quick Fee: Record payment with validation
   const recordQuickFee = async () => {
     if (!qfSelectedParent || !qfAmount || !profile) return;
+    
+    // Validate amount is positive
+    const numAmount = parseFloat(qfAmount);
+    if (!isFinite(numAmount) || numAmount <= 0) {
+      setMsg({ text: 'Error: Amount must be a positive number', type: 'error' });
+      return;
+    }
+    if (numAmount > 99999999) {
+      setMsg({ text: 'Error: Amount is too large', type: 'error' });
+      return;
+    }
+    
     setQfSaving(true);
     const today = new Date().toISOString().split('T')[0];
     const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     const { error } = await supabase.from('fee_payments').insert({
       school_id: profile.id,
       parent_id: qfSelectedParent.id,
-      amount: parseFloat(qfAmount),
+      amount: numAmount,
       months_paid: [currentMonth],
       months_count: 1,
       payment_date: today,
@@ -222,10 +221,22 @@ export const Dashboard = () => {
   const handleBuy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !plan || !reference) return;
+    
+    // Validate reference format (max 100 chars, no special injection chars)
+    const cleanReference = reference.trim();
+    if (cleanReference.length < 5) {
+      setMsg({ text: 'Error: Reference number must be at least 5 characters', type: 'error' });
+      return;
+    }
+    if (cleanReference.length > 100) {
+      setMsg({ text: 'Error: Reference number is too long (max 100 characters)', type: 'error' });
+      return;
+    }
+    
     setBuying(true); setMsg({ text: '', type: '' });
     const { error } = await supabase.from('credit_requests').insert({
       school_id: profile.id, credits: plan.credits, amount_pkr: plan.pkr,
-      payment_method: payMethod, payment_reference: reference, status: 'pending'
+      payment_method: payMethod, payment_reference: cleanReference, status: 'pending'
     });
     setBuying(false);
     if (error) setMsg({ text: `Error: ${error.message}`, type: 'error' });
@@ -259,30 +270,6 @@ export const Dashboard = () => {
             <button
               key={item.id}
               className={`sidebar-nav-item${tab === item.id ? ' active' : ''}${tab.startsWith(item.id + '-') && item.id !== 'overview' ? ' active' : ''}`}
-              onClick={() => setTab(item.id)}
-            >
-              <item.icon size={18} />
-              {item.label}
-            </button>
-          ))}
-
-          {/* Sub-nav for People */}
-          {tab.startsWith('people') && PEOPLE_NAV.map(item => (
-            <button
-              key={item.id}
-              className={`sidebar-nav-item sub${tab === item.id ? ' active' : ''}`}
-              onClick={() => setTab(item.id)}
-            >
-              <item.icon size={18} />
-              {item.label}
-            </button>
-          ))}
-
-          {/* Sub-nav for Finances */}
-          {tab.startsWith('finances') && FINANCES_NAV.map(item => (
-            <button
-              key={item.id}
-              className={`sidebar-nav-item sub${tab === item.id ? ' active' : ''}`}
               onClick={() => setTab(item.id)}
             >
               <item.icon size={18} />

@@ -83,17 +83,6 @@
 
 .sidebar-nav-item svg { flex-shrink: 0; }
 
-/* Sub-nav items */
-.sidebar-nav-item.sub {
-  padding-left: 1.75rem;
-  font-size: var(--font-xs);
-  opacity: 0.75;
-}
-
-.sidebar-nav-item.sub:hover {
-  opacity: 1;
-}
-
 /* Bottom of sidebar */
 .sidebar-bottom {
   margin-top: auto;
