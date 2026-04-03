@@ -184,28 +184,31 @@ export async function saveReceipt(receiptData: ReceiptData, paymentId: string, s
     // Generate receipt number client-side (no RPC needed)
     let nextNum = 1;
     try {
-      const { data: lastReceipt } = await supabase
+      const { data: lastReceipt, error: lastErr } = await supabase
         .from('fee_receipts')
         .select('receipt_no')
         .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
         .limit(1);
+      console.log('[saveReceipt] last receipts:', lastReceipt, 'error:', lastErr);
       if (lastReceipt && lastReceipt.length > 0 && lastReceipt[0].receipt_no) {
         const match = lastReceipt[0].receipt_no.match(/\d+$/);
         if (match) nextNum = parseInt(match[0], 10) + 1;
       }
-    } catch (_) { /* first receipt */ }
+    } catch (e) { console.error('[saveReceipt] error fetching last receipt:', e); }
 
     const receiptNo = `R${String(nextNum).padStart(5, '0')}`;
+    console.log('[saveReceipt] inserting with receiptNo:', receiptNo);
     const finalData = { ...receiptData, receipt_no: receiptNo };
     const { data, error } = await supabase.from('fee_receipts').insert({
       receipt_no: receiptNo, school_id: schoolId, parent_id: parentId, payment_id: paymentId, receipt_data: finalData, sent_via: []
     }).select().single();
 
+    console.log('[saveReceipt] insert result:', data, 'error:', error);
     if (error) throw error;
     return data as FeeReceipt;
   } catch (error) {
-    console.error('Error saving receipt:', error);
+    console.error('[saveReceipt] final error:', error);
     return null;
   }
 }
