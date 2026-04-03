@@ -202,11 +202,12 @@ export async function saveReceipt(receiptData: ReceiptData, paymentId: string, s
     const finalData = { ...receiptData, receipt_no: receiptNo };
     const { data, error } = await supabase.from('fee_receipts').insert({
       receipt_no: receiptNo, school_id: schoolId, parent_id: parentId, payment_id: paymentId, receipt_data: finalData, sent_via: []
-    }).select().single();
+    }).select();
 
     console.log('[saveReceipt] insert result:', data, 'error:', error);
     if (error) throw error;
-    return data as FeeReceipt;
+    // Return a minimal FeeReceipt object — the important thing is receipt_no is set
+    return { id: paymentId, receipt_no: receiptNo, school_id: schoolId, parent_id: parentId, payment_id: paymentId, receipt_data: finalData, sent_via: [], created_at: new Date().toISOString() } as FeeReceipt;
   } catch (error) {
     console.error('[saveReceipt] final error:', error);
     return null;
