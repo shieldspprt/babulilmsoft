@@ -224,13 +224,22 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
 
   const addCategory = async () => {
     if (!newCategory.trim()) return;
-    await supabase.from('expense_categories').insert({
-      school_id: schoolId,
-      name: newCategory.trim()
-    });
-    setNewCategory('');
-    setShowCategoryForm(false);
-    loadCategories();
+    try {
+      const { error } = await supabase.from('expense_categories').insert({
+        school_id: schoolId,
+        name: newCategory.trim()
+      });
+      if (error) {
+        showFlash('Error adding category: ' + error.message);
+        return;
+      }
+      showFlash('Category added successfully');
+      setNewCategory('');
+      setShowCategoryForm(false);
+      loadCategories();
+    } catch (err: any) {
+      showFlash('Error adding category: ' + err.message);
+    }
   };
 
   const deleteCategory = (id: string, isDefault: boolean) => {

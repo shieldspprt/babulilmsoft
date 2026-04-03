@@ -80,15 +80,19 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   }, [load]);
 
   const handleAdd = async () => {
-    if (!newName.trim() || !isPositiveNumber(newFee)) {
-      showFlash('Please enter a valid positive fee amount');
+    if (!newName.trim()) {
+      showFlash('Please enter a class name');
+      return;
+    }
+    if (!isPositiveNumber(newFee)) {
+      showFlash('Please enter a valid positive fee amount (maximum Rs 999,999,999)');
       return;
     }
     setSaving(true);
     const { error } = await supabase.from('classes').insert({
       school_id: schoolId,
       name: newName.trim(),
-      monthly_fee: parseInt(newFee) || 0,
+      monthly_fee: parseInt(newFee, 10),
       admission_fee: 0,
       display_order: classes.length + 1,
       active: true
@@ -106,15 +110,18 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   };
 
   const handleEdit = async () => {
-    if (!editingClass || !editName.trim()) return;
+    if (!editingClass || !editName.trim()) {
+      showFlash('Please enter a class name');
+      return;
+    }
     if (!isPositiveNumber(editFee)) {
-      showFlash('Please enter a valid positive fee amount');
+      showFlash('Please enter a valid positive fee amount (maximum Rs 999,999,999)');
       return;
     }
     setSaving(true);
     const { error } = await supabase.from('classes').update({
       name: editName.trim(),
-      monthly_fee: parseInt(editFee) || 0,
+      monthly_fee: parseInt(editFee, 10),
       active: editActive
     }).eq('id', editingClass.id);
     setSaving(false);
