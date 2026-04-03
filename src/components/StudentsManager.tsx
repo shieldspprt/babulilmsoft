@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
+import { useDebounce } from '../hooks/useDebounce';
 import { Plus, X, Search, Trash2, Edit2, ChevronLeft, ChevronRight, GraduationCap, BookOpen } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -60,6 +61,9 @@ export const StudentsManager = ({ schoolId, role }: { schoolId: string; role?: R
   const [saving, setSaving]           = useState(false);
   const { flash, showFlash }             = useFlashMessage(4000);
   const [search, setSearch]           = useState('');
+  
+  // Debounce search input for better performance
+  const debouncedSearch = useDebounce(search, 300);
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
   const [deleting, setDeleting]       = useState(false);
   const [page, setPage]               = useState(1);
@@ -200,8 +204,8 @@ export const StudentsManager = ({ schoolId, role }: { schoolId: string; role?: R
   };
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return students;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return students;
+    const q = debouncedSearch.toLowerCase();
     return students.filter(s =>
       s.first_name.toLowerCase().includes(q) ||
       s.last_name.toLowerCase().includes(q) ||
@@ -209,7 +213,7 @@ export const StudentsManager = ({ schoolId, role }: { schoolId: string; role?: R
       getParentName(s.parent_id).toLowerCase().includes(q) ||
       getClassName(s.admission_class_id).toLowerCase().includes(q)
     );
-  }, [students, search, parents, classes]);
+  }, [students, debouncedSearch, parents, classes]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = useMemo(() => {
@@ -217,7 +221,8 @@ export const StudentsManager = ({ schoolId, role }: { schoolId: string; role?: R
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
 
-  useEffect(() => { setPage(1); }, [search]);
+  // Reset page when search changes
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
   if (loading) return <div className="manager-loading"><div className="spinner" /><span>Loading…</span></div>;
 

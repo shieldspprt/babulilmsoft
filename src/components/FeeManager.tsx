@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
+import { useDebounce } from '../hooks/useDebounce';
 import { Button } from './ui/Button';
 import {
   Search, Receipt, Trash2, Phone, CreditCard,
@@ -189,6 +190,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
   const [loading, setLoading] = useState(true);
   const [parents, setParents] = useState<ParentListItem[]>([]);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
@@ -359,8 +361,8 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
 
   /* ── derived: filtered parents ──────────────────────────────────── */
   const filteredParents = useMemo(() => {
-    if (!search.trim()) return parents;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return parents;
+    const q = debouncedSearch.toLowerCase();
     return parents.filter(
       p =>
         p.first_name.toLowerCase().includes(q) ||
@@ -368,7 +370,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
         p.cnic.includes(q) ||
         (p.contact || '').includes(q),
     );
-  }, [parents, search]);
+  }, [parents, debouncedSearch]);
 
   /* ── derived: balance engine for selected parent ────────────────── */
   const monthlyFee = useMemo(

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
+import { useDebounce } from '../hooks/useDebounce';
 import { isValidPhone } from '../lib/validation';
 import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar } from 'lucide-react';
 import { Button } from './ui/Button';
@@ -38,6 +39,9 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   const [saving, setSaving]         = useState(false);
   const { flash, showFlash }         = useFlashMessage(4000);
   const [search, setSearch]         = useState('');
+  
+  // Debounce search input for better performance
+  const debouncedSearch = useDebounce(search, 300);
   const [deleteTarget, setDeleteTarget] = useState<Parent | null>(null);
   const [deleting, setDeleting]     = useState(false);
   const [cnicError, setCnicError]   = useState('');
@@ -286,15 +290,15 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   };
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return records;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return records;
+    const q = debouncedSearch.toLowerCase();
     return records.filter(r =>
       r.first_name.toLowerCase().includes(q) ||
       r.last_name.toLowerCase().includes(q) ||
       r.cnic.includes(q) ||
       r.contact?.includes(q)
     );
-  }, [records, search]);
+  }, [records, debouncedSearch]);
 
   const totalPages = useMemo(() => Math.ceil(filtered.length / PAGE_SIZE), [filtered]);
   const paginated = useMemo(() => {
@@ -302,7 +306,8 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
 
-  useEffect(() => { setPage(1); }, [search]);
+  // Reset page when search changes
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
   if (loading) return <div className="manager-loading"><div className="spinner" /><span>Loading...</span></div>;
 

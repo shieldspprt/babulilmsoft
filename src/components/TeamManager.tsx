@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useFlashMessage } from '../hooks/useFlashMessage';
@@ -23,6 +23,9 @@ export const TeamManager = ({ schoolId }: { schoolId: string }) => {
   const [removing, setRemoving]     = useState<string | null>(null);
   const [copiedId, setCopiedId]     = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  
+  // Track timeout for confirm dismiss cleanup
+  const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Load Members ──────────────────────────────────────────── */
   const loadMembers = useCallback(async () => {
@@ -132,11 +135,24 @@ export const TeamManager = ({ schoolId }: { schoolId: string }) => {
         setRemoving(null);
       }
     } else {
+      // Clear any existing timeout before setting new one
+      if (confirmTimeoutRef.current) {
+        clearTimeout(confirmTimeoutRef.current);
+      }
       setConfirmRemove(memberId);
       // Auto-dismiss confirm after 5s
-      setTimeout(() => setConfirmRemove(null), 5000);
+      confirmTimeoutRef.current = setTimeout(() => setConfirmRemove(null), 5000);
     }
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (confirmTimeoutRef.current) {
+        clearTimeout(confirmTimeoutRef.current);
+      }
+    };
+  }, []);
 
   /* ── Only owner can access ─────────────────────────────────── */
   if (role !== 'owner') {
