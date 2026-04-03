@@ -491,9 +491,11 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
       // Generate and save receipt
       const receiptData = await generateReceiptData(payment.id, schoolId);
       if (receiptData) {
-        await saveReceipt(receiptData, payment.id, schoolId, selectedParent.id);
-        setCurrentReceipt(receiptData);
-        setShowReceipt(true);
+        const saved = await saveReceipt(receiptData, payment.id, schoolId, selectedParent.id);
+        if (saved) {
+          setCurrentReceipt(saved.receipt_data);
+          setShowReceipt(true);
+        }
       }
 
       setPaymentAmount('');
