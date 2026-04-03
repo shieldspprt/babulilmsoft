@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, type FC, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { AlertTriangle, Clock, CreditCard, Lock } from 'lucide-react';
@@ -10,7 +10,7 @@ type CreditStatus = {
   expiresAt: string | null; expired: boolean; warning: boolean;
 };
 
-export const CreditGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const CreditGuard: FC<{ children: ReactNode }> = ({ children }) => {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
@@ -60,7 +60,7 @@ export const CreditGuard: React.FC<{ children: React.ReactNode }> = ({ children 
   return <>{children}</>;
 };
 
-export const CreditDisplay: React.FC = () => {
+export const CreditDisplay: FC = () => {
   const { profile } = useAuth();
   if (!profile) return null;
 

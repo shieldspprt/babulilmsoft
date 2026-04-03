@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
+import { isValidPhone } from '../lib/validation';
 import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
@@ -141,6 +142,11 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   const handleSave = async () => {
     if (!form.first_name.trim() || !form.last_name.trim() || !form.contact.trim() || !form.cnic.trim()) {
       showFlash('Error: First name, last name, CNIC and contact are required');
+      return;
+    }
+    // Validate phone format
+    if (form.contact && !isValidPhone(form.contact)) {
+      showFlash('Error: Contact number must be a valid Pakistani mobile number (e.g., 03XX-XXXXXXX or 03XXXXXXXXX)');
       return;
     }
     const cnicValid = await validateCnic(form.cnic);
