@@ -176,7 +176,7 @@
 .record-avatar {
   width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: var(--font-lg); font-weight: 800; color: #fff;
+  font-size: var(--font-lg); font-weight: 800; color: var(--text);
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--primary), #60a5fa);
 }
