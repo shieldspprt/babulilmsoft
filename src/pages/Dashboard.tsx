@@ -17,7 +17,7 @@ import {
   LayoutDashboard, GraduationCap, DollarSign,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
   CheckCircle, XCircle, BookOpen,
-  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote
+  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote, ChevronDown
 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -38,14 +38,6 @@ type Student = {
   monthly_fee: number;
   classes?: { name: string };
 };
-
-const NAV: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: 'overview',  label: 'Overview',  icon: LayoutDashboard },
-  { id: 'people',   label: 'People',    icon: Users2 },
-  { id: 'classes',  label: 'Classes',   icon: BookOpen },
-  { id: 'finances', label: 'Finances',  icon: DollarSign },
-  { id: 'team',     label: 'Team',      icon: GraduationCap },
-];
 
 const PAGE_TITLES: Record<Tab, string> = {
   overview:  '',
@@ -266,16 +258,54 @@ export const Dashboard = () => {
 
         {/* Nav */}
         <nav className="sidebar-nav">
-          {NAV.map(item => (
-            <button
-              key={item.id}
-              className={`sidebar-nav-item${tab === item.id ? ' active' : ''}${tab.startsWith(item.id + '-') && item.id !== 'overview' ? ' active' : ''}`}
-              onClick={() => setTab(item.id === 'people' ? 'people-parents' : item.id === 'finances' ? 'finances-income' : item.id)}
-            >
-              <item.icon size={18} />
-              {item.label}
-            </button>
-          ))}
+          <button
+            className={`sidebar-nav-item${tab === 'overview' ? ' active' : ''}`}
+            onClick={() => setTab('overview')}
+          >
+            <LayoutDashboard size={18} /> Overview
+          </button>
+
+          {/* People section */}
+          <div className="sidebar-section">
+            <div className="sidebar-section-header">
+              <button
+                className={`sidebar-nav-item has-sub${tab.startsWith('people') ? ' active' : ''}`}
+                onClick={() => setTab('people-parents')}
+              >
+                <Users2 size={18} /> People <ChevronDown size={14} className="sub-chevron" />
+              </button>
+              <div className="sidebar-sub-items">
+                <button className={`sidebar-sub-item${tab === 'people-parents' ? ' active' : ''}`} onClick={() => setTab('people-parents')}>Parents & Guardians</button>
+                <button className={`sidebar-sub-item${tab === 'people-students' ? ' active' : ''}`} onClick={() => setTab('people-students')}>Students</button>
+              </div>
+            </div>
+          </div>
+
+          <button className={`sidebar-nav-item${tab === 'classes' ? ' active' : ''}`} onClick={() => setTab('classes')}>
+            <BookOpen size={18} /> Classes
+          </button>
+
+          {/* Finances section */}
+          <div className="sidebar-section">
+            <div className="sidebar-section-header">
+              <button
+                className={`sidebar-nav-item has-sub${tab.startsWith('finances') || tab === 'fee' ? ' active' : ''}`}
+                onClick={() => setTab('finances-income')}
+              >
+                <DollarSign size={18} /> Finances <ChevronDown size={14} className="sub-chevron" />
+              </button>
+              <div className="sidebar-sub-items">
+                <button className={`sidebar-sub-item${tab === 'finances-income' ? ' active' : ''}`} onClick={() => setTab('finances-income')}>Income</button>
+                <button className={`sidebar-sub-item${tab === 'finances-expense' ? ' active' : ''}`} onClick={() => setTab('finances-expense')}>Expenses</button>
+                <button className={`sidebar-sub-item${tab === 'finances-suppliers' ? ' active' : ''}`} onClick={() => setTab('finances-suppliers')}>Suppliers</button>
+                <button className={`sidebar-sub-item${tab === 'fee' ? ' active' : ''}`} onClick={() => setTab('fee')}>Fee Collections</button>
+              </div>
+            </div>
+          </div>
+
+          <button className={`sidebar-nav-item${tab === 'team' ? ' active' : ''}`} onClick={() => setTab('team')}>
+            <GraduationCap size={18} /> Team
+          </button>
         </nav>
 
         {/* Bottom */}
