@@ -115,7 +115,7 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
     loadData();
   }, [loadData]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.category_id || !formData.amount) {
       showFlash('Please fill all required fields');
@@ -138,21 +138,27 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
       additional_notes: formData.additional_notes
     };
 
-    if (editingId) {
-      const { error } = await supabase
-        .from('income_records')
-        .update(payload)
-        .eq('id', editingId);
-      if (error) showFlash('Error updating: ' + error.message);
-    } else {
-      const { error } = await supabase.from('income_records').insert(payload);
-      if (error) showFlash('Error creating: ' + error.message);
-    }
+    try {
+      if (editingId) {
+        const { error } = await supabase
+          .from('income_records')
+          .update(payload)
+          .eq('id', editingId);
+        if (error) showFlash('Error updating: ' + error.message);
+        else showFlash('Income record updated successfully');
+      } else {
+        const { error } = await supabase.from('income_records').insert(payload);
+        if (error) showFlash('Error creating: ' + error.message);
+        else showFlash('Income record created successfully');
+      }
 
-    resetForm();
-    setShowForm(false);
-    loadRecords();
-  };
+      resetForm();
+      setShowForm(false);
+      loadRecords();
+    } catch (err: any) {
+      showFlash('Error saving income: ' + err.message);
+    }
+  }, [schoolId, formData, editingId, showFlash, loadRecords]);
 
   const resetForm = () => {
     setFormData({
