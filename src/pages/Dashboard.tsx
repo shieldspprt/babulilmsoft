@@ -108,7 +108,7 @@ export const Dashboard = () => {
   // Quick Fee: load children when parent selected
   useEffect(() => {
     if (!qfSelectedParent || !profile) return;
-    supabase.from('students').select('*, classes:name').eq('parent_id', qfSelectedParent.id).eq('school_id', profile.id).eq('active', true)
+    supabase.from('students').select('*, admission_class_id(name)').eq('parent_id', qfSelectedParent.id).eq('school_id', profile.id).eq('active', true)
       .then(({ data }) => {
         setQfChildren(data || []);
         if (data && data.length > 0) {
