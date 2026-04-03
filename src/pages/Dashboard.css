@@ -48,16 +48,6 @@
 
 .sidebar-logo-text em { font-style: normal; color: #60a5fa; }
 
-/* Nav section label */
-.sidebar-section-label {
-  padding: 1rem 1rem 0.35rem;
-  font-size: var(--font-xs);
-  font-weight: 700;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
 /* Nav items */
 .sidebar-nav { display: flex; flex-direction: column; padding: 0 0.5rem; gap: 2px; }
 

@@ -54,37 +54,54 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
 
   const load = async () => {
     setLoading(true);
-    const [{ data: parents }, { data: students }] = await Promise.all([
-      supabase.from('parents').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
-      supabase.from('students').select('id, parent_id, monthly_fee, discount_type, discount_value').eq('school_id', schoolId)
-    ]);
-    setRecords(parents || []);
-    
-        // Count students, total monthly fee, and total discount per parent
-    const counts: Record<string, number> = {};
-    const monthlyTotals: Record<string, number> = {};
-    const discountTotals: Record<string, number> = {};
-    students?.forEach(s => {
-      counts[s.parent_id] = (counts[s.parent_id] || 0) + 1;
-      const fee = s.monthly_fee || 0;
-      let disc = 0;
-      if (s.discount_type === 'percentage' && s.discount_value) {
-        disc = (fee * s.discount_value) / 100;
-      } else if (s.discount_type === 'amount' && s.discount_value) {
-        disc = s.discount_value;
+    try {
+      const [{ data: parents }, { data: students }] = await Promise.all([
+        supabase.from('parents').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
+        supabase.from('students').select('id, parent_id, monthly_fee, discount_type, discount_value').eq('school_id', schoolId)
+      ]);
+      
+      if (!parents) {
+        setRecords([]);
+        setLoading(false);
+        return;
       }
-      monthlyTotals[s.parent_id] = (monthlyTotals[s.parent_id] || 0) + fee;
-      discountTotals[s.parent_id] = (discountTotals[s.parent_id] || 0) + disc;
-    });
-    setStudentCounts(counts);
-    setMonthlyTotals(monthlyTotals);
-    setDiscountTotals(discountTotals);
-    setLoading(false);
+      
+      setRecords(parents);
+      
+      // Count students, total monthly fee, and total discount per parent
+      const counts: Record<string, number> = {};
+      const monthlyTotals: Record<string, number> = {};
+      const discountTotals: Record<string, number> = {};
+      students?.forEach(s => {
+        counts[s.parent_id] = (counts[s.parent_id] || 0) + 1;
+        const fee = s.monthly_fee || 0;
+        let disc = 0;
+        if (s.discount_type === 'percentage' && s.discount_value) {
+          disc = (fee * s.discount_value) / 100;
+        } else if (s.discount_type === 'amount' && s.discount_value) {
+          disc = s.discount_value;
+        }
+        monthlyTotals[s.parent_id] = (monthlyTotals[s.parent_id] || 0) + fee;
+        discountTotals[s.parent_id] = (discountTotals[s.parent_id] || 0) + disc;
+      });
+      setStudentCounts(counts);
+      setMonthlyTotals(monthlyTotals);
+      setDiscountTotals(discountTotals);
+    } catch (err: any) {
+      showFlash('Error loading parents: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadClasses = async () => {
-    const { data } = await supabase.from('classes').select('id, name, monthly_fee').eq('school_id', schoolId).eq('active', true).order('name');
-    setClasses(data || []);
+    try {
+      const { data } = await supabase.from('classes').select('id, name, monthly_fee').eq('school_id', schoolId).eq('active', true).order('name');
+      setClasses(data || []);
+    } catch (err: any) {
+      showFlash('Error loading classes: ' + err.message);
+      setClasses([]);
+    }
   };
   useEffect(() => { load(); }, [schoolId]);
 

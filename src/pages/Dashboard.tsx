@@ -109,8 +109,14 @@ export const Dashboard = () => {
 
   const loadHistory = async () => {
     if (!profile) return;
-    const { data } = await supabase.from('credit_requests').select('*').eq('school_id', profile.id).order('created_at', { ascending: false });
-    setHistory(data || []);
+    try {
+      const { data } = await supabase.from('credit_requests').select('*').eq('school_id', profile.id).order('created_at', { ascending: false });
+      setHistory(data || []);
+    } catch (err: any) {
+      console.error('Error loading payment history:', err);
+      setMsg({ text: 'Failed to load payment history', type: 'error' });
+      setHistory([]);
+    }
   };
 
   useEffect(() => { if (profile) { checkCredits(); loadOverviewStats(); } }, [profile]);
