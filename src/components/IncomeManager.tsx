@@ -69,13 +69,9 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
       .eq('school_id', schoolId)
       .order('name', { ascending: true });
 
-    if (error) {
-      console.error('Error loading categories:', error);
-      return;
-    }
+    if (error) return;
 
     if (data && data.length === 0) {
-      // Create default categories
       const defaultCats = DEFAULT_CATEGORIES.map(name => ({
         school_id: schoolId,
         name,
@@ -100,10 +96,7 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
       .eq('school_id', schoolId)
       .order('date', { ascending: false });
 
-    if (error) {
-      console.error('Error loading records:', error);
-      return;
-    }
+    if (error) return;
 
     const formatted = (data || []).map((r: any) => ({
       ...r,
@@ -253,7 +246,7 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
 
   useEffect(() => { setPage(1); }, [searchQuery, filterCategory]);
 
-  if (loading) return <div className="loading">Loading income data...</div>;
+  if (loading) return <div className="loading-spinner"><div className="loading-spinner-icon" /> Loading income data…</div>;
 
   return (
     <div className="income-manager">

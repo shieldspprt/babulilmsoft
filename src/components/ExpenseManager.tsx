@@ -75,18 +75,15 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
         .order('name');
       
       if (error) {
-        console.error('Error loading categories:', error);
         showFlash('Error loading categories: ' + error.message);
         return;
       }
       
       if (data) setCategories(data);
     } catch (err: any) {
-      console.error('Unexpected error loading categories:', err);
       showFlash('Error loading categories: ' + err.message);
     }
-    // Note: showFlash dependency - need to handle this since useFlashMessage returns stable fn
-  }, [schoolId]); // showFlash is stable from hook, omit to avoid warning
+  }, [schoolId]);
 
   const loadExpenses = useCallback(async () => {
     try {
@@ -100,7 +97,6 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
         .order('expense_date', { ascending: false });
       
       if (error) {
-        console.error('Error loading expenses:', error);
         showFlash('Error loading expenses: ' + error.message);
         return;
       }
@@ -113,22 +109,20 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
         setExpenses(formatted as Expense[]);
       }
     } catch (err: any) {
-      console.error('Unexpected error loading expenses:', err);
       showFlash('Error loading expenses: ' + err.message);
     }
-  }, [schoolId]); // showFlash is stable
+  }, [schoolId]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       await Promise.all([loadCategories(), loadExpenses()]);
     } catch (err: any) {
-      console.error('Error loading data:', err);
       showFlash('Error loading data: ' + err.message);
     } finally {
       setLoading(false);
     }
-  }, [loadCategories, loadExpenses]); // showFlash is stable
+  }, [loadCategories, loadExpenses]);
 
   useEffect(() => {
     loadData();
@@ -282,7 +276,7 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
 
   useEffect(() => { setPage(1); }, [searchTerm, filterCategory]);
 
-  if (loading) return <div className="loading">Loading expenses...</div>;
+  if (loading) return <div className="loading-spinner"><div className="loading-spinner-icon" /> Loading expenses…</div>;
 
   return (
     <div className="expense-manager">

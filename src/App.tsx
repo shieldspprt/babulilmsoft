@@ -14,7 +14,7 @@ import './App.css';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
-  if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'var(--bg)', color:'var(--text-muted)', fontSize:'1rem', gap:'0.75rem' }}><div style={{ width:24, height:24, border:'3px solid var(--border)', borderTopColor:'var(--primary)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} /> Loading…</div>;
+  if (loading) return <div className="loading-spinner"><div className="loading-spinner-icon" /> Loading…</div>;
   if (!session) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
