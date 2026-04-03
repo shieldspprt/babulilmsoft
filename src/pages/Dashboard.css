@@ -34,15 +34,15 @@
   background: var(--primary);
   border-radius: var(--radius-md);
   display: flex; align-items: center; justify-content: center;
-  color: #fff;
+  color: var(--text);
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(37,99,235,0.4);
+  box-shadow: var(--shadow-glow);
 }
 
 .sidebar-logo-text {
   font-size: var(--font-lg);
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--text);
   letter-spacing: -0.03em;
 }
 

@@ -184,28 +184,23 @@ export async function saveReceipt(receiptData: ReceiptData, paymentId: string, s
     // Generate receipt number client-side (no RPC needed)
     let nextNum = 1;
     try {
-      const { data: lastReceipt, error: lastErr } = await supabase
+      const { data: lastReceipt } = await supabase
         .from('fee_receipts')
         .select('receipt_no')
         .eq('school_id', schoolId)
         .order('created_at', { ascending: false })
         .limit(1);
-      console.log('[saveReceipt] last receipts:', lastReceipt, 'error:', lastErr);
       if (lastReceipt && lastReceipt.length > 0 && lastReceipt[0].receipt_no) {
         const match = lastReceipt[0].receipt_no.match(/\d+$/);
         if (match) nextNum = parseInt(match[0], 10) + 1;
       }
-    } catch (e) { console.error('[saveReceipt] error fetching last receipt:', e); }
+    } catch (e) { /* fallback: start from 1 */ }
 
     const receiptNo = `R${String(nextNum).padStart(5, '0')}`;
-    console.log('[saveReceipt] inserting with receiptNo:', receiptNo);
     const finalData = { ...receiptData, receipt_no: receiptNo };
-    const { data, error } = await supabase.from('fee_receipts').insert({
+    await supabase.from('fee_receipts').insert({
       receipt_no: receiptNo, school_id: schoolId, parent_id: parentId, payment_id: paymentId, receipt_data: finalData, sent_via: []
-    }).select();
-
-    console.log('[saveReceipt] insert result:', data, 'error:', error);
-    if (error) throw error;
+    });
     // Return a minimal FeeReceipt object — the important thing is receipt_no is set
     return { id: paymentId, receipt_no: receiptNo, school_id: schoolId, parent_id: parentId, payment_id: paymentId, receipt_data: finalData, sent_via: [], created_at: new Date().toISOString() } as FeeReceipt;
   } catch (error) {

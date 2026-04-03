@@ -1,13 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ClassesManager }   from '../components/ClassesManager';
 import { IncomeManager }    from '../components/IncomeManager';
 import { ExpenseManager }   from '../components/ExpenseManager';
-import { SuppliersManager } from '../components/SuppliersManager';
-import { ParentsManager }   from '../components/ParentsManager';
-import { StudentsManager }  from '../components/StudentsManager';
 import { FeeManager }           from '../components/FeeManager';
 import { SchoolProfileManager } from '../components/SchoolProfileManager';
 import { TeamManager }           from '../components/TeamManager';
@@ -20,6 +17,19 @@ import {
   Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote, ChevronDown
 } from 'lucide-react';
 import './Dashboard.css';
+
+// Lazy load heavy manager components
+const SuppliersManager = lazy(() => import('../components/SuppliersManager').then(m => ({ default: m.SuppliersManager })));
+const ParentsManager   = lazy(() => import('../components/ParentsManager').then(m => ({ default: m.ParentsManager })));
+const StudentsManager  = lazy(() => import('../components/StudentsManager').then(m => ({ default: m.StudentsManager })));
+
+// Loading fallback for lazy components
+const ManagerFallback = () => (
+  <div className="manager-loading">
+    <div className="spinner" />
+    <span>Loading…</span>
+  </div>
+);
 
 type Tab = 'overview' | 'classes' | 'people' | 'people-students' | 'people-parents' | 'finances' | 'finances-income' | 'finances-expense' | 'finances-suppliers' | 'fee' | 'team' | 'profile' | 'buy' | 'history';
 
@@ -415,12 +425,12 @@ export const Dashboard = () => {
 
           {/* Feature tabs */}
           {tab === 'classes'   && <ClassesManager   schoolId={profile.id} role={role || undefined} />}
-          {tab === 'people-parents'   && <ParentsManager   schoolId={profile.id} role={role || undefined} />}
-          {tab === 'people-students'  && <StudentsManager  schoolId={profile.id} role={role || undefined} />}
+          {tab === 'people-parents'   && <Suspense fallback={<ManagerFallback />}><ParentsManager   schoolId={profile.id} role={role || undefined} /></Suspense>}
+          {tab === 'people-students'  && <Suspense fallback={<ManagerFallback />}><StudentsManager  schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'fee'            && <FeeManager       schoolId={profile.id} role={role || undefined} />}
           {tab === 'finances-income'    && <IncomeManager    schoolId={profile.id} role={role || undefined} />}
           {tab === 'finances-expense'   && <ExpenseManager   schoolId={profile.id} role={role || undefined} />}
-          {tab === 'finances-suppliers' && <SuppliersManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'finances-suppliers' && <Suspense fallback={<ManagerFallback />}><SuppliersManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'team'      && <TeamManager schoolId={profile.id} />}
           {tab === 'profile'   && <SchoolProfileManager schoolId={profile.id} role={role || undefined} />}
 
