@@ -112,14 +112,7 @@ export const Dashboard = () => {
   }, [qfSelectedParent, profile]);
 
   const openQuickFee = () => {
-    setShowQuickFee(true);
-    setQfSearch('');
-    setQfParents([]);
-    setQfSelectedParent(null);
-    setQfChildren([]);
-    setQfAmount('');
-    setQfMethod('Cash');
-    setQfSuccess(false);
+    setTab('fee');
   };
 
   // Quick Fee: Record payment with validation
