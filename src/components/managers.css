@@ -347,11 +347,11 @@
 }
 
 .data-table tbody tr.inactive {
-  background: #fef2f2;
+  background: var(--danger-light);
 }
 
 .data-table tbody tr.inactive:hover {
-  background: #fee2e2;
+  background: rgba(239,68,68,0.2);
 }
 
 /* Status Badge */
@@ -393,21 +393,21 @@
 }
 
 .action-btn.edit {
-  color: #3b82f6;
+  color: var(--primary);
 }
 
 .action-btn.edit:hover {
-  background: #dbeafe;
-  border-color: #3b82f6;
+  background: var(--primary-light);
+  border-color: var(--primary);
 }
 
 .action-btn.delete {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .action-btn.delete:hover:not(:disabled) {
-  background: #fee2e2;
-  border-color: #dc2626;
+  background: var(--danger-light);
+  border-color: var(--danger);
 }
 
 .action-btn:disabled {

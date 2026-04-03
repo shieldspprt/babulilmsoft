@@ -13,8 +13,8 @@ import type { ReceiptData } from '../lib/supabase';
 import { ReceiptPreview } from './receipts/ReceiptPreview';
 import './FeeManager.css';
 import './managers.css';
-import { isPositiveNumber } from '../lib/validation';
 import { sanitizeHtml } from '../lib/sanitization';
+import { isPositiveNumber } from '../lib/validation';
 
 /* ═══════════════════════════════════════════════════════════════════
    TYPES
