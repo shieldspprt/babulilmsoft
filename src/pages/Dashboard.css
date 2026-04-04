@@ -555,10 +555,6 @@
 .data-table tr:hover td { background: var(--surface-hover); }
 
 .status-cell { display: flex; align-items: center; gap: 6px; }
-.status-pill { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:99px; font-size:var(--font-xs); font-weight:700; }
-.status-pill.pending  { background:var(--warning-light); color:var(--warning); }
-.status-pill.approved { background:var(--success-light); color:var(--success); }
-.status-pill.rejected { background:var(--danger-light);  color:var(--danger); }
 
 /* ── Shared Utility ───────────────────────────────────────────────────── */
 .dash-loading {

@@ -6,20 +6,17 @@
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #f5f3ff 100%);
+  background: var(--bg);
 }
 
 .auth-card {
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-2xl);
   padding: 2.5rem 2.5rem 2rem;
   width: 100%;
   max-width: 440px;
-  box-shadow:
-    0 4px 6px -1px rgba(99,102,241,0.06),
-    0 10px 15px -3px rgba(99,102,241,0.04),
-    0 20px 25px -5px rgba(99,102,241,0.03);
+  box-shadow: var(--shadow-xl);
 }
 
 .auth-logo {

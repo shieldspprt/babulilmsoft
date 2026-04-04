@@ -37,18 +37,18 @@
 .admin-logo-text {
   font-size: var(--font-lg);
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--text);
   letter-spacing: -0.03em;
 }
 
-.admin-logo-text em { font-style: normal; color: #60a5fa; }
+.admin-logo-text em { font-style: normal; color: var(--primary); }
 
 .admin-badge {
   font-size: var(--font-xs);
   font-weight: 700;
   padding: 2px 8px;
   background: rgba(255,255,255,0.12);
-  color: #94a3b8;
+  color: var(--sidebar-text);
   border-radius: 99px;
   letter-spacing: 0.05em;
   text-transform: uppercase;
