@@ -14,7 +14,7 @@ import {
   LayoutDashboard, GraduationCap, DollarSign,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
   CheckCircle, XCircle, BookOpen,
-  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote, ChevronDown
+  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote, ChevronDown, Settings
 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -317,6 +317,10 @@ export const Dashboard = () => {
 
           <button className={`sidebar-nav-item${tab === 'team' ? ' active' : ''}`} onClick={() => setTab('team')}>
             <GraduationCap size={18} /> Team
+          </button>
+
+          <button className={`sidebar-nav-item${tab === 'profile' ? ' active' : ''}`} onClick={() => setTab('profile')}>
+            <Settings size={18} /> School Profile
           </button>
         </nav>
 
