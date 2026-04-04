@@ -128,7 +128,7 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
     loadData();
   }, [loadData]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.category_id || !formData.amount || !formData.description || !formData.paid_by) return;
 
@@ -149,27 +149,32 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
       additional_notes: formData.additional_notes
     };
 
-    if (editingId) {
-      setProcessingId(editingId);
-      const { error: updateError } = await supabase.from('expenses').update(expenseData).eq('id', editingId);
-      setProcessingId(null);
-      if (updateError) {
-        showFlash('Error updating expense: ' + updateError.message);
-        return;
+    try {
+      if (editingId) {
+        setProcessingId(editingId);
+        const { error: updateError } = await supabase.from('expenses').update(expenseData).eq('id', editingId);
+        setProcessingId(null);
+        if (updateError) {
+          showFlash('Error updating expense: ' + updateError.message);
+          return;
+        }
+        showFlash('Expense updated successfully');
+      } else {
+        const { error: insertError } = await supabase.from('expenses').insert(expenseData);
+        if (insertError) {
+          showFlash('Error creating expense: ' + insertError.message);
+          return;
+        }
+        showFlash('Expense recorded successfully');
       }
-      showFlash('Expense updated successfully');
-    } else {
-      const { error: insertError } = await supabase.from('expenses').insert(expenseData);
-      if (insertError) {
-        showFlash('Error creating expense: ' + insertError.message);
-        return;
-      }
-      showFlash('Expense recorded successfully');
-    }
 
-    resetForm();
-    loadExpenses();
-  };
+      resetForm();
+      loadExpenses();
+    } catch (err: any) {
+      showFlash('Error saving expense: ' + err.message);
+      setProcessingId(null);
+    }
+  }, [schoolId, formData, editingId, showFlash, loadExpenses]);
 
   const resetForm = () => {
     setFormData({
@@ -216,7 +221,7 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
     });
   };
 
-  const addCategory = async () => {
+  const addCategory = useCallback(async () => {
     if (!newCategory.trim()) return;
     try {
       const { error } = await supabase.from('expense_categories').insert({
@@ -234,7 +239,7 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
     } catch (err: any) {
       showFlash('Error adding category: ' + err.message);
     }
-  };
+  }, [newCategory, schoolId, showFlash, loadCategories]);
 
   const deleteCategory = (id: string, isDefault: boolean) => {
     if (isDefault) {

@@ -79,7 +79,7 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     load(); 
   }, [load]);
 
-  const handleAdd = async () => {
+  const handleAdd = useCallback(async () => {
     if (!newName.trim()) {
       showFlash('Please enter a class name');
       return;
@@ -89,27 +89,32 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from('classes').insert({
-      school_id: schoolId,
-      name: newName.trim(),
-      monthly_fee: parseInt(newFee, 10),
-      admission_fee: 0,
-      display_order: classes.length + 1,
-      active: true
-    });
-    setSaving(false);
-    if (error) {
-      showFlash('Error: ' + error.message);
-    } else {
-      showFlash('Class added!');
-      setNewName('');
-      setNewFee('');
-      setShowAddModal(false);
-      load();
+    try {
+      const { error } = await supabase.from('classes').insert({
+        school_id: schoolId,
+        name: newName.trim(),
+        monthly_fee: parseInt(newFee, 10),
+        admission_fee: 0,
+        display_order: classes.length + 1,
+        active: true
+      });
+      if (error) {
+        showFlash('Error: ' + error.message);
+      } else {
+        showFlash('Class added!');
+        setNewName('');
+        setNewFee('');
+        setShowAddModal(false);
+        load();
+      }
+    } catch (err: any) {
+      showFlash('Error adding class: ' + err.message);
+    } finally {
+      setSaving(false);
     }
-  };
+  }, [newName, newFee, schoolId, classes.length, showFlash, load]);
 
-  const handleEdit = async () => {
+  const handleEdit = useCallback(async () => {
     if (!editingClass || !editName.trim()) {
       showFlash('Please enter a class name');
       return;
@@ -119,20 +124,25 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from('classes').update({
-      name: editName.trim(),
-      monthly_fee: parseInt(editFee, 10),
-      active: editActive
-    }).eq('id', editingClass.id);
-    setSaving(false);
-    if (error) {
-      showFlash('Error: ' + error.message);
-    } else {
-      showFlash('Class updated!');
-      setEditingClass(null);
-      load();
+    try {
+      const { error } = await supabase.from('classes').update({
+        name: editName.trim(),
+        monthly_fee: parseInt(editFee, 10),
+        active: editActive
+      }).eq('id', editingClass.id);
+      if (error) {
+        showFlash('Error: ' + error.message);
+      } else {
+        showFlash('Class updated!');
+        setEditingClass(null);
+        load();
+      }
+    } catch (err: any) {
+      showFlash('Error updating class: ' + err.message);
+    } finally {
+      setSaving(false);
     }
-  };
+  }, [editingClass, editName, editFee, editActive, showFlash, load]);
 
   const handleDelete = (id: string) => {
     // Check if class has students before allowing deletion

@@ -203,23 +203,27 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
     });
   };
 
-  const addCategory = async (e: React.FormEvent) => {
+  const addCategory = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCategoryName.trim()) return;
     
-    const { error } = await supabase.from('income_categories').insert({
-      school_id: schoolId,
-      name: newCategoryName.trim(),
-      is_default: false
-    });
-    
-    if (error) showFlash('Error adding category: ' + error.message);
-    else {
-      setNewCategoryName('');
-      setShowCategoryForm(false);
-      loadCategories();
+    try {
+      const { error } = await supabase.from('income_categories').insert({
+        school_id: schoolId,
+        name: newCategoryName.trim(),
+        is_default: false
+      });
+      
+      if (error) showFlash('Error adding category: ' + error.message);
+      else {
+        setNewCategoryName('');
+        setShowCategoryForm(false);
+        loadCategories();
+      }
+    } catch (err: any) {
+      showFlash('Error adding category: ' + err.message);
     }
-  };
+  }, [newCategoryName, schoolId, showFlash, loadCategories]);
 
   const deleteCategory = (id: string) => {
     setConfirmAction({
