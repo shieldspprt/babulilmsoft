@@ -216,10 +216,10 @@
   font-size: 11px; font-weight: 700;
 }
 .rec-badge.teacher  { background: var(--primary-light); color: var(--primary); }
-.rec-badge.staff    { background: #f3e8ff; color: #7c3aed; }
+.rec-badge.staff    { background: var(--accent-light); color: var(--accent); }
 .rec-badge.father   { background: var(--primary-light); color: var(--primary); }
-.rec-badge.mother   { background: #fce7f3; color: #db2777; }
-.rec-badge.guardian { background: #f3e8ff; color: #7c3aed; }
+.rec-badge.mother   { background: rgba(219,39,119,0.15); color: #f472b6; }
+.rec-badge.guardian { background: var(--accent-light); color: var(--accent); }
 
 /* ─── Inline add row (for Classes) ──────────────────────────────────── */
 .inline-add-row {
@@ -364,13 +364,13 @@
 }
 
 .status-badge.active {
-  background: #d1fae5;
-  color: #059669;
+  background: var(--success-light);
+  color: var(--success);
 }
 
 .status-badge.inactive {
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--danger-light);
+  color: var(--danger);
 }
 
 /* Action Buttons */
@@ -472,12 +472,12 @@
 
 /* Add Child button */
 .action-btn.add-child {
-  color: #7c3aed;
+  color: var(--accent);
 }
 
 .action-btn.add-child:hover {
-  background: #f3e8ff;
-  border-color: #7c3aed;
+  background: var(--accent-light);
+  border-color: var(--accent);
 }
 
 /* ─── Team Manager ────────────────────────────────────────────── */
@@ -568,8 +568,8 @@
 }
 
 .team-avatar.manager {
-  background: #f1f5f9;
-  color: var(--text-muted);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
   border: 1.5px solid var(--border);
 }
 
@@ -608,8 +608,8 @@
 }
 
 .team-role-badge.manager {
-  background: #f1f5f9;
-  color: var(--text-muted);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
 }
 
 .team-status-badge {
