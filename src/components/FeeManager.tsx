@@ -11,6 +11,7 @@ import {
 import { generateReceiptData, saveReceipt, getReceiptByPayment } from '../lib/receiptGenerator';
 import type { ReceiptData } from '../lib/supabase';
 import { ReceiptPreview } from './receipts/ReceiptPreview';
+import { InvoicePreview } from './receipts/InvoicePreview';
 import './FeeManager.css';
 import './managers.css';
 import { sanitizeHtml } from '../lib/sanitization';
@@ -218,6 +219,10 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
   // RECEIPT MODAL STATE
   const [showReceipt, setShowReceipt] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState<ReceiptData | null>(null);
+
+  // INVOICE MODAL STATE
+  const [showInvoice, setShowInvoice] = useState(false);
+  const [currentInvoice, setCurrentInvoice] = useState<ReceiptData | null>(null);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const cm = useMemo(() => currentMonthStr(), []);
@@ -567,6 +572,90 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
     }
   }, [deleteTarget, selectedParent, loadParentDetail, loadParents, showFlash]);
 
+  /* ── generate invoice (no database save) ─────────────────────────── */
+  const generateInvoice = useCallback(async () => {
+    if (!selectedParent || selectedMonths.size === 0) return;
+
+    try {
+      // Fetch school and parent data
+      const [{ data: school }, { data: parent }] = await Promise.all([
+        supabase
+          .from('schools')
+          .select('school_name, contact, logo_url')
+          .eq('id', schoolId)
+          .single(),
+        supabase
+          .from('parents')
+          .select('first_name, last_name, contact, cnic')
+          .eq('id', selectedParent.id)
+          .single()
+      ]);
+
+      // Build students with fees (same as receipt)
+      const receiptStudents = children.map((s: StudentRow) => {
+        const classFee = N(s.classes?.[0]?.monthly_fee) || N(s.monthly_fee) || 0;
+        let discount = 0;
+        if (s.discount_type === 'percentage' && s.discount_value) {
+          discount = classFee * N(s.discount_value) / 100;
+        } else if ((s.discount_type === 'fixed' || s.discount_type === 'amount') && s.discount_value) {
+          discount = N(s.discount_value);
+        }
+        return {
+          name: `${s.first_name} ${s.last_name}`,
+          class_name: s.classes?.[0]?.name || '—',
+          monthly_fee: classFee,
+          discount_type: s.discount_type,
+          discount_value: discount,
+          final_fee: N(s.monthly_fee) || 0
+        };
+      });
+
+      const grossFee = receiptStudents.reduce((sum, s) => sum + s.monthly_fee, 0);
+      const totalDiscount = receiptStudents.reduce((sum, s) => sum + (s.discount_value || 0), 0);
+      const netMonthly = receiptStudents.reduce((sum, s) => sum + s.final_fee, 0);
+
+      // Generate temporary invoice number
+      const tempInvoiceNo = `V${Date.now().toString().slice(-6)}`;
+
+      const invoiceData: ReceiptData = {
+        receipt_no: tempInvoiceNo,
+        date: new Date().toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }),
+        school: {
+          name: school?.school_name || '—',
+          address: school?.contact || '—',
+          contact: school?.contact || '—',
+          logo_url: school?.logo_url || ''
+        },
+        parent: {
+          name: `${parent?.first_name || ''} ${parent?.last_name || ''}`.trim(),
+          contact: parent?.contact || '—',
+          cnic: parent?.cnic || '—'
+        },
+        students: receiptStudents,
+        summary: {
+          gross_fee: grossFee,
+          total_discount: totalDiscount,
+          net_monthly: netMonthly,
+          previous_balance: paidMonthsBalance > 0 ? paidMonthsBalance : 0,
+          total_payable: Math.max(0, totalForSelected),
+          payment_received: 0,
+          new_balance: Math.max(0, totalForSelected),
+          is_cleared: false
+        },
+        payment: {
+          method: 'Pending',
+          months_paid: Array.from(selectedMonths).sort(),
+          months_count: selectedMonths.size
+        }
+      };
+
+      setCurrentInvoice(invoiceData);
+      setShowInvoice(true);
+    } catch (err: any) {
+      showFlash('Error generating invoice: ' + err.message);
+    }
+  }, [selectedParent, selectedMonths, children, schoolId, paidMonthsBalance, totalForSelected, showFlash]);
+
   /* ── format month range label ───────────────────────────────────── */
   const rangeLabel = useMemo(() => {
     if (payableMonths.length === 0) return '';
@@ -908,18 +997,18 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
                   </div>
                 )}
 
-                {/* Payment Form */}
+                {/* Payment Form - Conditional Button */}
                 <div className="fee-payment-form" style={{ marginTop: '1rem' }}>
                   <div className="fee-form-row">
                     <div className="fee-form-group">
-                      <label>Amount (Rs) *</label>
+                      <label>Amount (Rs)</label>
                       <input
                         type="number"
-                        min="1"
+                        min="0"
                         max="99999999"
                         value={paymentAmount}
                         onChange={e => setPaymentAmount(e.target.value)}
-                        placeholder="Enter amount"
+                        placeholder="Enter amount (0 for invoice)"
                       />
                     </div>
                     <div className="fee-form-group">
@@ -955,17 +1044,34 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
                       />
                     </div>
                   </div>
-                  <Button
-                    onClick={recordPayment}
-                    isLoading={saving}
-                    disabled={
-                      !paymentAmount || parseInt(paymentAmount, 10) <= 0
-                    }
-                    fullWidth
-                    size="lg"
-                  >
-                    <CreditCard size={16} /> Record Payment
-                  </Button>
+                  
+                  {/* Conditional Button: Invoice or Payment */}
+                  {parseInt(paymentAmount || '0', 10) > 0 ? (
+                    <Button
+                      onClick={recordPayment}
+                      isLoading={saving}
+                      disabled={!paymentAmount || parseInt(paymentAmount, 10) <= 0}
+                      fullWidth
+                      size="lg"
+                    >
+                      <CreditCard size={16} /> Record Payment
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={generateInvoice}
+                      fullWidth
+                      size="lg"
+                      variant="outline"
+                      style={{ 
+                        background: '#fef2f2', 
+                        borderColor: '#dc2626', 
+                        color: '#dc2626',
+                        fontWeight: 600
+                      }}
+                    >
+                      <FileText size={16} /> Generate Invoice
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -1093,6 +1199,14 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
         <ReceiptPreview
           receipt={currentReceipt}
           onClose={() => setShowReceipt(false)}
+        />
+      )}
+
+      {/* ─── Invoice Preview Modal ──────────────────────────────────── */}
+      {showInvoice && currentInvoice && (
+        <InvoicePreview
+          invoice={currentInvoice}
+          onClose={() => setShowInvoice(false)}
         />
       )}
     </div>

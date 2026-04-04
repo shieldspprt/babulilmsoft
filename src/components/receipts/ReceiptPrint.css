@@ -62,3 +62,227 @@
   
   .receipt-modal, .receipt-modal-content, .receipt-actions { display: none !important; }
 }
+
+/* INVOICE SPECIFIC STYLES */
+
+/* Invoice Watermark */
+.invoice-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: rgba(220, 38, 38, 0.08);
+  font-size: 48px;
+  font-weight: 900;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.invoice-watermark-preview {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-25deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: rgba(220, 38, 38, 0.12);
+  font-size: 32px;
+  font-weight: 900;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.invoice-single {
+  position: relative;
+}
+
+/* Invoice Title Banner */
+.invoice-title-banner {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  text-align: center;
+  padding: 8px;
+  margin: 0 -10px 10px -10px;
+  border-radius: 0;
+}
+
+.invoice-title-banner h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.invoice-subtitle {
+  font-size: 9px;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Invoice Meta */
+.invoice-no {
+  color: #dc2626 !important;
+  font-size: 12px !important;
+}
+
+.invoice-due-date {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  margin-top: 4px;
+  border: 1px solid #fecaca;
+}
+
+.r-parent-cnic {
+  font-size: 8px;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Invoice Summary */
+.invoice-summary {
+  background: #fef2f2;
+  border: 1.5px solid #dc2626;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.invoice-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  font-size: 9px;
+  color: #333;
+}
+
+.invoice-summary-row.fee-row {
+  border-top: 1px dashed #fca5a5;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.invoice-summary-row.total-due {
+  background: #dc2626;
+  color: white;
+  margin: 6px -8px -8px -8px;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  border-radius: 0 0 2px 2px;
+}
+
+/* Invoice Notice */
+.invoice-notice {
+  display: flex;
+  gap: 8px;
+  background: #fff7ed;
+  border: 1.5px solid #f97316;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.invoice-notice-icon {
+  color: #f97316;
+  flex-shrink: 0;
+}
+
+.invoice-notice-text {
+  font-size: 8px;
+  color: #7c2d12;
+}
+
+.invoice-notice-text strong {
+  color: #c2410c;
+  font-size: 9px;
+}
+
+.invoice-notice-text p {
+  margin: 2px 0 0 0;
+  line-height: 1.3;
+}
+
+/* Invoice Footer */
+.invoice-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.invoice-stamp-area {
+  border: 2px dashed #d1d5db;
+  padding: 8px 16px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.stamp-placeholder {
+  font-size: 7px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.invoice-note {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* Print Styles for Invoice */
+@media print {
+  .invoice-print-area, .invoice-print-area * { visibility: visible; }
+  .invoice-print-area { 
+    position: absolute; 
+    left: 0; 
+    top: 0; 
+    width: 100%; 
+    display: flex !important; 
+    flex-direction: column; 
+    padding: 0; 
+    margin: 0; 
+    background: white; 
+  }
+  
+  .invoice-watermark {
+    color: rgba(220, 38, 38, 0.06) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .invoice-title-banner {
+    background: #dc2626 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .invoice-summary {
+    background: #fef2f2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .invoice-summary-row.total-due {
+    background: #dc2626 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .invoice-notice {
+    background: #fff7ed !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .invoice-due-date {
+    background: #fef2f2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
