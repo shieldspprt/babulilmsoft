@@ -86,10 +86,10 @@
 .form-group input,
 .form-group select {
   padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  color: var(--text-main);
+  color: var(--text);
   font-size: 1rem;
 }
 
@@ -132,7 +132,7 @@
 
 /* Categories */
 .categories-section {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--surface);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
@@ -172,10 +172,10 @@
 .add-category-form input {
   flex: 1;
   padding: 0.5rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  color: var(--text-main);
+  color: var(--text);
 }
 
 .categories-list {
@@ -194,12 +194,12 @@
 }
 
 .category-tag.default {
-  background: rgba(59, 130, 246, 0.15);
+  background: var(--primary-light);
   color: var(--primary);
 }
 
 .category-tag.custom {
-  background: rgba(16, 185, 129, 0.15);
+  background: var(--success-light);
   color: var(--success);
 }
 
@@ -221,10 +221,10 @@
 
 .filters-bar select {
   padding: 0.5rem 1rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  color: var(--text-main);
+  color: var(--text);
 }
 
 /* Table */

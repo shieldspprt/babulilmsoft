@@ -81,18 +81,18 @@
 }
 
 .balance-badge.owe {
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--danger-light);
+  color: var(--danger);
 }
 
 .balance-badge.owed {
-  background: #d1fae5;
-  color: #059669;
+  background: var(--success-light);
+  color: var(--success);
 }
 
 .balance-badge.settled {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--surface-hover);
+  color: var(--text-muted);
 }
 
 .balance-amount {
@@ -288,13 +288,13 @@
 }
 
 .type-badge.bill {
-  background: #fee2e2;
-  color: #dc2626;
+  background: var(--danger-light);
+  color: var(--danger);
 }
 
 .type-badge.payment {
-  background: #d1fae5;
-  color: #059669;
+  background: var(--success-light);
+  color: var(--success);
 }
 
 .ledger-table .amount {

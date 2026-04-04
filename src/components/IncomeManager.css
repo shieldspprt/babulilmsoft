@@ -93,12 +93,12 @@
 }
 
 .category-tag.default {
-  background: rgba(59, 130, 246, 0.15);
+  background: var(--primary-light);
   color: var(--primary);
 }
 
 .category-tag.custom {
-  background: rgba(139, 92, 246, 0.15);
+  background: var(--accent-light);
   color: var(--accent);
 }
 
@@ -113,7 +113,7 @@
 }
 
 .category-tag button:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0,0,0,0.1);
 }
 
 /* Form Section */
@@ -328,7 +328,7 @@
 }
 
 .record-category {
-  background: rgba(59, 130, 246, 0.15);
+  background: var(--primary-light);
   color: var(--primary);
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
@@ -489,9 +489,8 @@
 }
 
 .category-tag.custom {
-  background: var(--surface-hover);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
+  background: var(--accent-light);
+  color: var(--accent);
 }
 
 .category-tag button {
