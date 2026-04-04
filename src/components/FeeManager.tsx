@@ -973,7 +973,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
                     Fee for {selectedMonths.size} month(s)
                   </span>
                   <span className="fee-summary-row-value">
-                    Rs {(selectedMonths.size * monthlyFee).toLocaleString()}
+                    Rs {(selectedMonths.size * monthlyFeeAfterDiscount).toLocaleString()}
                   </span>
                 </div>
 
