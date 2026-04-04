@@ -625,7 +625,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
           monthly_fee: classFee,
           discount_type: s.discount_type,
           discount_value: discount,
-          final_fee: N(s.monthly_fee) || 0
+          final_fee: Math.max(0, classFee - discount)
         };
       });
 
