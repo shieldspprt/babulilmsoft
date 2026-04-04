@@ -58,3 +58,32 @@
 @media (max-width: 640px) {
   .nav-container { padding: 0 1rem; }
 }
+
+/* Dark variant for auth pages */
+.navbar.dark {
+  background: rgba(15, 15, 17, 0.85);
+  border-bottom-color: var(--border);
+}
+
+.navbar.dark .nav-logo-text {
+  color: #fff;
+}
+
+.navbar.dark .nav-actions .btn-ghost {
+  color: rgba(255,255,255,0.8);
+}
+
+.navbar.dark .nav-actions .btn-ghost:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+}
+
+.navbar.dark .nav-actions .btn-secondary {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+  color: #fff;
+}
+
+.navbar.dark .nav-actions .btn-secondary:hover {
+  background: rgba(255,255,255,0.15);
+}

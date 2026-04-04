@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { LogOut, GraduationCap, LayoutDashboard } from 'lucide-react';
 import './Navbar.css';
 
-export const Navbar = () => {
+export const Navbar = ({ dark = false }: { dark?: boolean }) => {
   const { session, signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -14,7 +14,7 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="navbar" aria-label="Main Navigation">
+    <nav className={`navbar${dark ? ' dark' : ''}`} aria-label="Main Navigation">
       <div className="nav-container">
         <Link to="/" className="nav-logo" aria-label="ilmsoft Home">
           <div className="nav-logo-icon">
