@@ -69,7 +69,10 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
       .eq('school_id', schoolId)
       .order('name', { ascending: true });
 
-    if (error) return;
+    if (error) {
+      showFlash('Error loading categories: ' + error.message);
+      return;
+    }
 
     if (data && data.length === 0) {
       const defaultCats = DEFAULT_CATEGORIES.map(name => ({
@@ -87,7 +90,7 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
     } else {
       setCategories(data || []);
     }
-  }, [schoolId]);
+  }, [schoolId, showFlash]);
 
   const loadRecords = useCallback(async () => {
     const { data, error } = await supabase
@@ -96,14 +99,17 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
       .eq('school_id', schoolId)
       .order('date', { ascending: false });
 
-    if (error) return;
+    if (error) {
+      showFlash('Error loading records: ' + error.message);
+      return;
+    }
 
     const formatted = (data || []).map((r: any) => ({
       ...r,
       category_name: r.category?.name || 'Unknown'
     }));
     setRecords(formatted as IncomeRecord[]);
-  }, [schoolId]);
+  }, [schoolId, showFlash]);
 
   const loadData = useCallback(async () => {
     setLoading(true);

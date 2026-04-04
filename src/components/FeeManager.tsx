@@ -363,7 +363,10 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
 
   /* ── derived: filtered parents ──────────────────────────────────── */
   const filteredParents = useMemo(() => {
+    // Early bailout: no parents or no search
+    if (parents.length === 0) return [];
     if (!debouncedSearch.trim()) return parents;
+    
     const q = debouncedSearch.toLowerCase();
     return parents.filter(
       p =>

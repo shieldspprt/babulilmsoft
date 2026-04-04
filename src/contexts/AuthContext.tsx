@@ -153,7 +153,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchProfile]);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.error('Error signing out:', err);
+      }
+    }
   }, []);
 
   const refreshProfile = useCallback(async () => {
