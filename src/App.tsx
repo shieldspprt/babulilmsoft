@@ -23,8 +23,8 @@ function AppContent() {
   const location = useLocation();
   // Dashboard and admin are full-screen apps — no public navbar
   const isAppRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard');
-  // Auth pages have dark header
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  // Auth pages and home page have dark header
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup' || location.pathname === '/';
 
   return (
     <div className="app-layout">
