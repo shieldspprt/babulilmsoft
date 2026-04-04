@@ -178,24 +178,12 @@ function InvoicePrintItem({ invoice }: { invoice: ReceiptData }) {
         
         {/* Amount Due Summary */}
         <div className="invoice-summary">
-          {s.previous_balance > 0 && (
-            <div className="invoice-summary-row">
-              <span>Previous Balance:</span>
-              <span>{formatCurrency(s.previous_balance)}</span>
-            </div>
-          )}
-          {s.previous_balance < 0 && (
-            <div className="invoice-summary-row">
-              <span>Previous Advance:</span>
-              <span>-{formatCurrency(Math.abs(s.previous_balance))}</span>
-            </div>
-          )}
-          <div className="invoice-summary-row fee-row">
-            <span>Fee for {invoice.payment.months_count} month(s):</span>
-            <span>{formatCurrency(s.net_monthly * invoice.payment.months_count)}</span>
+          <div className="invoice-summary-row">
+            <span>Monthly Fee:</span>
+            <span>{formatCurrency(s.net_monthly)}</span>
           </div>
           <div className="invoice-summary-row total-due">
-            <span>TOTAL AMOUNT DUE</span>
+            <span>Total Due Today:</span>
             <span>{formatCurrency(s.total_payable)}</span>
           </div>
         </div>
@@ -306,24 +294,12 @@ function InvoiceContent({ invoice }: { invoice: ReceiptData }) {
       </table>
       
       <div className="invoice-summary">
-        {s.previous_balance > 0 && (
-          <div className="invoice-summary-row">
-            <span>Previous Balance:</span>
-            <span>{formatCurrency(s.previous_balance)}</span>
-          </div>
-        )}
-        {s.previous_balance < 0 && (
-          <div className="invoice-summary-row">
-            <span>Previous Advance:</span>
-            <span>-{formatCurrency(Math.abs(s.previous_balance))}</span>
-          </div>
-        )}
-        <div className="invoice-summary-row fee-row">
-          <span>Fee for {invoice.payment.months_count} month(s):</span>
-          <span>{formatCurrency(s.net_monthly * invoice.payment.months_count)}</span>
+        <div className="invoice-summary-row">
+          <span>Monthly Fee:</span>
+          <span>{formatCurrency(s.net_monthly)}</span>
         </div>
         <div className="invoice-summary-row total-due">
-          <span>TOTAL AMOUNT DUE</span>
+          <span>Total Due Today:</span>
           <span>{formatCurrency(s.total_payable)}</span>
         </div>
       </div>
