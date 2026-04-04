@@ -11,28 +11,147 @@ interface Props {
 export function InvoicePreview({ invoice, onClose }: Props) {
   
   const handlePrint = () => {
-    window.print();
-  };
-  
-  const handleDownload = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
     const printContent = document.querySelector('.invoice-print-area')?.innerHTML || '';
-    const blob = new Blob([`
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 15);
+    
+    printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
         <title>Fee Voucher ${invoice.receipt_no || ''}</title>
         <style>
-          * { visibility: hidden; }
-          body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-          .invoice-print-area, .invoice-print-area * { visibility: visible; }
-          .invoice-print-area { display: flex !important; flex-direction: column; }
           @page { size: A4 portrait; margin: 0.3in; }
+          body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: white; }
+          .invoice-print-area { display: flex; flex-direction: column; }
+          .receipt-print-item { width: 100%; page-break-inside: avoid; padding: 6px 0; }
+          
+          /* Invoice Styles */
+          .receipt-single { width: 100%; padding: 10px; font-family: Arial, sans-serif; font-size: 10px; line-height: 1.2; color: #000; background: white; box-sizing: border-box; position: relative; }
+          .r-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 6px; border-bottom: 1.5px solid #000; margin-bottom: 6px; }
+          .r-school-name { font-size: 14px; font-weight: 700; }
+          .r-school-phone { font-size: 8px; color: #333; }
+          .r-logo { flex-shrink: 0; }
+          .r-logo img { height: 40px; width: auto; max-width: 80px; object-fit: contain; }
+          .r-meta { text-align: right; flex-shrink: 0; }
+          .r-receipt-no { font-size: 11px; font-weight: 700; color: #dc2626; }
+          .r-date { font-size: 8px; color: #666; }
+          .r-parent { display: flex; justify-content: space-between; align-items: center; background: #f5f5f5; padding: 6px; margin-bottom: 6px; border-radius: 3px; }
+          .r-parent-label { font-size: 7px; text-transform: uppercase; color: #666; }
+          .r-parent-name { font-size: 11px; font-weight: 600; }
+          .r-parent-cnic { font-size: 8px; color: #666; margin-top: 2px; }
+          .r-table-title { font-size: 8px; font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+          .r-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
+          .r-table th { background: #e5e5e5; padding: 3px 2px; text-align: left; font-weight: 700; border: 0.5px solid #ccc; font-size: 8px; }
+          .r-table td { padding: 2px; border: 0.5px solid #ddd; }
+          .r-table tfoot td { font-weight: 700; background: #e5e5e5; border: 0.5px solid #ccc; }
+          .cut-line { text-align: center; font-size: 8px; color: #999; margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+          
+          /* Invoice Specific */
+          .invoice-title-banner { background: #dc2626; color: white; text-align: center; padding: 8px; margin: 0 -10px 10px -10px; }
+          .invoice-title-banner h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 2px; }
+          .invoice-subtitle { font-size: 9px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; }
+          .invoice-no { color: #dc2626 !important; font-size: 12px !important; }
+          .invoice-due-date { background: #fef2f2; color: #dc2626; padding: 2px 6px; border-radius: 3px; font-size: 9px; margin-top: 4px; border: 1px solid #fecaca; }
+          .invoice-summary { background: #fef2f2; border: 1.5px solid #dc2626; border-radius: 4px; padding: 8px; margin-bottom: 8px; }
+          .invoice-summary-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9px; color: #333; }
+          .invoice-summary-row.total-due { background: #dc2626; color: white; margin: 6px -8px -8px -8px; padding: 8px; font-size: 12px; font-weight: 800; border-radius: 0 0 2px 2px; }
+          .invoice-notice { display: flex; gap: 8px; background: #fff7ed; border: 1.5px solid #f97316; border-radius: 4px; padding: 8px; margin-bottom: 8px; }
+          .invoice-notice-icon { color: #f97316; flex-shrink: 0; }
+          .invoice-notice-text { font-size: 8px; color: #7c2d12; }
+          .invoice-notice-text strong { color: #c2410c; font-size: 9px; }
+          .invoice-notice-text p { margin: 2px 0 0 0; line-height: 1.3; }
+          .invoice-footer { display: flex; justify-content: space-between; align-items: flex-end; }
+          .r-footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 4px; font-size: 8px; }
+          .r-signature-line { width: 60px; border-top: 0.5px solid #000; margin-bottom: 1px; }
+          .r-note { font-size: 7px; color: #999; text-align: center; margin-top: 4px; }
+          .invoice-note { color: #dc2626; font-weight: 600; }
         </style>
       </head>
-      <body>${printContent}</body>
+      <body>
+        <div class="invoice-print-area">
+          ${printContent}
+        </div>
+      </body>
       </html>
-    `], { type: 'text/html' });
+    `);
     
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
+  
+  const handleDownload = () => {
+    const printContent = document.querySelector('.invoice-print-area')?.innerHTML || '';
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 15);
+    
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Fee Voucher ${invoice.receipt_no || ''}</title>
+  <style>
+    @page { size: A4 portrait; margin: 0.3in; }
+    body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: white; }
+    .invoice-print-area { display: flex; flex-direction: column; }
+    .receipt-print-item { width: 100%; page-break-inside: avoid; padding: 6px 0; }
+    
+    /* Invoice Styles */
+    .receipt-single { width: 100%; padding: 10px; font-family: Arial, sans-serif; font-size: 10px; line-height: 1.2; color: #000; background: white; box-sizing: border-box; position: relative; }
+    .r-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 6px; border-bottom: 1.5px solid #000; margin-bottom: 6px; }
+    .r-school-name { font-size: 14px; font-weight: 700; }
+    .r-school-phone { font-size: 8px; color: #333; }
+    .r-logo { flex-shrink: 0; }
+    .r-logo img { height: 40px; width: auto; max-width: 80px; object-fit: contain; }
+    .r-meta { text-align: right; flex-shrink: 0; }
+    .r-receipt-no { font-size: 11px; font-weight: 700; color: #dc2626; }
+    .r-date { font-size: 8px; color: #666; }
+    .r-parent { display: flex; justify-content: space-between; align-items: center; background: #f5f5f5; padding: 6px; margin-bottom: 6px; border-radius: 3px; }
+    .r-parent-label { font-size: 7px; text-transform: uppercase; color: #666; }
+    .r-parent-name { font-size: 11px; font-weight: 600; }
+    .r-parent-cnic { font-size: 8px; color: #666; margin-top: 2px; }
+    .r-table-title { font-size: 8px; font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+    .r-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
+    .r-table th { background: #e5e5e5; padding: 3px 2px; text-align: left; font-weight: 700; border: 0.5px solid #ccc; font-size: 8px; }
+    .r-table td { padding: 2px; border: 0.5px solid #ddd; }
+    .r-table tfoot td { font-weight: 700; background: #e5e5e5; border: 0.5px solid #ccc; }
+    .cut-line { text-align: center; font-size: 8px; color: #999; margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+    
+    /* Invoice Specific */
+    .invoice-title-banner { background: #dc2626; color: white; text-align: center; padding: 8px; margin: 0 -10px 10px -10px; }
+    .invoice-title-banner h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: 2px; }
+    .invoice-subtitle { font-size: 9px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; }
+    .invoice-no { color: #dc2626 !important; font-size: 12px !important; }
+    .invoice-due-date { background: #fef2f2; color: #dc2626; padding: 2px 6px; border-radius: 3px; font-size: 9px; margin-top: 4px; border: 1px solid #fecaca; }
+    .invoice-summary { background: #fef2f2; border: 1.5px solid #dc2626; border-radius: 4px; padding: 8px; margin-bottom: 8px; }
+    .invoice-summary-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 9px; color: #333; }
+    .invoice-summary-row.total-due { background: #dc2626; color: white; margin: 6px -8px -8px -8px; padding: 8px; font-size: 12px; font-weight: 800; border-radius: 0 0 2px 2px; }
+    .invoice-notice { display: flex; gap: 8px; background: #fff7ed; border: 1.5px solid #f97316; border-radius: 4px; padding: 8px; margin-bottom: 8px; }
+    .invoice-notice-icon { color: #f97316; flex-shrink: 0; }
+    .invoice-notice-text { font-size: 8px; color: #7c2d12; }
+    .invoice-notice-text strong { color: #c2410c; font-size: 9px; }
+    .invoice-notice-text p { margin: 2px 0 0 0; line-height: 1.3; }
+    .invoice-footer { display: flex; justify-content: space-between; align-items: flex-end; }
+    .r-footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 4px; font-size: 8px; }
+    .r-signature-line { width: 60px; border-top: 0.5px solid #000; margin-bottom: 1px; }
+    .r-note { font-size: 7px; color: #999; text-align: center; margin-top: 4px; }
+    .invoice-note { color: #dc2626; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="invoice-print-area">
+    ${printContent}
+  </div>
+</body>
+</html>`;
+    
+    const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

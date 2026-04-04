@@ -11,29 +11,113 @@ interface Props {
 export function ReceiptPreview({ receipt, onClose }: Props) {
   
   const handlePrint = () => {
-    window.print();
-  };
-  
-  const handleDownload = () => {
-    // Create a printable version and trigger download
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
     const printContent = document.querySelector('.receipt-print-area')?.innerHTML || '';
-    const blob = new Blob([`
+    
+    printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
         <title>Receipt ${receipt.receipt_no || ''}</title>
         <style>
-          * { visibility: hidden; }
-          body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
-          .receipt-print-area, .receipt-print-area * { visibility: visible; }
-          .receipt-print-area { display: flex !important; flex-direction: column; }
           @page { size: A4 portrait; margin: 0.3in; }
+          body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: white; }
+          .receipt-print-area { display: flex; flex-direction: column; }
+          .receipt-print-item { width: 100%; page-break-inside: avoid; padding: 6px 0; }
+          
+          /* Receipt Styles */
+          .receipt-single { width: 100%; padding: 10px; font-family: Arial, sans-serif; font-size: 10px; line-height: 1.2; color: #000; background: white; box-sizing: border-box; }
+          .r-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 6px; border-bottom: 1.5px solid #000; margin-bottom: 6px; }
+          .r-school-name { font-size: 14px; font-weight: 700; }
+          .r-school-phone { font-size: 8px; color: #333; }
+          .r-logo { flex-shrink: 0; }
+          .r-logo img { height: 40px; width: auto; max-width: 80px; object-fit: contain; }
+          .r-meta { text-align: right; flex-shrink: 0; }
+          .r-receipt-no { font-size: 11px; font-weight: 700; color: #dc2626; }
+          .r-date { font-size: 8px; color: #666; }
+          .r-parent { display: flex; justify-content: space-between; align-items: center; background: #f5f5f5; padding: 6px; margin-bottom: 6px; border-radius: 3px; }
+          .r-parent-label { font-size: 7px; text-transform: uppercase; color: #666; }
+          .r-parent-name { font-size: 11px; font-weight: 600; }
+          .r-table-title { font-size: 8px; font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+          .r-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
+          .r-table th { background: #e5e5e5; padding: 3px 2px; text-align: left; font-weight: 700; border: 0.5px solid #ccc; font-size: 8px; }
+          .r-table td { padding: 2px; border: 0.5px solid #ddd; }
+          .r-table tfoot td { font-weight: 700; background: #e5e5e5; border: 0.5px solid #ccc; }
+          .r-summary { background: #f5f5f5; padding: 6px; margin-bottom: 6px; border-radius: 3px; }
+          .r-summary-row { display: flex; justify-content: space-between; padding: 1px 0; font-size: 9px; }
+          .r-summary-row.total { margin-top: 3px; padding-top: 3px; border-top: 1px solid #000; font-size: 10px; font-weight: 700; }
+          .r-footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 4px; font-size: 8px; }
+          .r-signature-line { width: 60px; border-top: 0.5px solid #000; margin-bottom: 1px; }
+          .r-note { font-size: 7px; color: #999; text-align: center; margin-top: 4px; }
+          .cut-line { text-align: center; font-size: 8px; color: #999; margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
         </style>
       </head>
-      <body>${printContent}</body>
+      <body>
+        <div class="receipt-print-area">
+          ${printContent}
+        </div>
+      </body>
       </html>
-    `], { type: 'text/html' });
+    `);
     
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  };
+  
+  const handleDownload = () => {
+    const printContent = document.querySelector('.receipt-print-area')?.innerHTML || '';
+    
+    const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Receipt ${receipt.receipt_no || ''}</title>
+  <style>
+    @page { size: A4 portrait; margin: 0.3in; }
+    body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: white; }
+    .receipt-print-area { display: flex; flex-direction: column; }
+    .receipt-print-item { width: 100%; page-break-inside: avoid; padding: 6px 0; }
+    
+    /* Receipt Styles */
+    .receipt-single { width: 100%; padding: 10px; font-family: Arial, sans-serif; font-size: 10px; line-height: 1.2; color: #000; background: white; box-sizing: border-box; }
+    .r-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 6px; border-bottom: 1.5px solid #000; margin-bottom: 6px; }
+    .r-school-name { font-size: 14px; font-weight: 700; }
+    .r-school-phone { font-size: 8px; color: #333; }
+    .r-logo { flex-shrink: 0; }
+    .r-logo img { height: 40px; width: auto; max-width: 80px; object-fit: contain; }
+    .r-meta { text-align: right; flex-shrink: 0; }
+    .r-receipt-no { font-size: 11px; font-weight: 700; color: #dc2626; }
+    .r-date { font-size: 8px; color: #666; }
+    .r-parent { display: flex; justify-content: space-between; align-items: center; background: #f5f5f5; padding: 6px; margin-bottom: 6px; border-radius: 3px; }
+    .r-parent-label { font-size: 7px; text-transform: uppercase; color: #666; }
+    .r-parent-name { font-size: 11px; font-weight: 600; }
+    .r-table-title { font-size: 8px; font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+    .r-table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 6px; }
+    .r-table th { background: #e5e5e5; padding: 3px 2px; text-align: left; font-weight: 700; border: 0.5px solid #ccc; font-size: 8px; }
+    .r-table td { padding: 2px; border: 0.5px solid #ddd; }
+    .r-table tfoot td { font-weight: 700; background: #e5e5e5; border: 0.5px solid #ccc; }
+    .r-summary { background: #f5f5f5; padding: 6px; margin-bottom: 6px; border-radius: 3px; }
+    .r-summary-row { display: flex; justify-content: space-between; padding: 1px 0; font-size: 9px; }
+    .r-summary-row.total { margin-top: 3px; padding-top: 3px; border-top: 1px solid #000; font-size: 10px; font-weight: 700; }
+    .r-footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 4px; font-size: 8px; }
+    .r-signature-line { width: 60px; border-top: 0.5px solid #000; margin-bottom: 1px; }
+    .r-note { font-size: 7px; color: #999; text-align: center; margin-top: 4px; }
+    .cut-line { text-align: center; font-size: 8px; color: #999; margin-bottom: 10px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+  </style>
+</head>
+<body>
+  <div class="receipt-print-area">
+    ${printContent}
+  </div>
+</body>
+</html>`;
+    
+    const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
