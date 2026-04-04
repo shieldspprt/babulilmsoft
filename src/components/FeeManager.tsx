@@ -388,6 +388,21 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
     [children],
   );
 
+  // Monthly fee AFTER discounts (for display in month cards)
+  const monthlyFeeAfterDiscount = useMemo(
+    () => children.reduce((sum, child) => {
+      let discAmt = 0;
+      if (child.discount_type === 'percentage' && child.discount_value) {
+        discAmt = (N(child.classes?.[0]?.monthly_fee) * N(child.discount_value)) / 100;
+      } else if (child.discount_type === 'amount' && child.discount_value) {
+        discAmt = N(child.discount_value);
+      }
+      const classFee = N(child.classes?.[0]?.monthly_fee);
+      return sum + Math.max(0, classFee - discAmt);
+    }, 0),
+    [children],
+  );
+
   const admissionMonth = useMemo(
     () => getAdmissionMonth(children),
     [children],
@@ -889,11 +904,11 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
                   const isUnpaid = !isPaid;
 
                   // First unpaid month absorbs paidMonthsBalance
-                  let displayFee = monthlyFee;
+                  let displayFee = monthlyFeeAfterDiscount;
                   const isFirstUnpaid =
                     unpaidMonths.length > 0 && ym === unpaidMonths[0];
                   if (isFirstUnpaid) {
-                    displayFee = monthlyFee + paidMonthsBalance;
+                    displayFee = monthlyFeeAfterDiscount + paidMonthsBalance;
                   }
 
                   return (
