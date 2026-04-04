@@ -637,9 +637,9 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
           total_discount: totalDiscount,
           net_monthly: netMonthly,
           previous_balance: paidMonthsBalance > 0 ? paidMonthsBalance : 0,
-          total_payable: Math.max(0, totalForSelected),
+          total_payable: Math.max(0, runningBalance),
           payment_received: 0,
-          new_balance: Math.max(0, totalForSelected),
+          new_balance: Math.max(0, runningBalance),
           is_cleared: false
         },
         payment: {
@@ -654,7 +654,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
     } catch (err: any) {
       showFlash('Error generating invoice: ' + err.message);
     }
-  }, [selectedParent, selectedMonths, children, schoolId, paidMonthsBalance, totalForSelected, showFlash]);
+  }, [selectedParent, selectedMonths, children, schoolId, paidMonthsBalance, runningBalance, showFlash]);
 
   /* ── format month range label ───────────────────────────────────── */
   const rangeLabel = useMemo(() => {
