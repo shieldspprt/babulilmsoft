@@ -54,7 +54,6 @@ export async function generateReceiptData(
     // Discount is calculated on the CLASS fee — same as FeeManager (line 728-729)
     const receiptStudents: ReceiptStudent[] = (students || []).map((s: any) => {
       const classFee = Number(s.classes?.monthly_fee) || Number(s.monthly_fee) || 0;
-      const baseFee = Number(s.monthly_fee) || 0;
       let discount = 0;
       if (s.discount_type === 'percentage') {
         // Percentage of CLASS fee (matches FeeManager's calculation)
@@ -68,7 +67,7 @@ export async function generateReceiptData(
         monthly_fee: classFee,
         discount_type: s.discount_type,
         discount_value: discount,
-        final_fee: baseFee  // Student's actual monthly fee
+        final_fee: Math.max(0, classFee - discount)  // Fee AFTER discount
       };
     });
 
