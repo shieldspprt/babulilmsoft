@@ -64,6 +64,23 @@ export function isPositiveNumber(value: unknown): boolean {
 }
 
 /**
+ * Validates a non-negative integer (0, 1, 2, 3, ...)
+ * Useful for quantities, counts, inventory items, etc.
+ * @param value - The value to validate
+ * @returns boolean indicating if the value is a non-negative integer
+ */
+export function isNonNegativeInteger(value: unknown): boolean {
+  if (typeof value === 'string') {
+    const num = parseInt(value, 10);
+    return !Number.isNaN(num) && num >= 0 && Number.isFinite(num) && num === parseFloat(value);
+  }
+  if (typeof value === 'number') {
+    return !Number.isNaN(value) && value >= 0 && Number.isFinite(value) && Math.floor(value) === value;
+  }
+  return false;
+}
+
+/**
  * Validates an amount is within reasonable limits (1 to 999,999,999)
  * Prevents database overflow and UI display issues
  * @param value - The amount to validate

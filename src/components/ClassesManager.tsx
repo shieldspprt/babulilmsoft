@@ -135,6 +135,12 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   };
 
   const handleDelete = (id: string) => {
+    // Check if class has students before allowing deletion
+    if ((studentCounts[id] || 0) > 0) {
+      showFlash('Error: Cannot delete class with enrolled students. Please move students to another class first.');
+      return;
+    }
+    
     setConfirmAction({
       message: 'Delete this class?',
       onConfirm: async () => {

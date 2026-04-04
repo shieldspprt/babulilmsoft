@@ -6,6 +6,7 @@ import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Users, UserPlus, Shield, Copy, CheckCircle, XCircle, Trash2, Clock } from 'lucide-react';
 import type { SchoolMember } from '../lib/supabase';
+import { isValidEmail } from '../lib/validation';
 import './managers.css';
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -57,8 +58,8 @@ export const TeamManager = ({ schoolId }: { schoolId: string }) => {
     const email = inviteEmail.trim().toLowerCase();
     if (!email) return;
 
-    // Basic email validation
-    if (!email.includes('@') || !email.includes('.')) {
+    // Use centralized email validation
+    if (!isValidEmail(email)) {
       showFlash('Please enter a valid email address');
       return;
     }
