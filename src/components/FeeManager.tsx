@@ -856,7 +856,16 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
                           Monthly Total
                         </td>
                         <td style={{ color: 'var(--primary)' }}>
-                          Rs {monthlyFee.toLocaleString()}
+                          Rs {children.reduce((sum, child) => {
+                            let discAmt = 0;
+                            if (child.discount_type === 'percentage' && child.discount_value) {
+                              discAmt = (N(child.classes?.[0]?.monthly_fee) * N(child.discount_value)) / 100;
+                            } else if (child.discount_type === 'amount' && child.discount_value) {
+                              discAmt = N(child.discount_value);
+                            }
+                            const classFee = N(child.classes?.[0]?.monthly_fee);
+                            return sum + Math.max(0, classFee - discAmt);
+                          }, 0).toLocaleString()}
                         </td>
                       </tr>
                     </tfoot>
