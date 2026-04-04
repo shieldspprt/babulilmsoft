@@ -111,11 +111,21 @@ export const Dashboard = () => {
   // Quick Fee: load children when parent selected
   useEffect(() => {
     if (!qfSelectedParent || !profile) return;
-    supabase.from('students').select('*, admission_class_id(name)').eq('parent_id', qfSelectedParent.id).eq('school_id', profile.id).eq('active', true)
+    supabase.from('students').select('*, classes(name, monthly_fee)').eq('parent_id', qfSelectedParent.id).eq('school_id', profile.id).eq('active', true)
       .then(({ data }) => {
         setQfChildren(data || []);
         if (data && data.length > 0) {
-          const totalMonthly = data.reduce((sum: number, s: any) => sum + (parseFloat(s.monthly_fee) || 0), 0);
+          // Calculate total with discounts applied
+          const totalMonthly = data.reduce((sum: number, s: any) => {
+            const classFee = Number(s.classes?.monthly_fee) || Number(s.monthly_fee) || 0;
+            let discount = 0;
+            if (s.discount_type === 'percentage' && s.discount_value) {
+              discount = classFee * (Number(s.discount_value) || 0) / 100;
+            } else if ((s.discount_type === 'fixed' || s.discount_type === 'amount') && s.discount_value) {
+              discount = Number(s.discount_value) || 0;
+            }
+            return sum + Math.max(0, classFee - discount);
+          }, 0);
           setQfAmount(String(totalMonthly));
         }
       });

@@ -147,7 +147,7 @@ function parsePayment(raw: any): FeePayment {
  * balance > 0 → owes money; balance < 0 → has advance.
  */
 function computeParentBalance(
-  childrenData: { monthly_fee: number; date_of_admission: string | null }[],
+  childrenData: { monthly_fee: number; discount_type?: string | null; discount_value?: number | null; date_of_admission: string | null }[],
   paymentsData: { amount: number; months_paid: string[] }[],
   cm: string,
 ): ParentBalanceInfo {
@@ -155,12 +155,19 @@ function computeParentBalance(
     childrenData as StudentRow[],
   );
   const payableMonths = getBillableMonths(admMonth, cm);
-  const monthlyFee = childrenData.reduce(
-    (sum, c) => sum + N(c.monthly_fee),
-    0,
-  );
+  
+  // Calculate monthly fee AFTER discounts for each child
+  const monthlyFeeAfterDiscount = childrenData.reduce((sum, c) => {
+    let discAmt = 0;
+    if (c.discount_type === 'percentage' && c.discount_value) {
+      discAmt = (N(c.monthly_fee) * N(c.discount_value)) / 100;
+    } else if (c.discount_type === 'amount' || c.discount_type === 'fixed') {
+      discAmt = N(c.discount_value);
+    }
+    return sum + Math.max(0, N(c.monthly_fee) - discAmt);
+  }, 0);
 
-  const totalOwed = payableMonths.length * monthlyFee;
+  const totalOwed = payableMonths.length * monthlyFeeAfterDiscount;
   const totalPaid = paymentsData.reduce((s, p) => s + N(p.amount), 0);
   const balance = totalOwed - totalPaid;
 
@@ -239,7 +246,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
           .order('first_name'),
         supabase
           .from('students')
-          .select('parent_id, monthly_fee, date_of_admission, active')
+          .select('parent_id, monthly_fee, discount_type, discount_value, date_of_admission, active')
           .eq('school_id', schoolId)
           .eq('active', true),
         supabase
@@ -253,13 +260,15 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
       const rawPayments = paymentsRes.data || [];
 
       // Group students and payments by parent
-      const studentMap = new Map<string, { monthly_fee: number; date_of_admission: string | null }[]>();
+      const studentMap = new Map<string, { monthly_fee: number; discount_type?: string | null; discount_value?: number | null; date_of_admission: string | null }[]>();
       const paymentMap = new Map<string, { amount: number; months_paid: string[] }[]>();
 
       rawStudents.forEach((s: any) => {
         if (!studentMap.has(s.parent_id)) studentMap.set(s.parent_id, []);
         studentMap.get(s.parent_id)!.push({
           monthly_fee: N(s.monthly_fee),
+          discount_type: s.discount_type,
+          discount_value: s.discount_value,
           date_of_admission: s.date_of_admission,
         });
       });
@@ -383,11 +392,6 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
   }, [parents, debouncedSearch]);
 
   /* ── derived: balance engine for selected parent ────────────────── */
-  const monthlyFee = useMemo(
-    () => children.reduce((s, c) => s + N(c.monthly_fee), 0),
-    [children],
-  );
-
   // Monthly fee AFTER discounts (for display in month cards)
   const monthlyFeeAfterDiscount = useMemo(
     () => children.reduce((sum, child) => {
@@ -427,8 +431,8 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
   );
 
   const totalOwed = useMemo(
-    () => payableMonths.length * monthlyFee,
-    [payableMonths.length, monthlyFee],
+    () => payableMonths.length * monthlyFeeAfterDiscount,
+    [payableMonths.length, monthlyFeeAfterDiscount],
   );
 
   const totalPaid = useMemo(
@@ -442,13 +446,13 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
   );
 
   const paidMonthsBalance = useMemo(
-    () => runningBalance - unpaidMonths.length * monthlyFee,
-    [runningBalance, unpaidMonths.length, monthlyFee],
+    () => runningBalance - unpaidMonths.length * monthlyFeeAfterDiscount,
+    [runningBalance, unpaidMonths.length, monthlyFeeAfterDiscount],
   );
 
   const totalForSelected = useMemo(() => {
-    return selectedMonths.size * monthlyFee + paidMonthsBalance;
-  }, [selectedMonths.size, monthlyFee, paidMonthsBalance]);
+    return selectedMonths.size * monthlyFeeAfterDiscount + paidMonthsBalance;
+  }, [selectedMonths.size, monthlyFeeAfterDiscount, paidMonthsBalance]);
 
   const netBalance = useMemo(() => {
     const amt = parseInt(paymentAmount, 10) || 0;
