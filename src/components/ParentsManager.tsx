@@ -17,6 +17,7 @@ type Parent = {
   cnic: string;
   contact: string;
   address: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -24,7 +25,7 @@ type Parent = {
 type Class = { id: string; name: string; monthly_fee: number; };
 
 const EMPTY = {
-  first_name: '', last_name: '', cnic: '', contact: '', address: '',
+  first_name: '', last_name: '', cnic: '', contact: '', address: '', notes: '',
 };
 const EMPTY_STUDENT = { first_name: '', last_name: '', cnic: '', date_of_birth: '', date_of_admission: new Date().toISOString().split('T')[0], admission_class_id: '', monthly_fee: 0, discount_type: '', discount_value: 0 };
 
@@ -166,6 +167,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       cnic: form.cnic.trim(),
       contact: form.contact.trim(),
       address: form.address.trim() || null,
+      notes: form.notes.trim() || null,
     });
     setSaving(false);
     if (error) {
@@ -191,6 +193,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       cnic: parent.cnic,
       contact: parent.contact,
       address: parent.address || '',
+      notes: parent.notes || '',
     });
     setCnicError('');
     setShowEditModal(true);
@@ -214,6 +217,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       cnic: form.cnic.trim(),
       contact: form.contact.trim(),
       address: form.address.trim() || null,
+      notes: form.notes.trim() || null,
     }).eq('id', editTarget.id);
     setSaving(false);
     if (error) {
@@ -273,7 +277,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       date_of_birth: childForm.date_of_birth || null,
       date_of_admission: childForm.date_of_admission || null,
       admission_class_id: childForm.admission_class_id || null,
-      monthly_fee: getFinalFee(),
+      monthly_fee: childForm.monthly_fee,   // ✅ raw class fee — discount applied separately by FeeManager
       discount_type: childForm.discount_type || null,
       discount_value: childForm.discount_value || null,
       active: true,
@@ -460,6 +464,16 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
                   <label className="form-label">Address</label>
                   <textarea className="form-textarea" rows={2} placeholder="Home address (optional)" value={form.address} onChange={e => set('address', e.target.value)} />
                 </div>
+                <div className="span-2">
+                  <label className="form-label">Family Notes</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={3}
+                    placeholder="Any notes about this family (e.g. scholarship, special arrangement, reason for discount…)"
+                    value={form.notes}
+                    onChange={e => set('notes', e.target.value)}
+                  />
+                </div>
               </div>
             </div>
             <div className="modal-foot">
@@ -496,6 +510,16 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
                 <div className="span-2">
                   <label className="form-label">Address</label>
                   <textarea className="form-textarea" rows={2} placeholder="Home address (optional)" value={form.address} onChange={e => set('address', e.target.value)} />
+                </div>
+                <div className="span-2">
+                  <label className="form-label">Family Notes</label>
+                  <textarea
+                    className="form-textarea"
+                    rows={3}
+                    placeholder="Any notes about this family (e.g. scholarship, special arrangement, reason for discount…)"
+                    value={form.notes}
+                    onChange={e => set('notes', e.target.value)}
+                  />
                 </div>
               </div>
             </div>

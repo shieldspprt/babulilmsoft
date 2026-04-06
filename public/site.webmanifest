@@ -1,0 +1,30 @@
+{
+  "name": "ilmsoft – School Management System",
+  "short_name": "ilmsoft",
+  "description": "School management software for Pakistani schools. Manage students, fees, teachers and finances.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e1422",
+  "theme_color": "#6366f1",
+  "lang": "en",
+  "dir": "ltr",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity", "business"],
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "label": "ilmsoft dashboard — fee and student management"
+    }
+  ],
+  "prefer_related_applications": false
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" fill="none">
+  <rect width="180" height="180" rx="40" fill="#6366f1"/>
+  <!-- Graduation cap icon centered -->
+  <g transform="translate(90,90)">
+    <!-- Board -->
+    <polygon points="0,-32 38,0 0,10 -38,0" fill="#fff" opacity="0.95"/>
+    <!-- Left side -->
+    <path d="M-26 6 L-26 28 L0 40 L26 28 L26 6 L0 16 Z" fill="#fff" opacity="0.85"/>
+    <!-- Tassel pole -->
+    <line x1="38" y1="0" x2="38" y2="20" stroke="#e0e7ff" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="38" cy="24" r="4" fill="#c7d2fe"/>
+  </g>
+</svg>

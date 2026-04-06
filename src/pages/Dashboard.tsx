@@ -6,6 +6,7 @@ import { ClassesManager }   from '../components/ClassesManager';
 import { IncomeManager }    from '../components/IncomeManager';
 import { ExpenseManager }   from '../components/ExpenseManager';
 import { FeeManager }           from '../components/FeeManager';
+import { FeeStatsManager }      from '../components/FeeStatsManager';
 import { SchoolProfileManager } from '../components/SchoolProfileManager';
 import { TeamManager }           from '../components/TeamManager';
 import { Button } from '../components/ui/Button';
@@ -14,7 +15,7 @@ import {
   LayoutDashboard, GraduationCap, DollarSign,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
   CheckCircle, XCircle, BookOpen,
-  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote, ChevronDown, Settings
+  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote, ChevronDown, Settings, BarChart2
 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -31,7 +32,7 @@ const ManagerFallback = () => (
   </div>
 );
 
-type Tab = 'overview' | 'classes' | 'people' | 'people-students' | 'people-parents' | 'finances' | 'finances-income' | 'finances-expense' | 'finances-suppliers' | 'fee' | 'team' | 'profile' | 'buy' | 'history';
+type Tab = 'overview' | 'fee-stats' | 'classes' | 'people' | 'people-students' | 'people-parents' | 'finances' | 'finances-income' | 'finances-expense' | 'finances-suppliers' | 'fee' | 'team' | 'profile' | 'buy' | 'history';
 
 type Parent = {
   id: string;
@@ -50,7 +51,8 @@ type Student = {
 };
 
 const PAGE_TITLES: Record<Tab, string> = {
-  overview:  '',
+  overview:   '',
+  'fee-stats': 'Fee Stats',
   classes:   'Classes',
   team:      'Team Management',
   buy:       'Buy Credits',
@@ -279,6 +281,13 @@ export const Dashboard = () => {
             <LayoutDashboard size={18} /> Overview
           </button>
 
+          <button
+            className={`sidebar-nav-item${tab === 'fee-stats' ? ' active' : ''}`}
+            onClick={() => setTab('fee-stats')}
+          >
+            <BarChart2 size={18} /> Fee Stats
+          </button>
+
           {/* People section */}
           <div className="sidebar-section">
             <div className={`sidebar-section-header${openSections.has('people') ? ' is-open' : ''}`}>
@@ -438,6 +447,7 @@ export const Dashboard = () => {
           )}
 
           {/* Feature tabs */}
+          {tab === 'fee-stats' && <FeeStatsManager schoolId={profile.id} />}
           {tab === 'classes'   && <ClassesManager   schoolId={profile.id} role={role || undefined} />}
           {tab === 'people-parents'   && <Suspense fallback={<ManagerFallback />}><ParentsManager   schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'people-students'  && <Suspense fallback={<ManagerFallback />}><StudentsManager  schoolId={profile.id} role={role || undefined} /></Suspense>}

@@ -66,6 +66,7 @@ type ParentBalanceInfo = {
 type ParentListItem = Parent & {
   childrenCount: number;
   balanceInfo: ParentBalanceInfo;
+  childNames: string[];  // for child-name search
 };
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -246,7 +247,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
           .order('first_name'),
         supabase
           .from('students')
-          .select('parent_id, monthly_fee, discount_type, discount_value, date_of_admission, active')
+          .select('parent_id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, active')
           .eq('school_id', schoolId)
           .eq('active', true),
         supabase
@@ -262,6 +263,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
       // Group students and payments by parent
       const studentMap = new Map<string, { monthly_fee: number; discount_type?: string | null; discount_value?: number | null; date_of_admission: string | null }[]>();
       const paymentMap = new Map<string, { amount: number; months_paid: string[] }[]>();
+      const childNamesMap = new Map<string, string[]>();
 
       rawStudents.forEach((s: any) => {
         if (!studentMap.has(s.parent_id)) studentMap.set(s.parent_id, []);
@@ -271,6 +273,10 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
           discount_value: s.discount_value,
           date_of_admission: s.date_of_admission,
         });
+        // accumulate child names for search
+        if (!childNamesMap.has(s.parent_id)) childNamesMap.set(s.parent_id, []);
+        const fullName = `${s.first_name || ''} ${s.last_name || ''}`.trim().toLowerCase();
+        if (fullName) childNamesMap.get(s.parent_id)!.push(fullName);
       });
 
       rawPayments.forEach((p: any) => {
@@ -284,6 +290,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
       const items: ParentListItem[] = rawParents.map(p => ({
         ...p,
         childrenCount: studentMap.get(p.id)?.length || 0,
+        childNames: childNamesMap.get(p.id) || [],
         balanceInfo: computeParentBalance(
           studentMap.get(p.id) || [],
           paymentMap.get(p.id) || [],
@@ -387,7 +394,8 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
         p.first_name.toLowerCase().includes(q) ||
         p.last_name.toLowerCase().includes(q) ||
         p.cnic.includes(q) ||
-        (p.contact || '').includes(q),
+        (p.contact || '').includes(q) ||
+        p.childNames.some(name => name.includes(q)),
     );
   }, [parents, debouncedSearch]);
 
@@ -708,8 +716,8 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
             <input
               type="text"
               role="searchbox"
-              aria-label="Search parents by name, CNIC, or contact"
-              placeholder="Search by name, CNIC, contact…"
+              aria-label="Search parents by name, CNIC, contact or child name"
+              placeholder="Search by name, CNIC, contact or child name…"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
