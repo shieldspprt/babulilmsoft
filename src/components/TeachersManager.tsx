@@ -4,7 +4,7 @@ import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import {
   Plus, X, GraduationCap, Briefcase, Phone,
-  MapPin, Search, Trash2
+  MapPin, Search, Trash2, Edit2
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
@@ -34,6 +34,7 @@ export const TeachersManager = ({ schoolId, role }: { schoolId: string; role?: R
   const { flash, showFlash }         = useFlashMessage(4000);
   const [search, setSearch]         = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Teacher | null>(null);
+  const [editTarget, setEditTarget] = useState<Teacher | null>(null);
   const [deleting, setDeleting]     = useState(false);
   const [cnicError, setCnicError]   = useState('');
 
@@ -58,6 +59,24 @@ export const TeachersManager = ({ schoolId, role }: { schoolId: string; role?: R
     if (k === 'cnic') setCnicError('');
   };
 
+  const openEdit = (teacher: Teacher) => {
+    setEditTarget(teacher);
+    setForm({
+      name: teacher.name,
+      type: teacher.type,
+      gender: teacher.gender,
+      cnic: teacher.cnic || '',
+      personal_contact: teacher.personal_contact || '',
+      home_contact: teacher.home_contact || '',
+      address: teacher.address || '',
+      education: teacher.education || '',
+      salary: teacher.salary ? String(teacher.salary) : '',
+      notes: teacher.notes || '',
+    });
+    setCnicError('');
+    setShowModal(true);
+  };
+
   const handleSave = async () => {
     if (!form.name.trim() || !form.personal_contact.trim()) return;
     
@@ -68,13 +87,22 @@ export const TeachersManager = ({ schoolId, role }: { schoolId: string; role?: R
     }
     
     setSaving(true);
-    const { error } = await supabase.from('teachers').insert({
-      school_id: schoolId, is_active: true,
-      ...form, salary: parseInt(form.salary) || 0,
-    });
+    let error;
+    if (editTarget) {
+      const { error: err } = await supabase.from('teachers').update({
+        ...form, salary: parseInt(form.salary) || 0,
+      }).eq('id', editTarget.id);
+      error = err;
+    } else {
+      const { error: err } = await supabase.from('teachers').insert({
+        school_id: schoolId, is_active: true,
+        ...form, salary: parseInt(form.salary) || 0,
+      });
+      error = err;
+    }
     setSaving(false);
     if (error) { showFlash('Error: ' + error.message); }
-    else       { showFlash(`${form.type} "${form.name}" added!`); setShowModal(false); setForm({ ...EMPTY }); setCnicError(''); load(); }
+    else       { showFlash(`${form.type} "${form.name}" ${editTarget ? 'updated' : 'added'}!`); setShowModal(false); setForm({ ...EMPTY }); setCnicError(''); setEditTarget(null); load(); }
   };
 
   const handleDelete = async () => {
@@ -118,7 +146,7 @@ export const TeachersManager = ({ schoolId, role }: { schoolId: string; role?: R
             <Search size={16} />
             <input placeholder="Search by name…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <Button onClick={() => { setForm({ ...EMPTY }); setShowModal(true); }}>
+          <Button onClick={() => { setForm({ ...EMPTY }); setEditTarget(null); setShowModal(true); }}>
             <Plus size={18} /> Add Person
           </Button>
         </div>
@@ -153,9 +181,14 @@ export const TeachersManager = ({ schoolId, role }: { schoolId: string; role?: R
                 </div>
               </div>
               {isOwner && (
-                <button className="record-delete" title="Remove" onClick={() => setDeleteTarget(r)}>
-                  <Trash2 size={13} />
-                </button>
+                <div className="row-actions" style={{ position: 'absolute', top: '0.75rem', right: '0.75rem' }}>
+                  <button className="action-btn edit" title="Edit" onClick={() => openEdit(r)}>
+                    <Edit2 size={14} />
+                  </button>
+                  <button className="action-btn delete" title="Remove" onClick={() => setDeleteTarget(r)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               )}
             </div>
           ))}
@@ -167,7 +200,7 @@ export const TeachersManager = ({ schoolId, role }: { schoolId: string; role?: R
         <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal-box">
             <div className="modal-head">
-              <h3>Add Teacher / Staff</h3>
+              <h3>{editTarget ? 'Edit' : 'Add'} Teacher / Staff</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
             </div>
             <div className="modal-body">
@@ -226,7 +259,7 @@ export const TeachersManager = ({ schoolId, role }: { schoolId: string; role?: R
             <div className="modal-foot">
               <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
               <Button onClick={handleSave} isLoading={saving} disabled={!form.name.trim() || !form.personal_contact.trim()}>
-                <Plus size={18} /> Save {form.type}
+                {editTarget ? <Edit2 size={18} /> : <Plus size={18} />} {editTarget ? 'Save Changes' : `Save ${form.type}`}
               </Button>
             </div>
           </div>

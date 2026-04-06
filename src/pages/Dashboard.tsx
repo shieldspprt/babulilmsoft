@@ -2,15 +2,15 @@ import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ClassesManager }   from '../components/ClassesManager';
-import { IncomeManager }    from '../components/IncomeManager';
-import { ExpenseManager }   from '../components/ExpenseManager';
-import { FeeManager }           from '../components/FeeManager';
-import { FeeStatsManager }      from '../components/FeeStatsManager';
+import { ClassesManager } from '../components/ClassesManager';
+import { IncomeManager } from '../components/IncomeManager';
+import { ExpenseManager } from '../components/ExpenseManager';
+import { FeeManager } from '../components/FeeManager';
+import { FeeStatsManager } from '../components/FeeStatsManager';
 import { SchoolProfileManager } from '../components/SchoolProfileManager';
-import { TeamManager }           from '../components/TeamManager';
+import { TeamManager } from '../components/TeamManager';
 import { Button } from '../components/ui/Button';
-import { Input }  from '../components/ui/Input';
+import { Input } from '../components/ui/Input';
 import {
   LayoutDashboard, GraduationCap, DollarSign,
   Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
@@ -21,8 +21,11 @@ import './Dashboard.css';
 
 // Lazy load heavy manager components
 const SuppliersManager = lazy(() => import('../components/SuppliersManager').then(m => ({ default: m.SuppliersManager })));
-const ParentsManager   = lazy(() => import('../components/ParentsManager').then(m => ({ default: m.ParentsManager })));
-const StudentsManager  = lazy(() => import('../components/StudentsManager').then(m => ({ default: m.StudentsManager })));
+const ParentsManager = lazy(() => import('../components/ParentsManager').then(m => ({ default: m.ParentsManager })));
+const StudentsManager = lazy(() => import('../components/StudentsManager').then(m => ({ default: m.StudentsManager })));
+const TeachersManager = lazy(() => import('../components/TeachersManager').then(m => ({ default: m.TeachersManager })));
+const ExtraFeesManager = lazy(() => import('../components/ExtraFeesManager').then(m => ({ default: m.ExtraFeesManager })));
+const ExtraFeeCollectionManager = lazy(() => import('../components/ExtraFeeCollectionManager').then(m => ({ default: m.ExtraFeeCollectionManager })));
 
 // Loading fallback for lazy components
 const ManagerFallback = () => (
@@ -32,7 +35,7 @@ const ManagerFallback = () => (
   </div>
 );
 
-type Tab = 'overview' | 'fee-stats' | 'classes' | 'people' | 'people-students' | 'people-parents' | 'finances' | 'finances-income' | 'finances-expense' | 'finances-suppliers' | 'fee' | 'team' | 'profile' | 'buy' | 'history';
+type Tab = 'overview' | 'fee-stats' | 'classes' | 'people' | 'people-students' | 'people-parents' | 'people-teachers' | 'finances' | 'finances-income' | 'finances-expense' | 'finances-suppliers' | 'fee' | 'finances-extra-fees' | 'team' | 'profile' | 'extra-fees' | 'buy' | 'history';
 
 type Parent = {
   id: string;
@@ -51,38 +54,41 @@ type Student = {
 };
 
 const PAGE_TITLES: Record<Tab, string> = {
-  overview:   '',
+  overview: '',
   'fee-stats': 'Fee Stats',
-  classes:   'Classes',
-  team:      'Team Management',
-  buy:       'Buy Credits',
-  profile:   'School Profile',
-  history:   'Payment History',
-  people:       'People',
-  'people-parents':   'Parents & Guardians',
-  'people-students':  'Students',
-  finances:     'Finances',
-  'finances-income':    'Income',
-  'finances-expense':   'Expenses',
+  classes: 'Classes',
+  team: 'Team Management',
+  buy: 'Buy Credits',
+  profile: 'School Profile',
+  'extra-fees': 'Extra Fees',
+  history: 'Payment History',
+  people: 'People',
+  'people-parents': 'Parents & Guardians',
+  'people-students': 'Students',
+  'people-teachers': 'Teachers',
+  finances: 'Finances',
+  'finances-income': 'Income',
+  'finances-expense': 'Expenses',
   'finances-suppliers': 'Suppliers',
-  fee:       'Add Fee',
+  fee: 'Add Fee',
+  'finances-extra-fees': 'One-Time Fee Collection',
 };
 
 export const Dashboard = () => {
   const { profile, role, refreshProfile, signOut } = useAuth();
-  const navigate  = useNavigate();
-  const location  = useLocation();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [tab, setTab]               = useState<Tab>('overview');
+  const [tab, setTab] = useState<Tab>('overview');
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(['people', 'finances']));
-  const [payMethod, setPayMethod]   = useState<'JazzCash' | 'Bank'>('JazzCash');
-  const [plan, setPlan]             = useState<{ credits: number; pkr: number } | null>(null);
-  const [reference, setReference]   = useState('');
-  const [buying, setBuying]         = useState(false);
-  const [msg, setMsg]               = useState<{ text: string; type: string }>({ text: '', type: '' });
-  const [history, setHistory]       = useState<any[]>([]);
+  const [payMethod, setPayMethod] = useState<'JazzCash' | 'Bank'>('JazzCash');
+  const [plan, setPlan] = useState<{ credits: number; pkr: number } | null>(null);
+  const [reference, setReference] = useState('');
+  const [buying, setBuying] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; type: string }>({ text: '', type: '' });
+  const [history, setHistory] = useState<any[]>([]);
   const [creditExpired, setCreditExpired] = useState(false);
-  const [daysLeft, setDaysLeft]     = useState(0);
+  const [daysLeft, setDaysLeft] = useState(0);
   const [overviewStats, setOverviewStats] = useState({ parents: 0, students: 0, classes: 0 });
 
   // Quick Fee Modal state
@@ -140,7 +146,7 @@ export const Dashboard = () => {
   // Quick Fee: Record payment with validation
   const recordQuickFee = async () => {
     if (!qfSelectedParent || !qfAmount || !profile) return;
-    
+
     // Validate amount is positive
     const numAmount = parseFloat(qfAmount);
     if (!isFinite(numAmount) || numAmount <= 0) {
@@ -151,7 +157,7 @@ export const Dashboard = () => {
       setMsg({ text: 'Error: Amount is too large', type: 'error' });
       return;
     }
-    
+
     setQfSaving(true);
     const today = new Date().toISOString().split('T')[0];
     const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
@@ -229,7 +235,7 @@ export const Dashboard = () => {
   const handleBuy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !plan || !reference) return;
-    
+
     // Validate reference format (max 100 chars, no special injection chars)
     const cleanReference = reference.trim();
     if (cleanReference.length < 5) {
@@ -240,7 +246,7 @@ export const Dashboard = () => {
       setMsg({ text: 'Error: Reference number is too long (max 100 characters)', type: 'error' });
       return;
     }
-    
+
     setBuying(true); setMsg({ text: '', type: '' });
     const { error } = await supabase.from('credit_requests').insert({
       school_id: profile.id, credits: plan.credits, amount_pkr: plan.pkr,
@@ -308,10 +314,6 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          <button className={`sidebar-nav-item${tab === 'classes' ? ' active' : ''}`} onClick={() => setTab('classes')}>
-            <BookOpen size={18} /> Classes
-          </button>
-
           {/* Finances section */}
           <div className="sidebar-section">
             <div className={`sidebar-section-header${openSections.has('finances') ? ' is-open' : ''}`}>
@@ -330,17 +332,33 @@ export const Dashboard = () => {
                 <button className={`sidebar-sub-item${tab === 'finances-expense' ? ' active' : ''}`} onClick={() => setTab('finances-expense')}>Expenses</button>
                 <button className={`sidebar-sub-item${tab === 'finances-suppliers' ? ' active' : ''}`} onClick={() => setTab('finances-suppliers')}>Suppliers</button>
                 <button className={`sidebar-sub-item${tab === 'fee' ? ' active' : ''}`} onClick={() => setTab('fee')}>Fee Collections</button>
+                <button className={`sidebar-sub-item${tab === 'finances-extra-fees' ? ' active' : ''}`} onClick={() => setTab('finances-extra-fees')}>One-Time Collection</button>
               </div>
             </div>
           </div>
 
-          <button className={`sidebar-nav-item${tab === 'team' ? ' active' : ''}`} onClick={() => setTab('team')}>
-            <GraduationCap size={18} /> Team
-          </button>
-
-          <button className={`sidebar-nav-item${tab === 'profile' ? ' active' : ''}`} onClick={() => setTab('profile')}>
-            <Settings size={18} /> School Profile
-          </button>
+          {/* School Profile section */}
+          <div className="sidebar-section">
+            <div className={`sidebar-section-header${openSections.has('profile-grp') ? ' is-open' : ''}`}>
+              <button
+                className={`sidebar-nav-item has-sub${['profile', 'classes', 'people-teachers', 'team'].includes(tab) ? ' active' : ''}`}
+                onClick={() => {
+                  const current = openSections.has('profile-grp') ? new Set([...openSections].filter(s => s !== 'profile-grp')) : new Set([...openSections, 'profile-grp']);
+                  setOpenSections(current);
+                  if (current.has('profile-grp')) setTab('profile');
+                }}
+              >
+                <Settings size={18} /> School Profile <ChevronDown size={14} className="sub-chevron" />
+              </button>
+              <div className="sidebar-sub-items">
+                <button className={`sidebar-sub-item${tab === 'profile' ? ' active' : ''}`} onClick={() => setTab('profile')}>General Profile</button>
+                <button className={`sidebar-sub-item${tab === 'classes' ? ' active' : ''}`} onClick={() => setTab('classes')}>Classes</button>
+                <button className={`sidebar-sub-item${tab === 'people-teachers' ? ' active' : ''}`} onClick={() => setTab('people-teachers')}>Teachers</button>
+                <button className={`sidebar-sub-item${tab === 'team' ? ' active' : ''}`} onClick={() => setTab('team')}>Team Management</button>
+                <button className={`sidebar-sub-item${tab === 'extra-fees' ? ' active' : ''}`} onClick={() => setTab('extra-fees')}>Extra Fees</button>
+              </div>
+            </div>
+          </div>
         </nav>
 
         {/* Bottom */}
@@ -365,7 +383,7 @@ export const Dashboard = () => {
                 fontSize: 'var(--font-sm)', fontWeight: 600, padding: '4px 12px',
                 borderRadius: '99px',
                 background: msg.type === 'success' ? 'var(--success-light)' : 'var(--danger-light)',
-                color:       msg.type === 'success' ? 'var(--success)'       : 'var(--danger)',
+                color: msg.type === 'success' ? 'var(--success)' : 'var(--danger)',
               }}>
                 {msg.text}
               </span>
@@ -448,15 +466,18 @@ export const Dashboard = () => {
 
           {/* Feature tabs */}
           {tab === 'fee-stats' && <FeeStatsManager schoolId={profile.id} />}
-          {tab === 'classes'   && <ClassesManager   schoolId={profile.id} role={role || undefined} />}
-          {tab === 'people-parents'   && <Suspense fallback={<ManagerFallback />}><ParentsManager   schoolId={profile.id} role={role || undefined} /></Suspense>}
-          {tab === 'people-students'  && <Suspense fallback={<ManagerFallback />}><StudentsManager  schoolId={profile.id} role={role || undefined} /></Suspense>}
-          {tab === 'fee'            && <FeeManager       schoolId={profile.id} role={role || undefined} />}
-          {tab === 'finances-income'    && <IncomeManager    schoolId={profile.id} role={role || undefined} />}
-          {tab === 'finances-expense'   && <ExpenseManager   schoolId={profile.id} role={role || undefined} />}
+          {tab === 'classes' && <ClassesManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'people-parents' && <Suspense fallback={<ManagerFallback />}><ParentsManager schoolId={profile.id} role={role || undefined} /></Suspense>}
+          {tab === 'people-students' && <Suspense fallback={<ManagerFallback />}><StudentsManager schoolId={profile.id} role={role || undefined} /></Suspense>}
+          {tab === 'people-teachers' && <Suspense fallback={<ManagerFallback />}><TeachersManager schoolId={profile.id} role={role || undefined} /></Suspense>}
+          {tab === 'fee' && <FeeManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'finances-extra-fees' && <Suspense fallback={<ManagerFallback />}><ExtraFeeCollectionManager schoolId={profile.id} role={role || undefined} /></Suspense>}
+          {tab === 'finances-income' && <IncomeManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'finances-expense' && <ExpenseManager schoolId={profile.id} role={role || undefined} />}
           {tab === 'finances-suppliers' && <Suspense fallback={<ManagerFallback />}><SuppliersManager schoolId={profile.id} role={role || undefined} /></Suspense>}
-          {tab === 'team'      && <TeamManager schoolId={profile.id} />}
-          {tab === 'profile'   && <SchoolProfileManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'team' && <TeamManager schoolId={profile.id} />}
+          {tab === 'profile' && <SchoolProfileManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'extra-fees' && <Suspense fallback={<ManagerFallback />}><ExtraFeesManager schoolId={profile.id} role={role || undefined} /></Suspense>}
 
           {/* Buy Credits */}
           {tab === 'buy' && (
@@ -473,8 +494,8 @@ export const Dashboard = () => {
 
               <div className="pricing-grid">
                 {[
-                  { credits: 30,  pkr: 2000, name: 'Monthly Plan',    popular: false },
-                  { credits: 100, pkr: 5000, name: 'Quarterly+ Plan', popular: true  },
+                  { credits: 30, pkr: 2000, name: 'Monthly Plan', popular: false },
+                  { credits: 100, pkr: 5000, name: 'Quarterly+ Plan', popular: true },
                 ].map(p => (
                   <div
                     key={p.credits}

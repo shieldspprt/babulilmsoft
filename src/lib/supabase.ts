@@ -71,6 +71,29 @@ export type Teacher = {
   type: 'Teacher' | 'Staff';
 };
 
+export type ExtraFee = {
+  id: string;
+  school_id: string;
+  name: string;
+  amount: number;
+  classes: string[];
+  due_date: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type ExtraFeePayment = {
+  id: string;
+  school_id: string;
+  extra_fee_id: string;
+  student_id: string;
+  parent_id: string;
+  amount_paid: number;
+  payment_method: string;
+  payment_date: string;
+  created_at: string;
+};
+
 export type Supplier = {
   id: string;
   school_id: string;
