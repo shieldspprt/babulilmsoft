@@ -37,6 +37,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userIdRef = useRef<string | null>(null);
 
   /**
+   * Initialize free credits for new school owners
+   * Called when a user has 0 credits and no expiration (new user)
+   */
+  const initializeFreeCredits = useCallback(async (schoolId: string): Promise<void> => {
+    try {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+      
+      await supabase
+        .from('schools')
+        .update({ 
+          total_credits: 30, 
+          credit_expires_at: expiresAt.toISOString() 
+        })
+        .eq('id', schoolId);
+        
+      // Refresh profile to get updated credits
+      const { data: updatedSchool } = await supabase
+        .from('schools')
+        .select('*')
+        .eq('id', schoolId)
+        .single();
+        
+      if (updatedSchool) {
+        setProfile(updatedSchool as SchoolProfile);
+      }
+    } catch (err) {
+      // Only log in development
+      if (import.meta.env.DEV) {
+        console.error('Error initializing free credits:', err);
+      }
+    }
+  }, []);
+
+  /**
    * Fetch user profile with role detection:
    * 1. Check school_members — if user is an active member, use that school
    * 2. Fallback: check schools.user_id — existing owner behavior
@@ -61,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (school) {
           setProfile(school as SchoolProfile);
+          // Members (managers invited to existing schools) don't get free credits
         } else if (schoolError) {
           // Only log in development
           if (import.meta.env.DEV) {
@@ -94,8 +130,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Error fetching profile:', error.message);
         }
       } else if (data) {
-        setProfile(data as SchoolProfile);
+        const schoolProfile = data as SchoolProfile;
+        setProfile(schoolProfile);
         setRole('owner');
+        
+        // Check if this is a new school owner who hasn't received free credits yet
+        // New users have 0 credits and no expiration date
+        if (schoolProfile.total_credits === 0 && !schoolProfile.credit_expires_at) {
+          await initializeFreeCredits(schoolProfile.id);
+        }
       }
     } catch (err) {
       if (attempt <= MAX_RETRIES) {
@@ -107,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Unexpected error fetching profile', err);
       }
     }
-  }, []);
+  }, [initializeFreeCredits]);
 
   useEffect(() => {
     const initSession = async () => {
