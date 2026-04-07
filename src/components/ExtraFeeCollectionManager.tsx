@@ -4,10 +4,10 @@ import type { Role, ExtraFee, Class, ExtraFeePayment } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/Button';
-import { CheckCircle, MessageCircle, DollarSign, BookOpen, AlertCircle, Search } from 'lucide-react';
+import { CheckCircle, MessageCircle, DollarSign, BookOpen, AlertCircle } from 'lucide-react';
 import './managers.css';
 
-export const ExtraFeeCollectionManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
+export const ExtraFeeCollectionManager = ({ schoolId }: { schoolId: string; role?: Role }) => {
   const { profile } = useAuth();
   const [fees, setFees] = useState<ExtraFee[]>([]);
   const [classes, setClasses] = useState<Class[]>([]);
