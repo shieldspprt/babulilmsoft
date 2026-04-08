@@ -1,6 +1,13 @@
 import { supabase } from './supabase';
 import type { ReceiptData, ReceiptStudent, FeeReceipt } from './supabase';
 
+/** Safe numeric coercion (PostgreSQL numeric may come as string) */
+function N(v: unknown): number {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') { const n = parseFloat(v); return Number.isNaN(n) ? 0 : n; }
+  return 0;
+}
+
 /**
  * Generate receipt data from payment record
  */
@@ -42,32 +49,52 @@ export async function generateReceiptData(
         .single()
     ]);
     
-    // Fetch students with classes
+    // Fetch students with their related class data
     const { data: students } = await supabase
       .from('students')
-      .select('first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, classes(name, monthly_fee)')
+      .select('id, parent_id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, admission_class_id, classes(name, monthly_fee)')
       .eq('parent_id', payment.parent_id)
       .eq('active', true)
       .eq('school_id', schoolId);
 
-    // Build student array
-    // Discount is calculated on the CLASS fee — same as FeeManager (line 728-729)
+    // Separate classes lookup — classes are returned as embedded array per student;
+    // fetch all school classes to build a lookup by class id for fee resolution
+    const { data: schoolClasses } = await supabase
+      .from('classes')
+      .select('id, name, monthly_fee')
+      .eq('school_id', schoolId);
+
+    const classesMap = new Map<string, { name: string; monthly_fee: number }>();
+    (schoolClasses || []).forEach((c: any) => {
+      if (c.id) classesMap.set(c.id, { name: c.name || '—', monthly_fee: N(c.monthly_fee) });
+    });
+
+    // Build student array — use embedded class record, fall back to classesMap via admission_class_id
     const receiptStudents: ReceiptStudent[] = (students || []).map((s: any) => {
-      const classFee = Number(s.classes?.monthly_fee) || Number(s.monthly_fee) || 0;
+      const embeddedClass = s.classes?.[0];
+      const classFee = embeddedClass
+        ? N(embeddedClass.monthly_fee)
+        : (s.admission_class_id && classesMap.has(s.admission_class_id)
+            ? N(classesMap.get(s.admission_class_id)!.monthly_fee)
+            : N(s.monthly_fee));
+      const className = embeddedClass
+        ? embeddedClass.name
+        : (s.admission_class_id && classesMap.has(s.admission_class_id)
+            ? classesMap.get(s.admission_class_id)!.name
+            : '—');
       let discount = 0;
       if (s.discount_type === 'percentage') {
-        // Percentage of CLASS fee (matches FeeManager's calculation)
         discount = classFee * (Number(s.discount_value) || 0) / 100;
       } else if (s.discount_type === 'fixed' || s.discount_type === 'amount') {
         discount = Number(s.discount_value) || 0;
       }
       return {
         name: `${s.first_name} ${s.last_name}`,
-        class_name: s.classes?.name || '—',
+        class_name: className,
         monthly_fee: classFee,
         discount_type: s.discount_type,
         discount_value: discount,
-        final_fee: Math.max(0, classFee - discount)  // Fee AFTER discount
+        final_fee: Math.max(0, classFee - discount)
       };
     });
 
