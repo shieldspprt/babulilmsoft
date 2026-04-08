@@ -406,7 +406,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
       let discAmt = 0;
       if (child.discount_type === 'percentage' && child.discount_value) {
         discAmt = (N(child.classes?.[0]?.monthly_fee) * N(child.discount_value)) / 100;
-      } else if (child.discount_type === 'amount' && child.discount_value) {
+      } else if ((child.discount_type === 'amount' || child.discount_type === 'fixed') && child.discount_value) {
         discAmt = N(child.discount_value);
       }
       const classFee = N(child.classes?.[0]?.monthly_fee);
@@ -664,7 +664,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
           total_discount: totalDiscount,
           net_monthly: netMonthly,
           previous_balance: paidMonthsBalance > 0 ? paidMonthsBalance : 0,
-          total_payable: Math.max(0, runningBalance),
+          total_payable: paidMonthsBalance + selectedMonths.size * monthlyFeeAfterDiscount,
           payment_received: 0,
           new_balance: Math.max(0, runningBalance),
           is_cleared: false
@@ -848,7 +848,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
                           discAmt =
                             (N(child.classes?.[0]?.monthly_fee) * N(child.discount_value)) /
                             100;
-                        } else if (child.discount_type === 'amount' && child.discount_value) {
+                        } else if ((child.discount_type === 'amount' || child.discount_type === 'fixed') && child.discount_value) {
                           discAmt = N(child.discount_value);
                         }
                         const classFee = N(child.classes?.[0]?.monthly_fee);
@@ -887,7 +887,7 @@ export const FeeManager = ({ schoolId, role }: { schoolId: string; role?: Role }
                             let discAmt = 0;
                             if (child.discount_type === 'percentage' && child.discount_value) {
                               discAmt = (N(child.classes?.[0]?.monthly_fee) * N(child.discount_value)) / 100;
-                            } else if (child.discount_type === 'amount' && child.discount_value) {
+                            } else if ((child.discount_type === 'amount' || child.discount_type === 'fixed') && child.discount_value) {
                               discAmt = N(child.discount_value);
                             }
                             const classFee = N(child.classes?.[0]?.monthly_fee);
