@@ -1,3 +1,4 @@
+
 /* ─── Shared Manager Shell ──────────────────────────────────────────── */
 
 .manager { display: flex; flex-direction: column; gap: 1.25rem; animation: fadeUp 0.25s ease-out; }
@@ -28,7 +29,85 @@
 
 .manager-search-bar input::placeholder { color: var(--text-placeholder); }
 
+/* ─── Manager Stats Grid ────────────────────────────────────────────── */
+.manager-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.manager-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.manager-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary-light);
+}
+
+.manager-stat-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: var(--primary);
+  opacity: 0.8;
+}
+
+.manager-stat-card.blue::after   { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.manager-stat-card.green::after  { background: linear-gradient(90deg, #10b981, #34d399); }
+.manager-stat-card.amber::after  { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.manager-stat-card.purple::after { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.manager-stat-card.rose::after   { background: linear-gradient(90deg, #f43f5e, #fb7185); }
+
+.manager-stat-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.manager-stat-card.blue .manager-stat-icon   { background: rgba(59,130,246,0.1); color: #3b82f6; }
+.manager-stat-card.green .manager-stat-icon  { background: rgba(16,185,129,0.1); color: #10b981; }
+.manager-stat-card.amber .manager-stat-icon  { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.manager-stat-card.purple .manager-stat-icon { background: rgba(139,92,246,0.1); color: #8b5cf6; }
+.manager-stat-card.rose .manager-stat-icon   { background: rgba(244,63,94,0.1);  color: #f43f5e; }
+
+.manager-stat-info { flex: 1; min-width: 0; }
+
+.manager-stat-label {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.manager-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.manager-stat-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
 /* ─── Flash Message ─────────────────────────────────────────────────── */
+
 .flash {
   padding: 0.75rem 1rem; border-radius: var(--radius-md);
   font-size: var(--font-sm); font-weight: 600;
@@ -648,4 +727,124 @@
     flex-direction: column;
     align-items: stretch;
   }
+}
+
+/* ─── Column Settings Popover ───────────────────────────────────────── */
+.column-settings-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem;
+  z-index: 100;
+  box-shadow: var(--shadow-xl);
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: fadeUp 0.15s ease-out;
+}
+
+.popover-title {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 0.5rem;
+}
+
+.popover-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.popover-item:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.popover-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.popover-item svg:first-child {
+  opacity: 0.7;
+}
+
+.popover-item.active svg:first-child {
+  opacity: 1;
+}
+
+.popover-item svg:last-child {
+  margin-left: auto;
+  color: var(--primary);
+}
+
+/* ─── Table Utilities ──────────────────────────────────────────────── */
+.student-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.student-cell span {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.class-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.class-cell svg {
+  color: var(--primary);
+  opacity: 0.8;
+}
+
+.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-muted { color: var(--text-muted); }
+.text-success { color: var(--success); }
+.text-danger { color: var(--danger); }
+.font-bold { font-weight: 700; }
+
+.stats-gender-overlay {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  text-align: right;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.stats-comparison {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.form-static-field {
+  padding: 0.625rem 0.875rem;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  color: var(--text);
 }

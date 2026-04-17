@@ -51,8 +51,8 @@ export const ExtraFeesManager = ({ schoolId, role }: { schoolId: string; role?: 
 
   useEffect(() => { loadData(); }, [schoolId]);
 
-  const set = (k: string, v: any) => {
-    setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: string | number) => {
+    setForm(prev => ({ ...prev, [k]: v }));
   };
 
   const toggleClass = (classId: string) => {

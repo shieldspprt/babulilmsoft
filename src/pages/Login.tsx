@@ -43,11 +43,26 @@ export const Login = () => {
             placeholder="you@school.com"
             value={email} onChange={e => setEmail(e.target.value)} required
           />
-          <Input
-            label="Password" type="password"
-            placeholder="Enter your password"
-            value={password} onChange={e => setPassword(e.target.value)} required
-          />
+          <div style={{ position: 'relative' }}>
+            <Input
+              label="Password" type="password"
+              placeholder="Enter your password"
+              value={password} onChange={e => setPassword(e.target.value)} required
+            />
+            <Link 
+              to="/reset-password" 
+              style={{ 
+                position: 'absolute', 
+                top: '0', 
+                right: '0', 
+                fontSize: 'var(--font-sm)', 
+                color: 'var(--primary)',
+                fontWeight: 500
+              }}
+            >
+              Forgot password?
+            </Link>
+          </div>
           <Button type="submit" fullWidth isLoading={loading} size="lg">
             <LogIn size={18} /> Login to Dashboard
           </Button>

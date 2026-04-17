@@ -22,22 +22,23 @@ export async function generateReceiptData(
   }
 
   try {
-    // 1. Payment
+    // 1. Payment — use the current 'payments' table
     const { data: payment, error: payErr } = await supabase
-      .from('fee_payments').select('*').eq('id', paymentId).single();
+      .from('payments').select('*').eq('id', paymentId).single();
     if (payErr || !payment) return null;
 
-    // 2. School + Parent in parallel
-    const [{ data: school }, { data: parent }] = await Promise.all([
+    // 2. School + Parent + Balance in parallel
+    const [{ data: school }, { data: parent }, { data: balanceRow }] = await Promise.all([
       supabase.from('schools').select('school_name, contact, logo_url').eq('id', schoolId).single(),
       supabase.from('parents').select('first_name, last_name, contact, cnic').eq('id', payment.parent_id).single(),
+      supabase.from('parent_balances').select('balance, total_charged, total_paid').eq('parent_id', payment.parent_id).single(),
     ]);
 
-    // 3. Students + Classes in parallel — fee comes from admission_class_id
+    // 3. Students + Classes in parallel
     const [{ data: students }, { data: classesRows }] = await Promise.all([
       supabase
         .from('students')
-        .select('id, first_name, last_name, monthly_fee, discount_type, discount_value, date_of_admission, admission_class_id')
+        .select('id, first_name, last_name, monthly_fee, current_monthly_fee, discount_type, discount_value, admission_class_id')
         .eq('parent_id', payment.parent_id)
         .eq('school_id', schoolId)
         .eq('active', true),
@@ -48,23 +49,19 @@ export async function generateReceiptData(
     const classMap = new Map<string, { name: string; monthly_fee: number }>();
     (classesRows || []).forEach((c: any) => classMap.set(c.id, { name: c.name, monthly_fee: N(c.monthly_fee) }));
 
-    // Build receipt students
+    // Build receipt students — use current_monthly_fee from DB (already discounted)
     const receiptStudents: ReceiptStudent[] = (students || []).map((s: any) => {
       const cls = classMap.get(s.admission_class_id);
       const classFee = cls?.monthly_fee || N(s.monthly_fee) || 0;
-      let discount = 0;
-      if (s.discount_type === 'percentage' && s.discount_value) {
-        discount = classFee * N(s.discount_value) / 100;
-      } else if (s.discount_type === 'fixed' || s.discount_type === 'amount') {
-        discount = N(s.discount_value);
-      }
+      const finalFee = N(s.current_monthly_fee) || classFee;
+      const discount = Math.max(0, classFee - finalFee);
       return {
         name: `${s.first_name} ${s.last_name}`.trim(),
         class_name: cls?.name || '—',
         monthly_fee: classFee,
         discount_type: s.discount_type,
         discount_value: discount,
-        final_fee: Math.max(0, classFee - discount),
+        final_fee: finalFee,
       };
     });
 
@@ -73,36 +70,17 @@ export async function generateReceiptData(
     const totalDiscount = receiptStudents.reduce((sum, s) => sum + (s.discount_value || 0), 0);
     const netMonthly = receiptStudents.reduce((sum, s) => sum + s.final_fee, 0);
 
-    // Balance math — mirrors FeeManager exactly
-    const admissionMonths = (students || [])
-      .map((s: any) => s.date_of_admission?.slice(0, 7))
-      .filter((m: string | null): m is string => !!m).sort();
-    const firstAdmMonth = admissionMonths[0] || new Date().toISOString().slice(0, 7);
-    const currentMonth = new Date().toISOString().slice(0, 7);
-
-    const payableMonths: string[] = [];
-    let [sy, sm] = firstAdmMonth.split('-').map(Number);
-    const [ey, em] = currentMonth.split('-').map(Number);
-    while (sy < ey || (sy === ey && sm <= em)) {
-      payableMonths.push(`${sy}-${String(sm).padStart(2, '0')}`);
-      sm++;
-      if (sm > 12) { sm = 1; sy++; }
-    }
-
-    const { data: allPayments } = await supabase
-      .from('fee_payments').select('amount')
-      .eq('parent_id', payment.parent_id).eq('school_id', schoolId);
-
-    const totalOwed = payableMonths.length * netMonthly;
-    const totalPaid = (allPayments || []).reduce((sum: number, p: any) => sum + N(p.amount), 0);
-    const thisPayment = N(payment.amount);
-
-    const previousBalance = totalOwed - totalPaid + thisPayment;
-    const newBalance = previousBalance - thisPayment;
+    // Balance — use parent_balances view (single source of truth from ledger)
+    const thisPayment = N(payment.received_amount);
+    // The balance in parent_balances is AFTER this payment (ledger already has this credit entry)
+    // balance = total_paid - total_charged (negative = owes money)
+    const currentBalance = N(balanceRow?.balance) || 0;
+    const previousBalance = currentBalance + thisPayment; // What it was BEFORE this payment
+    const newBalance = currentBalance;
 
     return {
       receipt_no: '',
-      date: new Date(payment.payment_date).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }),
+      date: new Date(payment.received_at).toLocaleDateString('en-PK', { day: '2-digit', month: 'short', year: 'numeric' }),
       school: { name: school?.school_name || '—', address: school?.contact || '—', contact: school?.contact || '—', logo_url: school?.logo_url || '' },
       parent: { name: `${parent?.first_name || ''} ${parent?.last_name || ''}`.trim(), contact: parent?.contact || '—', cnic: parent?.cnic || '—' },
       students: receiptStudents,
@@ -110,16 +88,16 @@ export async function generateReceiptData(
         gross_fee: grossFee,
         total_discount: totalDiscount,
         net_monthly: netMonthly,
-        previous_balance: previousBalance,
-        total_payable: previousBalance,
+        previous_balance: Math.abs(previousBalance),
+        total_payable: Math.abs(previousBalance),
         payment_received: thisPayment,
-        new_balance: newBalance,
-        is_cleared: newBalance <= 0,
+        new_balance: Math.abs(newBalance),
+        is_cleared: newBalance >= 0,
       },
       payment: {
         method: payment.payment_method || 'Cash',
-        months_paid: payment.months_paid || [],
-        months_count: payment.months_count || (payment.months_paid || []).length,
+        months_paid: [],
+        months_count: 0,
       },
     };
   } catch (error) {

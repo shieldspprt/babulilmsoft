@@ -1,31 +1,18 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { useDebounce } from '../hooks/useDebounce';
 import { isValidPhone } from '../lib/validation';
-import { Plus, X, Users, Search, Trash2, UserPlus, ChevronLeft, ChevronRight, Edit2, GraduationCap, BookOpen, Calendar } from 'lucide-react';
+import { GraduationCap, BookOpen, Calendar, Edit2, Trash2, UserPlus, X, Plus, Users, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
+import { useParents } from '../hooks/useParents';
+import type { Parent } from '../hooks/useParents';
 import '../components/managers.css';
 
-type Parent = {
-  id: string;
-  school_id: string;
-  first_name: string;
-  last_name: string;
-  cnic: string;
-  contact: string;
-  address: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-type Class = { id: string; name: string; monthly_fee: number; };
-
 const EMPTY = {
-  first_name: '', last_name: '', cnic: '', contact: '', address: '', notes: '',
+  first_name: '', last_name: '', cnic: '', contact: '', address: '', notes: '', initial_balance: '',
 };
 const EMPTY_STUDENT = { first_name: '', last_name: '', cnic: '', date_of_birth: '', date_of_admission: new Date().toISOString().split('T')[0], admission_class_id: '', monthly_fee: 0, discount_type: '', discount_value: 0 };
 
@@ -33,83 +20,29 @@ const PAGE_SIZE = 25;
 
 export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
   const isOwner = !role || role === 'owner';
-  const [records, setRecords]       = useState<Parent[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [showModal, setShowModal]   = useState(false);
-  const [form, setForm]             = useState({ ...EMPTY });
-  const [saving, setSaving]         = useState(false);
-  const { flash, showFlash }         = useFlashMessage(4000);
-  const [search, setSearch]         = useState('');
+  const { flash, showFlash } = useFlashMessage(4000);
   
-  // Debounce search input for better performance
+  const {
+    records, loading, classes,
+    studentCounts, monthlyTotals, discountTotals,
+    parentStats, load, loadClasses
+  } = useParents(schoolId, showFlash);
+
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ ...EMPTY });
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [deleteTarget, setDeleteTarget] = useState<Parent | null>(null);
-  const [deleting, setDeleting]     = useState(false);
-  const [cnicError, setCnicError]   = useState('');
-  const [page, setPage]             = useState(1);
+  const [deleting, setDeleting] = useState(false);
+  const [cnicError, setCnicError] = useState('');
+  const [page, setPage] = useState(1);
   const [editTarget, setEditTarget] = useState<Parent | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showChildModal, setShowChildModal] = useState(false);
   const [selectedParentForChild, setSelectedParentForChild] = useState<Parent | null>(null);
   const [childForm, setChildForm] = useState({ ...EMPTY_STUDENT });
-  const [classes, setClasses] = useState<Class[]>([]);
   const [savingChild, setSavingChild] = useState(false);
-  const [studentCounts, setStudentCounts] = useState<Record<string, number>>({});
-  const [monthlyTotals, setMonthlyTotals] = useState<Record<string, number>>({});
-  const [discountTotals, setDiscountTotals] = useState<Record<string, number>>({});
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [{ data: parents }, { data: students }] = await Promise.all([
-        supabase.from('parents').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
-        supabase.from('students').select('id, parent_id, monthly_fee, discount_type, discount_value').eq('school_id', schoolId)
-      ]);
-      
-      if (!parents) {
-        setRecords([]);
-        setLoading(false);
-        return;
-      }
-      
-      setRecords(parents);
-      
-      // Count students, total monthly fee, and total discount per parent
-      const counts: Record<string, number> = {};
-      const monthlyTotals: Record<string, number> = {};
-      const discountTotals: Record<string, number> = {};
-      students?.forEach(s => {
-        counts[s.parent_id] = (counts[s.parent_id] || 0) + 1;
-        const fee = s.monthly_fee || 0;
-        let disc = 0;
-        if (s.discount_type === 'percentage' && s.discount_value) {
-          disc = (fee * s.discount_value) / 100;
-        } else if (s.discount_type === 'amount' && s.discount_value) {
-          disc = s.discount_value;
-        }
-        monthlyTotals[s.parent_id] = (monthlyTotals[s.parent_id] || 0) + fee;
-        discountTotals[s.parent_id] = (discountTotals[s.parent_id] || 0) + disc;
-      });
-      setStudentCounts(counts);
-      setMonthlyTotals(monthlyTotals);
-      setDiscountTotals(discountTotals);
-    } catch (err: any) {
-      showFlash('Error loading parents: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [schoolId, showFlash]);
-
-  const loadClasses = useCallback(async () => {
-    try {
-      const { data } = await supabase.from('classes').select('id, name, monthly_fee').eq('school_id', schoolId).eq('active', true).order('name');
-      setClasses(data || []);
-    } catch (err: any) {
-      showFlash('Error loading classes: ' + err.message);
-      setClasses([]);
-    }
-  }, [schoolId, showFlash]);
-  useEffect(() => { load(); }, [load, schoolId]);
 
   const set = (k: string, v: string) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -160,7 +93,8 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from('parents').insert({
+    const balNum = Number(form.initial_balance) || 0;
+    const { data: newParent, error } = await supabase.from('parents').insert({
       school_id: schoolId,
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim(),
@@ -168,7 +102,19 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       contact: form.contact.trim(),
       address: form.address.trim() || null,
       notes: form.notes.trim() || null,
-    });
+    }).select('id').single();
+
+    if (newParent && !error && balNum !== 0) {
+      await supabase.from('ledger').insert({
+         school_id: schoolId,
+         parent_id: newParent.id,
+         entry_type: balNum > 0 ? 'debit' : 'credit',
+         amount: Math.abs(balNum),
+         reference_type: 'opening_balance',
+         description: 'Opening Balance'
+      });
+    }
+
     setSaving(false);
     if (error) {
       if (error.message.includes('unique') || error.message.includes('duplicate')) {
@@ -185,7 +131,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     }
   };
 
-  const openEdit = (parent: Parent) => {
+  const openEdit = async (parent: Parent) => {
     setEditTarget(parent);
     setForm({
       first_name: parent.first_name,
@@ -194,9 +140,15 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       contact: parent.contact,
       address: parent.address || '',
       notes: parent.notes || '',
+      initial_balance: ''
     });
     setCnicError('');
     setShowEditModal(true);
+
+    const { data } = await supabase.from('ledger').select('amount, entry_type').eq('parent_id', parent.id).eq('reference_type', 'opening_balance').maybeSingle();
+    if (data) {
+      setForm(prev => ({ ...prev, initial_balance: data.entry_type === 'debit' ? String(data.amount) : String(-data.amount) }));
+    }
   };
 
   const handleEdit = async () => {
@@ -211,6 +163,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       return;
     }
     setSaving(true);
+    const balNum = Number(form.initial_balance) || 0;
     const { error } = await supabase.from('parents').update({
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim(),
@@ -219,6 +172,20 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       address: form.address.trim() || null,
       notes: form.notes.trim() || null,
     }).eq('id', editTarget.id);
+    
+    if (!error) {
+       await supabase.from('ledger').delete().eq('parent_id', editTarget.id).eq('reference_type', 'opening_balance');
+       if (balNum !== 0) {
+         await supabase.from('ledger').insert({
+           school_id: schoolId,
+           parent_id: editTarget.id,
+           entry_type: balNum > 0 ? 'debit' : 'credit',
+           amount: Math.abs(balNum),
+           reference_type: 'opening_balance',
+           description: 'Opening Balance'
+         });
+       }
+    }
     setSaving(false);
     if (error) {
       if (error.message.includes('unique') || error.message.includes('duplicate')) {
@@ -240,16 +207,19 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const { error } = await supabase.from('parents').delete().eq('id', deleteTarget.id);
+      // Soft-delete: deactivate parent and their students
+      const { error } = await supabase.from('parents').update({ is_active: false }).eq('id', deleteTarget.id);
       if (error) {
-        showFlash('Error deleting parent: ' + error.message);
+        showFlash('Error deactivating parent: ' + error.message);
       } else {
-        showFlash(`Parent "${deleteTarget.first_name} ${deleteTarget.last_name}" removed`);
+        // Also deactivate all their students
+        await supabase.from('students').update({ active: false }).eq('parent_id', deleteTarget.id);
+        showFlash(`Parent "${deleteTarget.first_name} ${deleteTarget.last_name}" deactivated`);
         setDeleteTarget(null);
         load();
       }
     } catch (err: any) {
-      showFlash('Error: ' + (err.message || 'Failed to delete parent'));
+      showFlash('Error: ' + (err.message || 'Failed to deactivate parent'));
     } finally {
       setDeleting(false);
     }
@@ -268,6 +238,14 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       return;
     }
     setSavingChild(true);
+    
+    // Calculate final monthly fee for revenue integrity
+    const net_monthly_fee = childForm.discount_type && childForm.discount_value
+        ? (childForm.discount_type === 'percentage' 
+            ? Math.round(childForm.monthly_fee * (100 - childForm.discount_value) / 100) 
+            : Math.max(0, childForm.monthly_fee - childForm.discount_value))
+        : childForm.monthly_fee;
+
     const { error } = await supabase.from('students').insert({
       school_id: schoolId,
       parent_id: selectedParentForChild.id,
@@ -277,7 +255,9 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       date_of_birth: childForm.date_of_birth || null,
       date_of_admission: childForm.date_of_admission || null,
       admission_class_id: childForm.admission_class_id || null,
-      monthly_fee: childForm.monthly_fee,   // ✅ raw class fee — discount applied separately by FeeManager
+      current_class_id: childForm.admission_class_id || null, // Ensure current_class is set
+      monthly_fee: childForm.monthly_fee,
+      current_monthly_fee: net_monthly_fee, // Explicitly save net fee
       discount_type: childForm.discount_type || null,
       discount_value: childForm.discount_value || null,
       active: true,
@@ -321,8 +301,8 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
         <div className="manager-title">
           <Users size={24} />
           <div>
-            <h3></h3>
-            <p>{records.length} parent{records.length !== 1 ? 's' : ''} registered</p>
+            <h3>Families & Beneficiaries</h3>
+            <p>{records.length} {records.length === 1 ? 'parent' : 'parents'} registered across all classes</p>
           </div>
         </div>
         <div style={{ display:'flex', gap:'0.75rem', alignItems:'center', flexWrap:'wrap' }}>
@@ -333,6 +313,46 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
           <Button onClick={() => { setForm({ ...EMPTY }); setCnicError(''); setShowModal(true); }}>
             <Plus size={18} /> Add Parent
           </Button>
+        </div>
+      </div>
+
+      <div className="manager-stats-grid">
+        <div className="manager-stat-card blue">
+          <div className="manager-stat-icon"><Users size={20} /></div>
+          <div className="manager-stat-info">
+            <div className="manager-stat-label">Total Families</div>
+            <div className="manager-stat-value">{parentStats.totalFamilies}</div>
+            <div className="manager-stat-sub">
+              {parentStats.fathers} Fathers • {parentStats.mothers} Mothers
+            </div>
+          </div>
+        </div>
+
+        <div className="manager-stat-card green">
+          <div className="manager-stat-icon"><GraduationCap size={20} /></div>
+          <div className="manager-stat-info">
+            <div className="manager-stat-label">Total Children</div>
+            <div className="manager-stat-value">{parentStats.totalChildren}</div>
+            <div className="manager-stat-sub">Avg {parentStats.totalFamilies > 0 ? (parentStats.totalChildren / parentStats.totalFamilies).toFixed(1) : 0} per family</div>
+          </div>
+        </div>
+
+        <div className="manager-stat-card amber">
+          <div className="manager-stat-icon"><BookOpen size={20} /></div>
+          <div className="manager-stat-info">
+            <div className="manager-stat-label">Monthly Potential</div>
+            <div className="manager-stat-value">Rs {parentStats.totalPotential.toLocaleString()}</div>
+            <div className="manager-stat-sub">Total expected from parents</div>
+          </div>
+        </div>
+
+        <div className="manager-stat-card rose">
+          <div className="manager-stat-icon"><Search size={20} /></div>
+          <div className="manager-stat-info">
+            <div className="manager-stat-label">Financial Aid</div>
+            <div className="manager-stat-value">Rs {parentStats.totalScholarships.toLocaleString()}</div>
+            <div className="manager-stat-sub">Total scholarship/discounts</div>
+          </div>
         </div>
       </div>
 
@@ -361,14 +381,16 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
                 </tr>
               </thead>
               <tbody>
-                {paginated.map(r => (
+                {paginated.map((r: any) => (
                   <tr key={r.id}>
                     <td>
-                      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
-                        <div className="record-avatar" style={{width:'36px',height:'36px',fontSize:'0.7rem',flexShrink:0}}>
-                          {r.first_name.charAt(0).toUpperCase()}{r.last_name.charAt(0).toUpperCase()}
-                        </div>
+                      <div className="student-cell">
                         <span style={{ fontWeight:600 }}>{r.first_name} {r.last_name}</span>
+                        {r.relation && (
+                          <span className={`rec-badge ${r.relation.toLowerCase()}`}>
+                            {r.relation}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td style={{ fontFamily:'monospace', fontSize:'0.8rem' }}>{r.cnic}</td>
@@ -390,10 +412,10 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
                       </span>
                     </td>
                     <td style={{ fontWeight: 600 }}>
-                      Rs {((monthlyTotals[r.id] || 0) - (discountTotals[r.id] || 0)).toLocaleString()}
+                      Rs {(monthlyTotals[r.id] || 0).toLocaleString()}
                     </td>
                     <td style={{ color: (discountTotals[r.id] || 0) > 0 ? 'var(--success)' : 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>
-                      {(discountTotals[r.id] || 0) > 0 ? `-Rs ${Math.round(discountTotals[r.id]!).toLocaleString()}` : '-'}
+                      {(discountTotals[r.id] || 0) > 0 ? `-Rs ${Math.round(discountTotals[r.id] || 0).toLocaleString()}` : '-'}
                     </td>
                     <td>
                       <div className="row-actions">
@@ -460,7 +482,8 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
                   error={cnicError}
                 />
                 <Input label="Contact Number *" placeholder="03XX-XXXXXXX" value={form.contact} onChange={e => set('contact', e.target.value)} required />
-                <div className="span-2">
+                <Input type="number" label="Initial Balance (Rs)" placeholder="Positive (Arrears) / Negative (Advance)" value={form.initial_balance} onChange={e => set('initial_balance', e.target.value)} />
+                <div className="span-2" style={{ marginTop: '0.5rem' }}>
                   <label className="form-label">Address</label>
                   <textarea className="form-textarea" rows={2} placeholder="Home address (optional)" value={form.address} onChange={e => set('address', e.target.value)} />
                 </div>
@@ -507,7 +530,8 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
                   error={cnicError}
                 />
                 <Input label="Contact Number *" placeholder="03XX-XXXXXXX" value={form.contact} onChange={e => set('contact', e.target.value)} required />
-                <div className="span-2">
+                <Input type="number" label="Initial Balance (Rs)" placeholder="Positive (Arrears) / Negative (Advance)" value={form.initial_balance} onChange={e => set('initial_balance', e.target.value)} />
+                <div className="span-2" style={{ marginTop: '0.5rem' }}>
                   <label className="form-label">Address</label>
                   <textarea className="form-textarea" rows={2} placeholder="Home address (optional)" value={form.address} onChange={e => set('address', e.target.value)} />
                 </div>

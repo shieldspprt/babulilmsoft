@@ -324,11 +324,7 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
 
       {/* Record Form */}
       <div className="form-section">
-        {!showForm ? (
-          <button className="btn-add-income" onClick={() => { resetForm(); setShowForm(true); }}>
-            <Plus size={20} /> Record Income
-          </button>
-        ) : (
+        {showForm && (
           <form className="income-form glass" onSubmit={handleSubmit}>
             <div className="form-header">
               <h4>{editingId ? 'Edit Income' : 'Record Income'}</h4>
@@ -418,8 +414,8 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
         )}
       </div>
 
-      {/* Records List */}
-      <div className="records-section glass">
+      {/* Records Header (Filters & Stats) */}
+      <div className="records-header-section glass">
         <div className="records-header">
           <div className="search-filter">
             <div className="search-box">
@@ -438,40 +434,86 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
               ))}
             </select>
           </div>
-          <span className="records-count">{filteredRecords.length} records</span>
+          
+          <div className="records-actions-top">
+            <span className="records-count">{filteredRecords.length} records</span>
+            <button className="btn-add-income compact" onClick={() => { if(showForm) setShowForm(false); else { resetForm(); setShowForm(true); } }}>
+              {showForm ? <X size={16} /> : <Plus size={16} />}
+              {showForm ? 'Cancel' : 'Record Income'}
+            </button>
+          </div>
         </div>
+      </div>
 
-        <div className="records-list">
+      {/* Table Section */}
+      <div className="records-table-section glass">
+        <div className="records-table-container">
           {filteredRecords.length === 0 ? (
             <div className="empty-state">
               <FileText size={48} />
               <p>No income records found</p>
             </div>
           ) : (
-            paginated.map(record => (
-              <div key={record.id} className="record-card">
-                <div className="record-main">
-                  <span className="record-category">{record.category_name}</span>
-                  <span className="record-amount">Rs {record.amount.toLocaleString()}</span>
-                </div>
-                <div className="record-details">
-                  <span><Calendar size={14} /> {new Date(record.date).toLocaleDateString()}</span>
-                  <span><CreditCard size={14} /> {record.payment_method}</span>
-                  <span className="record-desc">{record.description}</span>
-                </div>
-                {record.additional_notes && (
-                  <div className="record-notes">{record.additional_notes}</div>
-                )}
-                <div className="record-actions">
-                  {isOwner && (
-                    <button className="btn-icon" onClick={() => startEdit(record)}><Edit2 size={14} /></button>
-                  )}
-                  {isOwner && (
-                    <button className="btn-icon danger" onClick={() => handleDelete(record.id)}><Trash2 size={14} /></button>
-                  )}
-                </div>
-              </div>
-            ))
+            <table className="records-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Method</th>
+                  <th className="amount-col">Amount</th>
+                  <th className="actions-col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.map(record => (
+                  <tr key={record.id}>
+                    <td className="date-cell">
+                      <div className="date-wrapper">
+                        <Calendar size={14} />
+                        {new Date(record.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </div>
+                    </td>
+                    <td>
+                      <span className="table-category-tag">{record.category_name}</span>
+                    </td>
+                    <td>
+                      <div className="desc-wrapper">
+                        <span className="record-desc-text">{record.description}</span>
+                        {record.additional_notes && (
+                          <span className="record-notes-hint" title={record.additional_notes}>
+                            <FileText size={12} />
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="method-wrapper">
+                        <CreditCard size={14} />
+                        {record.payment_method}
+                      </div>
+                    </td>
+                    <td className="amount-col amount-cell">
+                      Rs {record.amount.toLocaleString()}
+                    </td>
+                    <td className="actions-col">
+                      <div className="table-actions">
+                        {isOwner && (
+                          <button className="btn-table-icon" onClick={() => startEdit(record)} title="Edit">
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+                        {isOwner && (
+                          <button className="btn-table-icon danger" onClick={() => handleDelete(record.id)} title="Delete">
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
 

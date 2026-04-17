@@ -7,6 +7,9 @@ import { Button } from './ui/Button';
 import { Input }  from './ui/Input';
 import '../components/managers.css';
 import { isPositiveNumber } from '../lib/validation';
+import './ClassesManager.css';
+
+const DEFAULT_SUBJECTS = ['English', 'Math', 'Science', 'Urdu', 'Quran', 'Islamyat'];
 
 type Class = {
   id: string;
@@ -16,6 +19,7 @@ type Class = {
   monthly_fee: number;
   admission_fee: number;
   active: boolean;
+  subjects: string[];
   created_at: string;
 };
 
@@ -32,12 +36,15 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newFee, setNewFee] = useState('');
+  const [newSubjects, setNewSubjects] = useState<string[]>(DEFAULT_SUBJECTS);
+  const [subjectInput, setSubjectInput] = useState('');
   const [saving, setSaving] = useState(false);
   
   const [editingClass, setEditingClass] = useState<Class | null>(null);
   const [editName, setEditName] = useState('');
   const [editFee, setEditFee] = useState('');
   const [editActive, setEditActive] = useState(true);
+  const [editSubjects, setEditSubjects] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!schoolId?.trim()) {
@@ -96,7 +103,8 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
         monthly_fee: parseInt(newFee, 10),
         admission_fee: 0,
         display_order: classes.length + 1,
-        active: true
+        active: true,
+        subjects: newSubjects
       });
       if (error) {
         showFlash('Error: ' + error.message);
@@ -104,6 +112,7 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
         showFlash('Class added!');
         setNewName('');
         setNewFee('');
+        setNewSubjects(DEFAULT_SUBJECTS);
         setShowAddModal(false);
         load();
       }
@@ -112,7 +121,7 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     } finally {
       setSaving(false);
     }
-  }, [newName, newFee, schoolId, classes.length, showFlash, load]);
+  }, [newName, newFee, newSubjects, schoolId, classes.length, showFlash, load]);
 
   const handleEdit = useCallback(async () => {
     if (!editingClass || !editName.trim()) {
@@ -128,7 +137,8 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       const { error } = await supabase.from('classes').update({
         name: editName.trim(),
         monthly_fee: parseInt(editFee, 10),
-        active: editActive
+        active: editActive,
+        subjects: editSubjects
       }).eq('id', editingClass.id);
       if (error) {
         showFlash('Error: ' + error.message);
@@ -142,7 +152,7 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     } finally {
       setSaving(false);
     }
-  }, [editingClass, editName, editFee, editActive, showFlash, load]);
+  }, [editingClass, editName, editFee, editActive, editSubjects, showFlash, load]);
 
   const handleDelete = (id: string) => {
     // Check if class has students before allowing deletion
@@ -173,6 +183,19 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     setEditName(c.name);
     setEditFee(c.monthly_fee.toString());
     setEditActive(c.active);
+    setEditSubjects(c.subjects || []);
+    setSubjectInput('');
+  };
+
+  const addSubject = (current: string[], set: (s: string[]) => void) => {
+    if (!subjectInput.trim()) return;
+    if (current.includes(subjectInput.trim())) return;
+    set([...current, subjectInput.trim()]);
+    setSubjectInput('');
+  };
+
+  const removeSubject = (current: string[], set: (s: string[]) => void, subject: string) => {
+    set(current.filter(s => s !== subject));
   };
 
   const filtered = search.trim()
@@ -197,7 +220,13 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
             <input placeholder="Search classes…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           {isOwner && (
-            <Button onClick={() => { setNewName(''); setNewFee(''); setShowAddModal(true); }}>
+            <Button onClick={() => { 
+              setNewName(''); 
+              setNewFee(''); 
+              setNewSubjects(DEFAULT_SUBJECTS);
+              setSubjectInput('');
+              setShowAddModal(true); 
+            }}>
               <Plus size={18} /> Add Class
             </Button>
           )}
@@ -228,7 +257,12 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
             <tbody>
               {filtered.map(c => (
                 <tr key={c.id} className={c.active ? '' : 'inactive'}>
-                  <td><strong>{c.name}</strong></td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{c.name}</div>
+                    <div className="class-subjects-list">
+                      {(c.subjects || []).join(', ')}
+                    </div>
+                  </td>
                   <td>Rs {c.monthly_fee.toLocaleString()}</td>
                   <td><Users size={14} style={{marginRight:4}}/>{studentCounts[c.id] || 0}</td>
                   <td>
@@ -270,6 +304,28 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
                 <div className="span-2">
                   <Input label="Monthly Fee (Rs) *" placeholder="e.g. 1500" inputMode="numeric" pattern="[0-9]*" value={newFee} onChange={e => setNewFee(e.target.value)} required />
                 </div>
+                <div className="span-2">
+                  <label className="form-label">Subjects Management</label>
+                  <div className="subject-tag-input-wrap">
+                    <div className="subject-tags">
+                      {newSubjects.map(s => (
+                        <span key={s} className="subject-tag">
+                          {s} <X size={12} onClick={() => removeSubject(newSubjects, setNewSubjects, s)} />
+                        </span>
+                      ))}
+                    </div>
+                    <div className="subject-input-row">
+                      <input 
+                        className="form-input" 
+                        placeholder="Type a subject and press Enter..." 
+                        value={subjectInput}
+                        onChange={e => setSubjectInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addSubject(newSubjects, setNewSubjects)}
+                      />
+                      <Button size="sm" onClick={() => addSubject(newSubjects, setNewSubjects)}>Add</Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="modal-foot">
@@ -296,6 +352,28 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
                 </div>
                 <div>
                   <Input label="Monthly Fee (Rs) *" inputMode="numeric" pattern="[0-9]*" value={editFee} onChange={e => setEditFee(e.target.value)} required />
+                </div>
+                <div className="span-2">
+                  <label className="form-label">Subjects Management</label>
+                  <div className="subject-tag-input-wrap">
+                    <div className="subject-tags">
+                      {editSubjects.map(s => (
+                        <span key={s} className="subject-tag">
+                          {s} <X size={12} onClick={() => removeSubject(editSubjects, setEditSubjects, s)} />
+                        </span>
+                      ))}
+                    </div>
+                    <div className="subject-input-row">
+                      <input 
+                        className="form-input" 
+                        placeholder="Add more subjects..." 
+                        value={subjectInput}
+                        onChange={e => setSubjectInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && addSubject(editSubjects, setEditSubjects)}
+                      />
+                      <Button size="sm" onClick={() => addSubject(editSubjects, setEditSubjects)}>Add</Button>
+                    </div>
+                  </div>
                 </div>
                 <div className="span-2">
                   <label className="form-label">Status</label>

@@ -443,6 +443,62 @@
 .fss-dues-amount.med  { color: #fbbf24; background: rgba(245,158,11,0.12); }
 .fss-dues-amount.low  { color: var(--text-secondary); background: var(--bg); }
 
+/* ── Actions ─────────────────────────────────────────────────────── */
+.fss-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fss-action-btn {
+  padding: 0.4rem 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: var(--font-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.fss-action-btn.collect {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.fss-action-btn.collect:hover {
+  background: var(--primary-dark);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.fss-action-btn.view {
+  background: var(--surface);
+}
+
+.fss-action-btn.view:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-muted);
+  transform: translateY(-1px);
+}
+
+.fss-action-btn.print {
+  background: var(--surface);
+  border-color: var(--secondary);
+  color: var(--secondary);
+}
+
+.fss-action-btn.print:hover {
+  background: var(--secondary);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .fss-kpi-grid { grid-template-columns: 1fr 1fr; }

@@ -18,6 +18,9 @@ export type SchoolProfile = {
   contact: string;
   email: string;
   logo_url: string;
+  primary_color: string;
+  secondary_color: string;
+  tertiary_color: string;
   total_credits: number;
   credit_expires_at: string | null;
   created_at: string;
@@ -50,8 +53,13 @@ export type Class = {
   id: string;
   school_id: string;
   name: string;
-  description: string;
+  display_order: number;
+  monthly_fee: number;
+  admission_fee: number;
+  active: boolean;
+  subjects: string[];
   created_at: string;
+  updated_at: string;
 };
 
 export type Teacher = {
@@ -129,7 +137,8 @@ export type SupplierTransaction = {
 export type Parent = {
   id: string;
   school_id: string;
-  name: string;
+  first_name: string; // Note: database has first_name/last_name but type had 'name'
+  last_name: string;
   relation: 'Father' | 'Mother' | 'Guardian';
   gender: string;
   cnic: string;
@@ -140,8 +149,113 @@ export type Parent = {
   occupation: string;
   notes: string;
   is_active: boolean;
+  opening_balance: number;
   created_at: string;
   updated_at: string;
+};
+
+export type Student = {
+  id: string;
+  school_id: string;
+  parent_id: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;
+  gender: 'Boy' | 'Girl';
+  admission_no: string;
+  date_of_admission: string;
+  admission_class_id: string;
+  current_class_id: string;
+  discount_type: string | null;
+  discount_value: number | null;
+  current_monthly_fee: number;
+  active: boolean;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FeeStructure = {
+  id: string;
+  school_id: string;
+  class_id: string;
+  monthly_amount: number;
+  effective_from: string;
+  effective_to: string | null;
+  created_at: string;
+};
+
+export type Discount = {
+  id: string;
+  school_id: string;
+  student_id: string;
+  discount_type: 'percentage' | 'amount' | 'fixed';
+  discount_value: number;
+  active_from: string;
+  active_to: string | null;
+  reason: string | null;
+  created_at: string;
+};
+
+export type LedgerEntry = {
+  id: string;
+  school_id: string;
+  parent_id: string;
+  entry_type: 'debit' | 'credit';
+  amount: number;
+  reference_type: 'fee_generation' | 'payment' | 'opening_balance' | 'adjustment';
+  reference_id: string | null;
+  description: string | null;
+  month: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type FeeGeneration = {
+  id: string;
+  school_id: string;
+  months_generated: string[];
+  generated_by: string | null;
+  student_count: number;
+  total_amount: number;
+  skipped_count: number;
+  status: 'pending' | 'completed' | 'failed';
+  generated_at: string;
+};
+
+export type StudentMonthlyFee = {
+  id: string;
+  school_id: string;
+  student_id: string;
+  parent_id: string;
+  class_id: string;
+  generation_id: string;
+  month: string;
+  gross_amount: number;
+  discount_type: string | null;
+  discount_value: number | null;
+  discount_amount: number;
+  net_amount: number;
+  created_at: string;
+};
+
+export type Payment = {
+  id: string;
+  school_id: string;
+  parent_id: string;
+  received_amount: number;
+  payment_method: 'cash' | 'bank' | 'cheque' | 'other';
+  received_by: string | null;
+  notes: string | null;
+  received_at: string;
+};
+
+export type PaymentAllocation = {
+  id: string;
+  payment_id: string;
+  student_monthly_fee_id: string;
+  allocated_amount: number;
+  created_at: string;
 };
 
 
@@ -207,4 +321,48 @@ export type ReceiptStudent = {
   discount_type: string | null;
   discount_value: number | null;
   final_fee: number;
+};
+
+export type ExamTerm = {
+  id: string;
+  school_id: string;
+  name: string;
+  academic_year: string;
+  start_date: string;
+  end_date: string;
+  class_ids: string[];
+  created_at: string;
+};
+
+export type AdminSettings = {
+  id: string;
+  jazzcash_number: string;
+  jazzcash_name: string;
+  bank_name: string;
+  bank_account_title: string;
+  bank_iban: string;
+  updated_at: string;
+};
+
+// === CUSTOM RECEIPT TYPES ===
+export type CustomReceiptItem = {
+  description: string;
+  quantity: number;
+  price: number;
+  total: number;
+};
+
+export type CustomReceipt = {
+  id: string;
+  school_id: string;
+  type: 'invoice' | 'receipt';
+  receipt_no: string;
+  recipient_name: string;
+  parent_id: string | null;
+  date: string;
+  due_date: string | null;
+  items: CustomReceiptItem[];
+  total_amount: number;
+  notes: string | null;
+  created_at: string;
 };

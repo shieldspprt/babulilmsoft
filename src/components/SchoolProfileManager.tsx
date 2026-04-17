@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
-import { Settings, Camera, Upload, CheckCircle } from 'lucide-react';
+import { Settings, Camera, Upload, CheckCircle, Palette } from 'lucide-react';
 import './managers.css';
 import './SchoolProfile.css';
 
@@ -13,12 +13,41 @@ import './SchoolProfile.css';
    School Profile Manager
    ═══════════════════════════════════════════════════════════════════ */
 
-const MAX_LOGO_SIZE = 512 * 1024; // 512 KB
+
+
+const ColorInput = ({ label, value, onChange, disabled }: { label: string, value: string, onChange: (val: string) => void, disabled: boolean }) => (
+  <div className="color-field-container" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '1rem' }}>
+    <label className="form-label" style={{ fontSize: '0.8rem', opacity: 0.8 }}>{label}</label>
+    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+      <div 
+        style={{ 
+          width: '36px', height: '36px', borderRadius: '50%', backgroundColor: value, 
+          boxShadow: '0 0 0 2px white, 0 0 0 3px #e2e8f0', transition: 'transform 0.2s' 
+        }} 
+      />
+      <input 
+        type="color" 
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ width: '40px', height: '32px', border: 'none', background: 'transparent', cursor: 'pointer' }}
+        disabled={disabled}
+      />
+      <div style={{ flex: 1 }}>
+        <Input 
+          placeholder="#000000"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+        />
+      </div>
+    </div>
+  </div>
+);
 
 export const SchoolProfileManager = ({ schoolId, role }: { schoolId: string; role?: Role }) => {
   const isOwner = !role || role === 'owner';
   const { profile, refreshProfile } = useAuth();
-  const { flash, showFlash } = useFlashMessage(5000);
+  const { flash, showFlash } = useFlashMessage(10000);
 
   const [form, setForm] = useState({
     school_name: '',
@@ -26,13 +55,15 @@ export const SchoolProfileManager = ({ schoolId, role }: { schoolId: string; rol
     email: '',
     address: '',
     logo_url: '',
+    primary_color: '#1a237e',
+    secondary_color: '#947029',
+    tertiary_color: '#f1f5f9',
   });
 
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Populate form from profile on mount
   useEffect(() => {
     if (profile) {
       setForm({
@@ -41,6 +72,9 @@ export const SchoolProfileManager = ({ schoolId, role }: { schoolId: string; rol
         email: profile.email || '',
         address: (profile as any).address || '',
         logo_url: profile.logo_url || '',
+        primary_color: profile.primary_color || '#1a237e',
+        secondary_color: profile.secondary_color || '#947029',
+        tertiary_color: profile.tertiary_color || '#f1f5f9',
       });
     }
   }, [profile]);
@@ -49,88 +83,74 @@ export const SchoolProfileManager = ({ schoolId, role }: { schoolId: string; rol
     setForm(prev => ({ ...prev, [field]: e.target.value }));
   };
 
-  /* ── Logo Upload ──────────────────────────────────────────────── */
   const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      showFlash('Please select an image file (PNG, JPG, or SVG)');
-      return;
-    }
-
-    if (file.size > MAX_LOGO_SIZE) {
-      showFlash('Logo must be under 512 KB');
-      return;
-    }
+    if (!file.type.startsWith('image/')) { showFlash('Please select an image file'); return; }
+    // Increased size limit to 2MB for storage backend instead of 512KB for base64
+    if (file.size > 2 * 1024 * 1024) { showFlash('Logo must be under 2 MB'); return; }
 
     setUploading(true);
     try {
-      // Convert to base64 for storage
-      const base64 = await fileToBase64(file);
-      setForm(prev => ({ ...prev, logo_url: base64 }));
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${schoolId}-${Math.random()}.${fileExt}`;
+      
+      const { data, error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('logos')
+        .getPublicUrl(data.path);
+
+      setForm(prev => ({ ...prev, logo_url: publicUrlData.publicUrl }));
     } catch (err: any) {
-      showFlash('Error reading file: ' + err.message);
+      showFlash('Error: ' + err.message);
     } finally {
       setUploading(false);
-      // Reset input so same file can be re-selected
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const handleRemoveLogo = () => {
-    setForm(prev => ({ ...prev, logo_url: '' }));
-  };
-
-  /* ── Save Profile ──────────────────────────────────────────────── */
   const handleSave = async () => {
-    if (!form.school_name.trim()) {
-      showFlash('School name is required');
-      return;
-    }
-
+    if (!form.school_name.trim()) { showFlash('School name is required'); return; }
     setSaving(true);
     try {
-      const updates: Record<string, string> = {
+      const payload: any = {
         school_name: form.school_name.trim(),
         contact: form.contact.trim(),
         email: form.email.trim(),
         logo_url: form.logo_url,
+        primary_color: form.primary_color,
+        secondary_color: form.secondary_color,
+        tertiary_color: form.tertiary_color,
+        address: form.address.trim()
       };
 
-      // Only include address if the column exists in the DB
-      if (form.address) {
-        updates.address = form.address.trim();
-      }
-
-      const { error } = await supabase
-        .from('schools')
-        .update(updates)
-        .eq('id', schoolId);
+      const { error } = await supabase.from('schools').update(payload).eq('id', schoolId);
 
       if (error) {
-        // If 'address' column doesn't exist, retry without it
-        if (error.message?.includes('address') || error.code === '42703') {
-          const { error: retryError } = await supabase
-            .from('schools')
-            .update({
-              school_name: form.school_name.trim(),
-              contact: form.contact.trim(),
-              email: form.email.trim(),
-              logo_url: form.logo_url,
-            })
-            .eq('id', schoolId);
-
-          if (retryError) throw retryError;
+        if (error.code === '42703') {
+           // Retry without color fields if they don't exist yet
+           const basics = { ...payload };
+           delete basics.primary_color;
+           delete basics.secondary_color;
+           delete basics.tertiary_color;
+           
+           const { error: retryErr } = await supabase.from('schools').update(basics).eq('id', schoolId);
+           if (retryErr) throw retryErr;
+           showFlash('Warning: Basic info saved, but color columns are missing in DB. See instructions to add them.');
         } else {
           throw error;
         }
+      } else {
+        showFlash('School profile and branding updated successfully');
       }
 
-      showFlash('School profile updated successfully');
       await refreshProfile();
     } catch (err: any) {
-      showFlash('Error updating profile: ' + err.message);
+      showFlash('Error: ' + err.message);
     } finally {
       setSaving(false);
     }
@@ -141,203 +161,77 @@ export const SchoolProfileManager = ({ schoolId, role }: { schoolId: string; rol
     form.contact !== (profile?.contact || '') ||
     form.email !== (profile?.email || '') ||
     form.address !== ((profile as any)?.address || '') ||
-    form.logo_url !== (profile?.logo_url || '');
+    form.logo_url !== (profile?.logo_url || '') ||
+    form.primary_color !== (profile?.primary_color || '#1a237e') ||
+    form.secondary_color !== (profile?.secondary_color || '#947029') ||
+    form.tertiary_color !== (profile?.tertiary_color || '#f1f5f9');
 
   return (
     <div className="manager">
-      {/* Toolbar */}
       <div className="manager-toolbar">
         <div className="manager-title">
           <Settings size={24} />
           <div>
             <h3>School Profile</h3>
-            <p>Manage your school information</p>
+            <p>Manage branding and contact information</p>
           </div>
         </div>
       </div>
 
-      {/* Flash */}
       {flash && (
-        <div className={'flash ' + (flash.startsWith('Error') ? 'error' : 'success')}>
-          {flash.startsWith('Error') ? <span>⚠ {flash}</span> : <span>✓ {flash}</span>}
+        <div className={'flash ' + (flash.includes('Error') || flash.includes('missing') ? 'error' : 'success')}>
+          <span>{flash}</span>
         </div>
       )}
 
-      {/* Profile Card */}
       <div className="profile-card">
-        {/* Logo Section */}
         <div className="profile-logo-section">
-          <div className="profile-logo-preview" title="School Logo">
-            {form.logo_url ? (
-              <img src={form.logo_url} alt="School Logo" className="profile-logo-img" />
-            ) : (
-              <div className="profile-logo-placeholder">
-                <Camera size={28} />
-                <span>No Logo</span>
-              </div>
-            )}
+          <div className="profile-logo-preview">
+            {form.logo_url ? <img src={form.logo_url} alt="Logo" /> : <Camera size={28} />}
           </div>
           {isOwner && (
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                onChange={handleLogoSelect}
-                style={{ display: 'none' }}
-              />
-              <div className="profile-logo-actions">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  isLoading={uploading}
-                >
-                  <Upload size={14} /> {form.logo_url ? 'Change Logo' : 'Upload Logo'}
-                </Button>
-                {form.logo_url && (
-                  <Button size="sm" variant="ghost" onClick={handleRemoveLogo}>
-                    Remove
-                  </Button>
-                )}
-              </div>
-              <span className="profile-logo-hint">PNG, JPG, or SVG · Max 512 KB</span>
-            </>
+            <div className="profile-logo-actions">
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleLogoSelect} style={{ display: 'none' }} />
+              <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} isLoading={uploading}>
+                <Upload size={14} /> Upload Logo
+              </Button>
+            </div>
           )}
         </div>
 
-        {/* Divider */}
         <div className="profile-divider" />
 
-        {/* Form */}
         <div className="profile-form">
-          <div className="form-section-label">School Information</div>
-          {isOwner ? (
-            <div className="form-grid">
-              <div className="span-2">
-                <Input
-                  label="School Name"
-                  placeholder="Enter school name"
-                  value={form.school_name}
-                  onChange={handleChange('school_name')}
-                  required
-                />
-              </div>
-              <Input
-                label="Phone / Contact"
-                placeholder="e.g. 0311-1234567"
-                value={form.contact}
-                onChange={handleChange('contact')}
-              />
-              <Input
-                label="Email"
-                type="email"
-                placeholder="e.g. school@example.com"
-                value={form.email}
-                onChange={handleChange('email')}
-              />
-              <div className="span-2">
-                <label className="form-label">Address</label>
-                <textarea
-                  className="form-textarea"
-                  rows={3}
-                  placeholder="Enter full school address"
-                  value={form.address}
-                  onChange={handleChange('address')}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="profile-info-grid">
-              <div className="profile-info-item">
-                <span className="profile-info-label">School Name</span>
-                <span className="profile-info-value">{form.school_name || '—'}</span>
-              </div>
-              <div className="profile-info-item">
-                <span className="profile-info-label">Phone / Contact</span>
-                <span className="profile-info-value">{form.contact || '—'}</span>
-              </div>
-              <div className="profile-info-item">
-                <span className="profile-info-label">Email</span>
-                <span className="profile-info-value">{form.email || '—'}</span>
-              </div>
-              <div className="profile-info-item">
-                <span className="profile-info-label">Address</span>
-                <span className="profile-info-value">{form.address || '—'}</span>
-              </div>
-            </div>
-          )}
+          <div className="form-section-label">General Information</div>
+          <div className="form-grid">
+            <div className="span-2"><Input label="School Name" value={form.school_name} onChange={handleChange('school_name')} required disabled={!isOwner} /></div>
+            <Input label="Contact" value={form.contact} onChange={handleChange('contact')} disabled={!isOwner} />
+            <Input label="Email" value={form.email} onChange={handleChange('email')} disabled={!isOwner} />
+            <div className="span-2"><label className="form-label">Address</label><textarea className="form-textarea" rows={2} value={form.address} onChange={handleChange('address')} disabled={!isOwner} /></div>
+          </div>
         </div>
 
-        {/* Divider */}
         <div className="profile-divider" />
 
-        {/* Save Button */}
+        <div className="profile-form">
+          <div className="form-section-label"><Palette size={16} /> Brand Identity</div>
+          <div className="form-grid">
+            <ColorInput label="Primary Color (Main Borders)" value={form.primary_color} onChange={(v)=>setForm(p=>({...p, primary_color: v}))} disabled={!isOwner} />
+            <ColorInput label="Secondary Color (Headers)" value={form.secondary_color} onChange={(v)=>setForm(p=>({...p, secondary_color: v}))} disabled={!isOwner} />
+            <ColorInput label="Tertiary Color (Accents)" value={form.tertiary_color} onChange={(v)=>setForm(p=>({...p, tertiary_color: v}))} disabled={!isOwner} />
+          </div>
+        </div>
+
+        <div className="profile-divider" />
+
         {isOwner && (
           <div className="profile-save-row">
-            <Button
-              onClick={handleSave}
-              isLoading={saving}
-              disabled={!hasChanges}
-              size="lg"
-            >
-              <CheckCircle size={18} />
-              {saving ? 'Saving...' : 'Save Changes'}
+            <Button onClick={handleSave} isLoading={saving} disabled={!hasChanges} size="lg">
+              <CheckCircle size={18} /> Save All Changes
             </Button>
-            {!hasChanges && (
-              <span className="profile-no-changes">All changes saved</span>
-            )}
           </div>
         )}
-      </div>
-
-      {/* Account Info (read-only) */}
-      <div className="profile-card profile-info-card">
-        <div className="form-section-label">Account Details</div>
-        <div className="profile-info-grid">
-          <div className="profile-info-item">
-            <span className="profile-info-label">Account ID</span>
-            <span className="profile-info-value profile-info-mono">{schoolId.slice(0, 8)}…</span>
-          </div>
-          <div className="profile-info-item">
-            <span className="profile-info-label">Member Since</span>
-            <span className="profile-info-value">
-              {profile?.created_at
-                ? new Date(profile.created_at).toLocaleDateString('en-PK', {
-                    year: 'numeric', month: 'long', day: 'numeric',
-                  })
-                : '—'}
-            </span>
-          </div>
-          <div className="profile-info-item">
-            <span className="profile-info-label">Credits Remaining</span>
-            <span className="profile-info-value" style={{ fontWeight: 700, color: 'var(--primary)' }}>
-              {profile?.total_credits || 0} days
-            </span>
-          </div>
-          <div className="profile-info-item">
-            <span className="profile-info-label">Credits Expire</span>
-            <span className="profile-info-value">
-              {profile?.credit_expires_at
-                ? new Date(profile.credit_expires_at).toLocaleDateString('en-PK', {
-                    year: 'numeric', month: 'short', day: 'numeric',
-                  })
-                : '—'}
-            </span>
-          </div>
-        </div>
       </div>
     </div>
   );
 };
-
-/* ── Helpers ─────────────────────────────────────────────────── */
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error('Failed to read file'));
-    reader.readAsDataURL(file);
-  });
-}

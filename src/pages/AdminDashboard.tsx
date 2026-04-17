@@ -42,9 +42,10 @@ export const AdminDashboard = () => {
   const [processingId, setProcessingId]   = useState<string | null>(null);
   const [rejectModal, setRejectModal]       = useState<{ id: string; notes: string } | null>(null);
   const [paySettings, setPaySettings]     = useState({
-    jazzcash_number: '0300-1234567', jazzcash_name: 'ilmsoft',
-    bank_name: 'Meezan Bank', bank_account_title: 'ilmsoft', bank_iban: 'PK12MEZN000123456789',
+    jazzcash_number: '', jazzcash_name: '',
+    bank_name: '', bank_account_title: '', bank_iban: '',
   });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const checkAdmin = async () => {
     if (!user) { navigate('/login'); return; }
@@ -55,8 +56,21 @@ export const AdminDashboard = () => {
 
   const loadAll = async () => {
     setLoading(true);
-    await Promise.all([loadRequests(), loadSchools(), loadStats()]);
+    await Promise.all([loadRequests(), loadSchools(), loadStats(), loadSettings()]);
     setLoading(false);
+  };
+
+  const loadSettings = async () => {
+    const { data } = await supabase.from('admin_settings').select('*').eq('id', 'global').single();
+    if (data) {
+      setPaySettings({
+        jazzcash_number: data.jazzcash_number || '',
+        jazzcash_name: data.jazzcash_name || '',
+        bank_name: data.bank_name || '',
+        bank_account_title: data.bank_account_title || '',
+        bank_iban: data.bank_iban || '',
+      });
+    }
   };
 
   const loadRequests = async () => {
@@ -111,6 +125,23 @@ export const AdminDashboard = () => {
       showFlash('Approval failed: ' + (error?.message || 'Request may no longer be pending'));
     }
     loadAll();
+  };
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    const { data, error } = await supabase
+      .from('admin_settings')
+      .upsert({ id: 'global', ...paySettings })
+      .select();
+    
+    setSavingSettings(false);
+    if (error) {
+      showFlash('Error saving settings: ' + error.message);
+    } else if (!data || data.length === 0) {
+      showFlash('Error: Update blocked or settings row missing. Check RLS or run SQL.');
+    } else {
+      showFlash('Settings saved successfully');
+    }
   };
 
   const handleReject = (id: string) => {
@@ -351,7 +382,7 @@ export const AdminDashboard = () => {
               </div>
             </div>
             <div className="pay-settings-actions">
-              <Button size="lg">Save Settings (Demo)</Button>
+              <Button size="lg" onClick={handleSaveSettings} isLoading={savingSettings}>Save Settings</Button>
             </div>
           </div>
         )}

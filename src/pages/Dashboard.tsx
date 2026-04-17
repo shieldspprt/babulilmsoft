@@ -5,17 +5,22 @@ import { supabase } from '../lib/supabase';
 import { ClassesManager } from '../components/ClassesManager';
 import { IncomeManager } from '../components/IncomeManager';
 import { ExpenseManager } from '../components/ExpenseManager';
-import { FeeManager } from '../components/FeeManager';
 import { FeeStatsManager } from '../components/FeeStatsManager';
 import { SchoolProfileManager } from '../components/SchoolProfileManager';
 import { TeamManager } from '../components/TeamManager';
+import { FeeGenerationManager } from '../components/FeeGenerationManager';
+import { LedgerManager } from '../components/LedgerManager';
+import { MissingFeeManager } from '../components/MissingFeeManager';
+import { PaymentPortalV2 } from '../components/PaymentPortalV2';
+import { InvoicePrinter } from '../components/InvoicePrinter';
+import { PaymentReceipt } from '../components/PaymentReceipt';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import {
   LayoutDashboard, GraduationCap, DollarSign,
-  Users2, CreditCard, History, LogOut, AlertTriangle, Clock,
+  Users2, CreditCard, History as HistoryIcon, LogOut, AlertTriangle, Clock,
   CheckCircle, XCircle, BookOpen,
-  Receipt, Search, X, ArrowLeft, CheckCircle2, Banknote, ChevronDown, Settings, BarChart2
+  Receipt, Banknote, ChevronDown, Settings, BarChart2, Calendar
 } from 'lucide-react';
 import './Dashboard.css';
 
@@ -23,9 +28,14 @@ import './Dashboard.css';
 const SuppliersManager = lazy(() => import('../components/SuppliersManager').then(m => ({ default: m.SuppliersManager })));
 const ParentsManager = lazy(() => import('../components/ParentsManager').then(m => ({ default: m.ParentsManager })));
 const StudentsManager = lazy(() => import('../components/StudentsManager').then(m => ({ default: m.StudentsManager })));
+const ExtraFeeCollectionManager = lazy(() => import('../components/ExtraFeeCollectionManager').then(m => ({ default: m.ExtraFeeCollectionManager })));
 const TeachersManager = lazy(() => import('../components/TeachersManager').then(m => ({ default: m.TeachersManager })));
 const ExtraFeesManager = lazy(() => import('../components/ExtraFeesManager').then(m => ({ default: m.ExtraFeesManager })));
-const ExtraFeeCollectionManager = lazy(() => import('../components/ExtraFeeCollectionManager').then(m => ({ default: m.ExtraFeeCollectionManager })));
+const StudentPromotion = lazy(() => import('../components/StudentPromotionModule').then(m => ({ default: m.default })));
+const CustomReceiptManager = lazy(() => import('../components/CustomReceiptManager').then(m => ({ default: m.CustomReceiptManager })));
+const ExamManager = lazy(() => import('../components/ExamManager').then(m => ({ default: m.default })));
+const ExamResultsManager = lazy(() => import('../components/ExamResultsSpreadsheet'));
+const ResultCardManager = lazy(() => import('../components/ResultCardManager'));
 
 // Loading fallback for lazy components
 const ManagerFallback = () => (
@@ -35,23 +45,7 @@ const ManagerFallback = () => (
   </div>
 );
 
-type Tab = 'overview' | 'fee-stats' | 'classes' | 'people' | 'people-students' | 'people-parents' | 'people-teachers' | 'finances' | 'finances-income' | 'finances-expense' | 'finances-suppliers' | 'fee' | 'finances-extra-fees' | 'team' | 'profile' | 'extra-fees' | 'buy' | 'history';
-
-type Parent = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  cnic: string;
-  contact: string;
-};
-
-type Student = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  monthly_fee: number;
-  classes?: { name: string };
-};
+type Tab = 'overview' | 'fee-stats' | 'classes' | 'people' | 'people-students' | 'people-parents' | 'people-teachers' | 'finances' | 'finances-income' | 'finances-expense' | 'finances-suppliers' | 'finances-extra-fees' | 'finances-custom-receipt' | 'team' | 'profile' | 'extra-fees' | 'buy' | 'history' | 'fees-generate' | 'fees-view' | 'fees-payment' | 'fees-missing' | 'exams-terms' | 'exams-promotion' | 'exams-results' | 'exams-results-cards';
 
 const PAGE_TITLES: Record<Tab, string> = {
   overview: '',
@@ -70,8 +64,21 @@ const PAGE_TITLES: Record<Tab, string> = {
   'finances-income': 'Income',
   'finances-expense': 'Expenses',
   'finances-suppliers': 'Suppliers',
-  fee: 'Add Fee',
   'finances-extra-fees': 'One-Time Fee Collection',
+  'finances-custom-receipt': 'Invoice & Payment Generator',
+  'fees-generate': 'Generate Fees',
+  'fees-view': 'Ledger & Statements',
+  'fees-payment': 'Receive Payment',
+  'fees-missing': 'Missing Fees',
+  'exams-terms': 'Examination Terms',
+  'exams-promotion': 'Student Promotion',
+  'exams-results': 'Exam Results',
+  'exams-results-cards': 'Academic Result Cards',
+};
+
+const currentMonthStr = (): string => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 
 export const Dashboard = () => {
@@ -80,7 +87,7 @@ export const Dashboard = () => {
   const location = useLocation();
 
   const [tab, setTab] = useState<Tab>('overview');
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(['people', 'finances']));
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
   const [payMethod, setPayMethod] = useState<'JazzCash' | 'Bank'>('JazzCash');
   const [plan, setPlan] = useState<{ credits: number; pkr: number } | null>(null);
   const [reference, setReference] = useState('');
@@ -90,97 +97,11 @@ export const Dashboard = () => {
   const [creditExpired, setCreditExpired] = useState(false);
   const [daysLeft, setDaysLeft] = useState(0);
   const [overviewStats, setOverviewStats] = useState({ parents: 0, students: 0, classes: 0 });
-
-  // Quick Fee Modal state
-  const [showQuickFee, setShowQuickFee] = useState(false);
-  const [qfSearch, setQfSearch] = useState('');
-  const [qfParents, setQfParents] = useState<Parent[]>([]);
-  const [qfSelectedParent, setQfSelectedParent] = useState<Parent | null>(null);
-  const [qfChildren, setQfChildren] = useState<Student[]>([]);
-  const [qfAmount, setQfAmount] = useState('');
-  const [qfMethod, setQfMethod] = useState('Cash');
-  const [qfSaving, setQfSaving] = useState(false);
-  const [qfSuccess, setQfSuccess] = useState(false);
-
-  // Quick Fee: search parents as user types
-  useEffect(() => {
-    if (!showQuickFee || !profile) return;
-    const timer = setTimeout(async () => {
-      let query = supabase.from('parents').select('*').eq('school_id', profile.id);
-      if (qfSearch.trim()) {
-        query = query.or(`first_name.ilike.%${qfSearch}%,last_name.ilike.%${qfSearch}%,cnic.ilike.%${qfSearch}%`);
-      }
-      const { data } = await query.order('first_name').limit(10);
-      setQfParents(data || []);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [qfSearch, showQuickFee, profile]);
-
-  // Quick Fee: load children when parent selected
-  useEffect(() => {
-    if (!qfSelectedParent || !profile) return;
-    supabase.from('students').select('*, classes(name, monthly_fee)').eq('parent_id', qfSelectedParent.id).eq('school_id', profile.id).eq('active', true)
-      .then(({ data }) => {
-        setQfChildren(data || []);
-        if (data && data.length > 0) {
-          // Calculate total with discounts applied
-          const totalMonthly = data.reduce((sum: number, s: any) => {
-            const classFee = Number(s.classes?.monthly_fee) || Number(s.monthly_fee) || 0;
-            let discount = 0;
-            if (s.discount_type === 'percentage' && s.discount_value) {
-              discount = classFee * (Number(s.discount_value) || 0) / 100;
-            } else if ((s.discount_type === 'fixed' || s.discount_type === 'amount') && s.discount_value) {
-              discount = Number(s.discount_value) || 0;
-            }
-            return sum + Math.max(0, classFee - discount);
-          }, 0);
-          setQfAmount(String(totalMonthly));
-        }
-      });
-  }, [qfSelectedParent, profile]);
-
-  const openQuickFee = () => {
-    setTab('fee');
-  };
-
-  // Quick Fee: Record payment with validation
-  const recordQuickFee = async () => {
-    if (!qfSelectedParent || !qfAmount || !profile) return;
-
-    // Validate amount is positive
-    const numAmount = parseFloat(qfAmount);
-    if (!isFinite(numAmount) || numAmount <= 0) {
-      setMsg({ text: 'Error: Amount must be a positive number', type: 'error' });
-      return;
-    }
-    if (numAmount > 99999999) {
-      setMsg({ text: 'Error: Amount is too large', type: 'error' });
-      return;
-    }
-
-    setQfSaving(true);
-    const today = new Date().toISOString().split('T')[0];
-    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-    const { error } = await supabase.from('fee_payments').insert({
-      school_id: profile.id,
-      parent_id: qfSelectedParent.id,
-      amount: numAmount,
-      months_paid: [currentMonth],
-      months_count: 1,
-      payment_date: today,
-      payment_method: qfMethod,
-    });
-    setQfSaving(false);
-    if (error) {
-      setMsg({ text: 'Error: ' + error.message, type: 'error' });
-    } else {
-      setQfSuccess(true);
-      setTimeout(() => {
-        setShowQuickFee(false);
-        setQfSuccess(false);
-      }, 1500);
-    }
-  };
+  const [focusedParentId, setFocusedParentId] = useState<string | null>(null);
+  const [showPrinterOverlay, setShowPrinterOverlay] = useState(false);
+  const [showReceiptOverlay, setShowReceiptOverlay] = useState(false);
+  const [activePaymentId, setActivePaymentId] = useState<string | null>(null);
+  const [adminSettings, setAdminSettings] = useState<any>(null);
 
   const checkCredits = useCallback(() => {
     if (!profile) return;
@@ -213,6 +134,22 @@ export const Dashboard = () => {
     }
   }, [profile]);
 
+  const loadAdminSettings = useCallback(async () => {
+    if (!profile) return;
+    try {
+      const { data, error } = await supabase.from('admin_settings').select('*').eq('id', 'global').maybeSingle();
+      if (error) {
+        console.error('Error fetching admin settings:', error);
+      } else if (data) {
+        setAdminSettings(data);
+      } else {
+        console.log('No global admin settings found. Using fallbacks.');
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching admin settings:', err);
+    }
+  }, [profile]);
+
   const loadHistory = useCallback(async () => {
     if (!profile) return;
     try {
@@ -225,8 +162,9 @@ export const Dashboard = () => {
     }
   }, [profile]);
 
-  useEffect(() => { if (profile) { checkCredits(); loadOverviewStats(); } }, [profile, checkCredits, loadOverviewStats]);
+  useEffect(() => { if (profile) { checkCredits(); loadOverviewStats(); loadAdminSettings(); } }, [profile, checkCredits, loadOverviewStats, loadAdminSettings]);
   useEffect(() => { if (tab === 'history' && profile) loadHistory(); }, [tab, profile, loadHistory]);
+  useEffect(() => { if (tab === 'buy') loadAdminSettings(); }, [tab, loadAdminSettings]);
   useEffect(() => {
     const s = location.state as { showBuyCredits?: boolean };
     if (s?.showBuyCredits) { setTab('buy'); navigate('/dashboard', { replace: true, state: {} }); }
@@ -318,7 +256,7 @@ export const Dashboard = () => {
           <div className="sidebar-section">
             <div className={`sidebar-section-header${openSections.has('finances') ? ' is-open' : ''}`}>
               <button
-                className={`sidebar-nav-item has-sub${tab.startsWith('finances') || tab === 'fee' ? ' active' : ''}`}
+                className={`sidebar-nav-item has-sub${tab.startsWith('finances') ? ' active' : ''}`}
                 onClick={() => {
                   const current = openSections.has('finances') ? new Set([...openSections].filter(s => s !== 'finances')) : new Set([...openSections, 'finances']);
                   setOpenSections(current);
@@ -331,8 +269,52 @@ export const Dashboard = () => {
                 <button className={`sidebar-sub-item${tab === 'finances-income' ? ' active' : ''}`} onClick={() => setTab('finances-income')}>Income</button>
                 <button className={`sidebar-sub-item${tab === 'finances-expense' ? ' active' : ''}`} onClick={() => setTab('finances-expense')}>Expenses</button>
                 <button className={`sidebar-sub-item${tab === 'finances-suppliers' ? ' active' : ''}`} onClick={() => setTab('finances-suppliers')}>Suppliers</button>
-                <button className={`sidebar-sub-item${tab === 'fee' ? ' active' : ''}`} onClick={() => setTab('fee')}>Fee Collections</button>
                 <button className={`sidebar-sub-item${tab === 'finances-extra-fees' ? ' active' : ''}`} onClick={() => setTab('finances-extra-fees')}>One-Time Collection</button>
+                <button className={`sidebar-sub-item${tab === 'finances-custom-receipt' ? ' active' : ''}`} onClick={() => setTab('finances-custom-receipt')}>Invoice / Payment</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Fees Section */}
+          <div className="sidebar-section">
+            <div className={`sidebar-section-header${openSections.has('fees-grp') ? ' is-open' : ''}`}>
+              <button 
+                className={`sidebar-nav-item has-sub${tab.startsWith('fees-') ? ' active' : ''}`}
+                onClick={() => {
+                  const current = openSections.has('fees-grp') ? new Set([...openSections].filter(s => s !== 'fees-grp')) : new Set([...openSections, 'fees-grp']);
+                  setOpenSections(current);
+                  if (current.has('fees-grp')) setTab('fees-view');
+                }}
+              >
+                <Receipt size={18} /> Fees <ChevronDown size={14} className="sub-chevron" />
+              </button>
+              <div className="sidebar-sub-items">
+                <button className={`sidebar-sub-item${tab === 'fees-view' ? ' active' : ''}`} onClick={() => setTab('fees-view')}>Ledger & Statements</button>
+                <button className={`sidebar-sub-item${tab === 'fees-payment' ? ' active' : ''}`} onClick={() => setTab('fees-payment')}>Receive Payment</button>
+                <button className={`sidebar-sub-item${tab === 'fees-generate' ? ' active' : ''}`} onClick={() => setTab('fees-generate')}>Generate Fees</button>
+                <button className={`sidebar-sub-item${tab === 'fees-missing' ? ' active' : ''}`} onClick={() => setTab('fees-missing')}>Missing Fees</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Exams Section */}
+          <div className="sidebar-section">
+            <div className={`sidebar-section-header${openSections.has('exams-grp') ? ' is-open' : ''}`}>
+              <button 
+                className={`sidebar-nav-item has-sub${tab.startsWith('exams-') ? ' active' : ''}`}
+                onClick={() => {
+                  const current = openSections.has('exams-grp') ? new Set([...openSections].filter(s => s !== 'exams-grp')) : new Set([...openSections, 'exams-grp']);
+                  setOpenSections(current);
+                  if (current.has('exams-grp')) setTab('exams-terms');
+                }}
+              >
+                <Calendar size={18} /> Exams <ChevronDown size={14} className="sub-chevron" />
+              </button>
+              <div className="sidebar-sub-items">
+                <button className={`sidebar-sub-item${tab === 'exams-terms' ? ' active' : ''}`} onClick={() => setTab('exams-terms')}>Examination Terms</button>
+                <button className={`sidebar-sub-item${tab === 'exams-promotion' ? ' active' : ''}`} onClick={() => setTab('exams-promotion')}>Student Promotion</button>
+                <button className={`sidebar-sub-item${tab === 'exams-results' ? ' active' : ''}`} onClick={() => setTab('exams-results')}>Exam Results</button>
+                <button className={`sidebar-sub-item${tab === 'exams-results-cards' ? ' active' : ''}`} onClick={() => setTab('exams-results-cards')}>Result Cards</button>
               </div>
             </div>
           </div>
@@ -445,7 +427,7 @@ export const Dashboard = () => {
                       <span className="hero-action-sub">Enroll a student</span>
                     </div>
                   </button>
-                  <button className="hero-action-btn rose" onClick={openQuickFee}>
+                  <button className="hero-action-btn rose" onClick={() => setTab('fees-payment')}>
                     <div className="hero-action-icon"><Receipt size={28} /></div>
                     <div className="hero-action-content">
                       <span className="hero-action-label">Collect Fee</span>
@@ -465,19 +447,57 @@ export const Dashboard = () => {
           )}
 
           {/* Feature tabs */}
-          {tab === 'fee-stats' && <FeeStatsManager schoolId={profile.id} />}
+          {tab === 'fee-stats' && (
+            <FeeStatsManager 
+              schoolId={profile.id} 
+              onAction={(pid, targetTab) => {
+                setFocusedParentId(pid);
+                if (targetTab === 'print' as any) {
+                  setShowPrinterOverlay(true);
+                } else {
+                  setTab(targetTab as any);
+                }
+              }}
+            />
+          )}
           {tab === 'classes' && <ClassesManager schoolId={profile.id} role={role || undefined} />}
           {tab === 'people-parents' && <Suspense fallback={<ManagerFallback />}><ParentsManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'people-students' && <Suspense fallback={<ManagerFallback />}><StudentsManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'people-teachers' && <Suspense fallback={<ManagerFallback />}><TeachersManager schoolId={profile.id} role={role || undefined} /></Suspense>}
-          {tab === 'fee' && <FeeManager schoolId={profile.id} role={role || undefined} />}
-          {tab === 'finances-extra-fees' && <Suspense fallback={<ManagerFallback />}><ExtraFeeCollectionManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'finances-income' && <IncomeManager schoolId={profile.id} role={role || undefined} />}
           {tab === 'finances-expense' && <ExpenseManager schoolId={profile.id} role={role || undefined} />}
           {tab === 'finances-suppliers' && <Suspense fallback={<ManagerFallback />}><SuppliersManager schoolId={profile.id} role={role || undefined} /></Suspense>}
+          {tab === 'finances-extra-fees' && <Suspense fallback={<ManagerFallback />}><ExtraFeeCollectionManager schoolId={profile.id} /></Suspense>}
+          {tab === 'finances-custom-receipt' && <Suspense fallback={<ManagerFallback />}><CustomReceiptManager schoolId={profile.id} /></Suspense>}
           {tab === 'team' && <TeamManager schoolId={profile.id} />}
           {tab === 'profile' && <SchoolProfileManager schoolId={profile.id} role={role || undefined} />}
           {tab === 'extra-fees' && <Suspense fallback={<ManagerFallback />}><ExtraFeesManager schoolId={profile.id} role={role || undefined} /></Suspense>}
+          {tab === 'fees-view' && (
+            <LedgerManager 
+              schoolId={profile.id} 
+              initialParentId={focusedParentId || undefined}
+              onPrintReceipt={(pid) => {
+                setActivePaymentId(pid);
+                setShowReceiptOverlay(true);
+              }}
+            />
+          )}
+          {tab === 'fees-payment' && (
+            <PaymentPortalV2 
+              schoolId={profile.id} 
+              initialParentId={focusedParentId || undefined} 
+              onPrintReceipt={(pid) => {
+                setActivePaymentId(pid);
+                setShowReceiptOverlay(true);
+              }}
+            />
+          )}
+          {tab === 'fees-generate' && <FeeGenerationManager schoolId={profile.id} />}
+          {tab === 'fees-missing' && <MissingFeeManager schoolId={profile.id} />}
+          {tab === 'exams-terms' && <Suspense fallback={<ManagerFallback />}><ExamManager schoolId={profile.id} /></Suspense>}
+          {tab === 'exams-promotion' && <Suspense fallback={<ManagerFallback />}><StudentPromotion schoolId={profile.id} /></Suspense>}
+          {tab === 'exams-results' && <Suspense fallback={<ManagerFallback />}><ExamResultsManager schoolId={profile.id} /></Suspense>}
+          {tab === 'exams-results-cards' && <Suspense fallback={<ManagerFallback />}><ResultCardManager schoolId={profile.id} /></Suspense>}
 
           {/* Buy Credits */}
           {tab === 'buy' && (
@@ -530,8 +550,8 @@ export const Dashboard = () => {
                   <div className="pay-instructions">
                     Send <strong>Rs {plan.pkr.toLocaleString()}</strong> via{' '}
                     {payMethod === 'JazzCash'
-                      ? <><strong>JazzCash to 0300-1234567</strong> (ilmsoft)</>
-                      : <><strong>Meezan Bank — IBAN: PK12MEZN000123456789</strong> (ilmsoft)</>
+                      ? <><strong>JazzCash to {adminSettings?.jazzcash_number || '0300-1234567'}</strong> ({adminSettings?.jazzcash_name || 'ilmsoft'})</>
+                      : <><strong>{adminSettings?.bank_name || 'Meezan Bank'} — IBAN: {adminSettings?.bank_iban || 'PK12MEZN000123456789'}</strong> ({adminSettings?.bank_account_title || 'ilmsoft'})</>
                     }
                     <br />After payment, enter your transaction reference number below.
                   </div>
@@ -558,7 +578,7 @@ export const Dashboard = () => {
             <div className="animate-fade-up">
               {history.length === 0 ? (
                 <div className="section-empty">
-                  <History size={48} />
+                  <HistoryIcon size={48} />
                   <p>No payment history yet</p>
                 </div>
               ) : (
@@ -602,93 +622,27 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* ─── Quick Fee Modal ──────────────────────────────────────── */}
-      {showQuickFee && (
-        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowQuickFee(false)}>
-          <div className="quick-fee-modal">
-            <div className="qfm-header">
-              <div className="qfm-title">
-                <Receipt size={20} />
-                Collect Fee
-              </div>
-              <button className="qfm-close" onClick={() => setShowQuickFee(false)}><X size={18} /></button>
-            </div>
 
-            {qfSuccess ? (
-              <div className="qfm-success">
-                <CheckCircle2 size={48} color="var(--success)" />
-                <p>Payment recorded!</p>
-              </div>
-            ) : !qfSelectedParent ? (
-              <div className="qfm-search-step">
-                <p className="qfm-step-label">Step 1 — Find Parent</p>
-                <div className="qfm-search-box">
-                  <Search size={16} />
-                  <input
-                    type="text"
-                    placeholder="Search by name or CNIC…"
-                    value={qfSearch}
-                    onChange={e => setQfSearch(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-                <div className="qfm-parent-list">
-                  {qfParents.map(p => (
-                    <button key={p.id} className="qfm-parent-item" onClick={() => setQfSelectedParent(p)}>
-                      <div className="qfm-parent-avatar">{p.first_name[0]}{p.last_name[0]}</div>
-                      <div className="qfm-parent-info">
-                        <span className="qfm-parent-name">{p.first_name} {p.last_name}</span>
-                        <span className="qfm-parent-contact">{p.contact || p.cnic}</span>
-                      </div>
-                    </button>
-                  ))}
-                  {qfParents.length === 0 && qfSearch && (
-                    <p className="qfm-empty">No parents found</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="qfm-pay-step">
-                <div className="qfm-selected-parent">
-                  <button className="qfm-back-btn" onClick={() => setQfSelectedParent(null)}>
-                    <ArrowLeft size={14} /> Change parent
-                  </button>
-                  <div className="qfm-parent-badge">
-                    <div className="qfm-parent-avatar sm">{qfSelectedParent.first_name[0]}{qfSelectedParent.last_name[0]}</div>
-                    <span>{qfSelectedParent.first_name} {qfSelectedParent.last_name}</span>
-                  </div>
-                </div>
-                {qfChildren.length > 0 && (
-                  <div className="qfm-children-info">
-                    {qfChildren.map((c: any) => (
-                      <span key={c.id} className="qfm-child-chip">{c.first_name} ({c.classes?.name || 'N/A'})</span>
-                    ))}
-                  </div>
-                )}
-                <div className="qfm-form">
-                  <div className="qfm-form-group">
-                    <label>Amount (Rs)</label>
-                    <input type="number" value={qfAmount} onChange={e => setQfAmount(e.target.value)} placeholder="0" />
-                  </div>
-                  <div className="qfm-form-group">
-                    <label>Method</label>
-                    <select value={qfMethod} onChange={e => setQfMethod(e.target.value)}>
-                      <option>Cash</option>
-                      <option>Bank Transfer</option>
-                      <option>JazzCash</option>
-                      <option>EasyPaisa</option>
-                    </select>
-                  </div>
-                </div>
-                <Button size="lg" fullWidth isLoading={qfSaving} onClick={recordQuickFee} disabled={!qfAmount}>
-                  <CreditCard size={16} /> Record Payment
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Overlays */}
+      {showPrinterOverlay && profile && (
+        <InvoicePrinter 
+          schoolId={profile.id}
+          month={currentMonthStr()}
+          onClose={() => setShowPrinterOverlay(false)}
+          parentId={focusedParentId || undefined}
+        />
       )}
 
+      {showReceiptOverlay && profile && activePaymentId && (
+        <PaymentReceipt 
+          schoolId={profile.id}
+          paymentId={activePaymentId}
+          onClose={() => {
+            setShowReceiptOverlay(false);
+            setActivePaymentId(null);
+          }}
+        />
+      )}
     </div>
   );
 };

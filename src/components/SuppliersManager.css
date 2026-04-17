@@ -23,107 +23,197 @@
   margin-left: auto;
 }
 
-/* Suppliers Grid */
-.suppliers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+/* Suppliers Table */
+.suppliers-table-container {
+  overflow-x: auto;
+  border-radius: 12px;
+  margin-top: 1rem;
 }
 
-.supplier-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.suppliers-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.95rem;
 }
 
-.supplier-info h3 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.25rem;
-}
-
-.supplier-info .business {
-  color: var(--text-muted);
-  margin: 0 0 0.5rem 0;
-  font-size: 0.9rem;
-}
-
-.supplier-info .contact,
-.supplier-info .address {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text-muted);
-  margin: 0.25rem 0;
-  font-size: 0.9rem;
-}
-
-/* Balance Section */
-.balance-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 1rem;
-  background: var(--bg-color);
-  border-radius: 0.5rem;
-}
-
-.balance-badge {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-}
-
-.balance-badge.owe {
-  background: var(--danger-light);
-  color: var(--danger);
-}
-
-.balance-badge.owed {
-  background: var(--success-light);
-  color: var(--success);
-}
-
-.balance-badge.settled {
+.suppliers-table th {
   background: var(--surface-hover);
+  padding: 1rem;
+  font-weight: 600;
   color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--border);
 }
 
-.balance-amount {
-  font-size: 1.25rem;
+.suppliers-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
 }
 
-.totals {
+.suppliers-table tr:hover td {
+  background: var(--primary-light);
+}
+
+.suppliers-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Table Cell Content */
+.supplier-main-info {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+}
+
+.supplier-name {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.business-name {
   font-size: 0.85rem;
   color: var(--text-muted);
 }
 
-/* Supplier Actions */
-.supplier-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.contact-info, .address-info {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
-.supplier-actions button:first-child,
-.supplier-actions button:nth-child(2) {
-  grid-column: span 1;
+.address-info {
+  max-width: 250px;
 }
 
-.supplier-actions button:nth-child(3) {
-  grid-column: span 2;
+.address-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.supplier-actions button:last-child {
-  grid-column: span 2;
+/* Balance Status Badges */
+.balance-col {
+  text-align: right;
+  width: 180px;
+}
+
+.balance-status-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  min-width: 140px;
+}
+
+.balance-status-badge.owe {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.balance-status-badge.owed {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.balance-status-badge.settled {
+  background: var(--surface-hover);
+  color: var(--text-muted);
+}
+
+.status-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.status-amount {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Actions Col */
+.actions-col {
+  width: 154px;
+  text-align: right;
+}
+
+.supplier-row-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.action-btn-text {
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.action-btn-text.bill {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.action-btn-text.bill:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.action-btn-text.payment {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.action-btn-text.payment:hover {
+  background: #22c55e;
+  color: white;
+}
+
+.action-btn-text.view {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.action-btn-text.view:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+.action-btn-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn-icon.delete:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
 }
 
 /* Forms */
@@ -302,9 +392,15 @@
   text-align: right;
 }
 
-.ledger-table .balance {
-  font-weight: 600;
-  text-align: right;
+.ledger-table tr.opening-balance-row {
+  background: var(--surface-hover);
+  font-style: italic;
+}
+
+.type-badge.opening {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px dashed var(--border);
 }
 
 /* Empty States */

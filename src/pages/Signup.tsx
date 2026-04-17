@@ -28,26 +28,7 @@ export const Signup = () => {
     if (authError) { setError(authError.message); setLoading(false); return; }
     if (data.session) {
       // Email confirmation not required — session is active
-      // Give 30 free credits to new user
-      const { data: school } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('user_id', data.session.user.id)
-        .single();
-      
-      if (school) {
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 30);
-        
-        await supabase
-          .from('schools')
-          .update({ 
-            total_credits: 30, 
-            credit_expires_at: expiresAt.toISOString() 
-          })
-          .eq('id', school.id);
-      }
-      
+      // Credits are initialized automatically by DB trigger (trg_school_credits)
       navigate('/dashboard');
     } else if (data.user) {
       // Email confirmation required — session not yet active

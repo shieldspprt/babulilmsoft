@@ -56,6 +56,17 @@
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-toggle-form:hover {
+  transform: translateY(-1px);
+  background: var(--primary-dark);
+}
+
+.btn-toggle-form.compact {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
 }
 
 .expense-form {
@@ -215,13 +226,26 @@
 /* Filters */
 .filters-bar {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
+  background: var(--surface);
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.filters-left {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex: 1;
 }
 
 .filters-bar select {
   padding: 0.5rem 1rem;
-  background: var(--surface);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);

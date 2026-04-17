@@ -10,6 +10,8 @@ import { Signup } from './pages/Signup';
 import { JoinInvite } from './pages/JoinInvite';
 import { Dashboard } from './pages/Dashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { ResetPassword } from './pages/ResetPassword';
+import { UpdatePassword } from './pages/UpdatePassword';
 import './App.css';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -24,7 +26,7 @@ function AppContent() {
   // Dashboard and admin are full-screen apps — no public navbar
   const isAppRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/dashboard');
   // Auth pages and home page have dark header
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup' || location.pathname === '/';
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup' || location.pathname === '/' || location.pathname === '/reset-password' || location.pathname === '/update-password';
 
   return (
     <div className="app-layout">
@@ -35,6 +37,8 @@ function AppContent() {
           <Route path="/login"   element={<Login />} />
           <Route path="/signup"  element={<Signup />} />
           <Route path="/join/:token" element={<JoinInvite />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="/dashboard/*" element={<ProtectedRoute><CreditGuard><Dashboard /></CreditGuard></ProtectedRoute>} />
           <Route path="/admin/*"     element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         </Routes>

@@ -1,0 +1,64 @@
+/* Subject Management Styling */
+
+.class-subjects-list {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-weight: 400;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subject-tag-input-wrap {
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.subject-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.subject-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--primary-light-alpha);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid var(--primary-light);
+}
+
+.subject-tag svg {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.subject-tag svg:hover {
+  opacity: 1;
+}
+
+.subject-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.subject-input-row .form-input {
+  flex: 1;
+}
+
+/* Modal sizing tweak for more content */
+.modal-box {
+  max-width: 600px;
+}

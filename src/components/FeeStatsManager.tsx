@@ -28,6 +28,10 @@ type ParentDuesRow = {
    HELPERS (mirrors FeeManager logic)
    ═══════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════════
+   HELPERS (Ledger System Logic)
+   ═══════════════════════════════════════════════════════════════════ */
+
 function N(v: unknown): number {
   if (typeof v === 'number') return v;
   if (typeof v === 'string') {
@@ -46,49 +50,10 @@ function todayStr(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-function getBillableMonths(startYm: string, endYm: string): string[] {
-  const result: string[] = [];
-  let [y, m] = startYm.split('-').map(Number);
-  const [ey, em] = endYm.split('-').map(Number);
-  while (y < ey || (y === ey && m <= em)) {
-    result.push(`${y}-${String(m).padStart(2, '0')}`);
-    m++;
-    if (m > 12) { m = 1; y++; }
-  }
-  return result;
-}
-
-function getAdmissionMonth(students: { date_of_admission: string | null }[]): string {
-  if (!students.length) return currentMonthStr();
-  const months = students
-    .map(s => s.date_of_admission?.slice(0, 7))
-    .filter((m): m is string => !!m);
-  if (!months.length) return currentMonthStr();
-  return [...months].sort()[0];
-}
-
-function computeBalance(
-  children: { monthly_fee: number; discount_type: string | null; discount_value: number | null; date_of_admission: string | null }[],
-  payments: { amount: number; months_paid: string[] }[],
-  cm: string,
-): number {
-  const admMonth = getAdmissionMonth(children);
-  const payableMonths = getBillableMonths(admMonth, cm);
-  const monthlyAfterDiscount = children.reduce((sum, c) => {
-    let disc = 0;
-    if (c.discount_type === 'percentage' && c.discount_value) disc = (N(c.monthly_fee) * N(c.discount_value)) / 100;
-    else if ((c.discount_type === 'amount' || c.discount_type === 'fixed') && c.discount_value) disc = N(c.discount_value);
-    return sum + Math.max(0, N(c.monthly_fee) - disc);
-  }, 0);
-  const totalOwed = payableMonths.length * monthlyAfterDiscount;
-  const totalPaid = payments.reduce((s, p) => s + N(p.amount), 0);
-  return totalOwed - totalPaid;
-}
-
 function formatPKR(n: number): string {
-  if (n >= 1_000_000) return `Rs ${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `Rs ${(n / 1_000).toFixed(1)}K`;
-  return `Rs ${n.toLocaleString()}`;
+  if (Math.abs(n) >= 1_000_000) return `Rs ${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `Rs ${(n / 1_000).toFixed(1)}K`;
+  return `Rs ${Math.round(n).toLocaleString()}`;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -104,13 +69,13 @@ const ClassBarChart = ({ data }: { data: ClassBreakdownItem[] }) => {
   if (!data.length) return (
     <div className="fss-chart-empty">
       <AlertCircle size={32} />
-      <p>No class data available</p>
+      <p>No class data available for this month</p>
     </div>
   );
 
   const maxVal = Math.max(...data.map(d => Math.max(d.expected, d.collected)), 1);
   const groupW = BAR_W * 2 + BAR_GAP + GROUP_GAP;
-  const svgW = data.length * groupW + GROUP_GAP;
+  const svgW = Math.max(800, data.length * groupW + GROUP_GAP);
 
   const yLines = [0, 0.25, 0.5, 0.75, 1];
 
@@ -192,7 +157,7 @@ const ClassBarChart = ({ data }: { data: ClassBreakdownItem[] }) => {
 
       {/* Legend */}
       <div className="fss-chart-legend">
-        <span className="fss-legend-item expected"><span className="fss-legend-dot expected" />Expected</span>
+        <span className="fss-legend-item expected"><span className="fss-legend-dot expected" />Expected (Billed)</span>
         <span className="fss-legend-item collected"><span className="fss-legend-dot collected" />Collected</span>
       </div>
     </div>
@@ -203,7 +168,13 @@ const ClassBarChart = ({ data }: { data: ClassBreakdownItem[] }) => {
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════════ */
 
-export const FeeStatsManager = ({ schoolId }: { schoolId: string }) => {
+export const FeeStatsManager = ({ 
+  schoolId, 
+  onAction 
+}: { 
+  schoolId: string; 
+  onAction: (parentId: string, tab: 'fees-payment' | 'fees-view' | 'print') => void 
+}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -222,146 +193,129 @@ export const FeeStatsManager = ({ schoolId }: { schoolId: string }) => {
   const cm = useMemo(() => currentMonthStr(), []);
   const today = useMemo(() => todayStr(), []);
 
-  /* ── fetch all data in one shot ──────────────────────────────────── */
+  /* ── fetch all data using New System tables ──────────────────────── */
   const loadStats = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [studentsRes, classesRes, paymentsRes, parentsRes] = await Promise.all([
+      const [feesRes, ledgerRes, classesRes, balancesRes] = await Promise.all([
+        // 1. Current Month Generated Fees
         supabase
-          .from('students')
-          .select('id, parent_id, admission_class_id, monthly_fee, discount_type, discount_value, date_of_admission, active')
+          .from('student_monthly_fees')
+          .select('net_amount, class_id, parent_id')
           .eq('school_id', schoolId)
-          .eq('active', true),
+          .eq('month', cm),
+        
+        // 2. All Ledger Payments (this month and today)
+        supabase
+          .from('ledger')
+          .select('parent_id, amount, reference_type, created_at, month')
+          .eq('school_id', schoolId)
+          .eq('reference_type', 'payment'),
+
+        // 3. Classes info for labeling
         supabase
           .from('classes')
-          .select('id, name, monthly_fee')
+          .select('id, name')
           .eq('school_id', schoolId),
+        
+        // 4. Current Parent Balances (Dues)
         supabase
-          .from('fee_payments')
-          .select('parent_id, amount, payment_date, months_paid')
-          .eq('school_id', schoolId),
-        supabase
-          .from('parents')
-          .select('id, first_name, last_name, contact')
+          .from('parent_balances')
+          .select(`
+            parent_id,
+            balance,
+            parents:parent_id(first_name, last_name, contact)
+          `)
           .eq('school_id', schoolId)
-          .order('first_name'),
       ]);
 
-      const students = studentsRes.data || [];
+      const monthlyFees = feesRes.data || [];
+      const ledgerPayments = ledgerRes.data || [];
       const classes = classesRes.data || [];
-      const payments = paymentsRes.data || [];
-      const parents = parentsRes.data || [];
+      const parentBalances = balancesRes.data || [];
 
-      /* ── class map ────────────────────────────────────────────────── */
-      const classMap = new Map<string, { name: string; monthly_fee: number }>();
-      classes.forEach((c: any) => classMap.set(c.id, { name: c.name, monthly_fee: N(c.monthly_fee) }));
+      /* ── Class Map ── */
+      const classMap = new Map<string, string>();
+      classes.forEach((c: any) => classMap.set(c.id, c.name));
 
-      /* ── KPI: Expected Monthly ────────────────────────────────────── */
-      let expMonthly = 0;
-      students.forEach((s: any) => {
-        const classFee = N(classMap.get(s.admission_class_id)?.monthly_fee ?? s.monthly_fee);
-        let disc = 0;
-        if (s.discount_type === 'percentage' && s.discount_value) disc = classFee * N(s.discount_value) / 100;
-        else if ((s.discount_type === 'amount' || s.discount_type === 'fixed') && s.discount_value) disc = N(s.discount_value);
-        expMonthly += Math.max(0, classFee - disc);
+      /* ── KPI: Expected Monthly (Sum of net_amount generated for this month) ── */
+      const expTotal = monthlyFees.reduce((sum, f) => sum + N(f.net_amount), 0);
+      setExpectedMonthly(expTotal);
+
+      /* ── KPI: Received This Month ── */
+      // Ledger payments recorded in this calendar month OR tagged with this month
+      const [currYear, currMonth] = cm.split('-');
+      const thisMonthLedger = ledgerPayments.filter(l => {
+        if (l.month === cm) return true;
+        const created = new Date(l.created_at);
+        return created.getFullYear() === Number(currYear) && (created.getMonth() + 1) === Number(currMonth);
       });
-      setExpectedMonthly(expMonthly);
+      const receivedTotal = thisMonthLedger.reduce((sum, l) => sum + N(l.amount), 0);
+      setReceivedThisMonth(receivedTotal);
 
-      /* ── KPI: Received This Month ─────────────────────────────────── */
-      const thisMonthPayments = payments.filter((p: any) =>
-        (p.payment_date || '').startsWith(cm),
-      );
-      setReceivedThisMonth(thisMonthPayments.reduce((s: number, p: any) => s + N(p.amount), 0));
+      /* ── KPI: Collected Today ── */
+      const todayLedger = ledgerPayments.filter(l => l.created_at.startsWith(today));
+      setCollectedToday(todayLedger.reduce((sum, l) => sum + N(l.amount), 0));
 
-      /* ── KPI: Collected Today ─────────────────────────────────────── */
-      setCollectedToday(
-        payments
-          .filter((p: any) => p.payment_date === today)
-          .reduce((s: number, p: any) => s + N(p.amount), 0),
-      );
-
-      /* ── Class-wise breakdown ─────────────────────────────────────── */
-      // Build: parentId → set of classIds (of their children)
-      const parentClassMap = new Map<string, Set<string>>();
-      students.forEach((s: any) => {
-        if (!s.admission_class_id) return;
-        if (!parentClassMap.has(s.parent_id)) parentClassMap.set(s.parent_id, new Set());
-        parentClassMap.get(s.parent_id)!.add(s.admission_class_id);
+      /* ── Class-wise Breakdown ── */
+      const classStats = new Map<string, { expected: number; collected: number }>();
+      
+      // Expected per class
+      monthlyFees.forEach(f => {
+        if (!classStats.has(f.class_id)) classStats.set(f.class_id, { expected: 0, collected: 0 });
+        classStats.get(f.class_id)!.expected += N(f.net_amount);
       });
 
-      // Per class: expected
-      const classExpected = new Map<string, number>();
-      students.forEach((s: any) => {
-        const cid = s.admission_class_id;
-        if (!cid) return;
-        const classFee = N(classMap.get(cid)?.monthly_fee ?? s.monthly_fee);
-        let disc = 0;
-        if (s.discount_type === 'percentage' && s.discount_value) disc = classFee * N(s.discount_value) / 100;
-        else if ((s.discount_type === 'amount' || s.discount_type === 'fixed') && s.discount_value) disc = N(s.discount_value);
-        const fee = Math.max(0, classFee - disc);
-        classExpected.set(cid, (classExpected.get(cid) || 0) + fee);
+      // Distribution of payments across classes
+      // We'll distribute payments proportional to the fees generated this month for each parent's students
+      // (This is a simplified approach useful for high-level stats)
+      const parentClassDistribution = new Map<string, Map<string, number>>();
+      monthlyFees.forEach(f => {
+        if (!parentClassDistribution.has(f.parent_id)) parentClassDistribution.set(f.parent_id, new Map());
+        const pMap = parentClassDistribution.get(f.parent_id)!;
+        pMap.set(f.class_id, (pMap.get(f.class_id) || 0) + N(f.net_amount));
       });
 
-      // Per class: collected this month (from parents who have any child in that class)
-      const classCollected = new Map<string, number>();
-      thisMonthPayments.forEach((p: any) => {
-        const classIds = parentClassMap.get(p.parent_id);
-        if (!classIds) return;
-        // Distribute payment proportionally across classes the parent's kids belong to
-        const share = N(p.amount) / classIds.size;
-        classIds.forEach(cid => {
-          classCollected.set(cid, (classCollected.get(cid) || 0) + share);
+      thisMonthLedger.forEach(p => {
+        const pDistribution = parentClassDistribution.get(p.parent_id);
+        if (!pDistribution) return;
+
+        const pTotalExpected = Array.from(pDistribution.values()).reduce((s, v) => s + v, 0);
+        if (pTotalExpected === 0) return;
+
+        pDistribution.forEach((amount, cid) => {
+          if (!classStats.has(cid)) classStats.set(cid, { expected: 0, collected: 0 });
+          const share = (amount / pTotalExpected) * N(p.amount);
+          classStats.get(cid)!.collected += share;
         });
       });
 
-      const breakdown: ClassBreakdownItem[] = classes
-        .filter((c: any) => classExpected.has(c.id) || classCollected.has(c.id))
-        .map((c: any) => ({
-          classId: c.id,
-          className: c.name,
-          expected: Math.round(classExpected.get(c.id) || 0),
-          collected: Math.round(classCollected.get(c.id) || 0),
-        }))
-        .sort((a, b) => b.expected - a.expected);
+      const breakdown: ClassBreakdownItem[] = Array.from(classStats.entries()).map(([cid, stats]) => ({
+        classId: cid,
+        className: classMap.get(cid) || 'Unknown',
+        expected: Math.round(stats.expected),
+        collected: Math.round(stats.collected)
+      })).sort((a, b) => b.expected - a.expected);
 
       setClassBreakdown(breakdown);
 
-      /* ── Dues per parent ──────────────────────────────────────────── */
-      // Build student map and payment map per parent
-      const studentMap = new Map<string, { monthly_fee: number; discount_type: string | null; discount_value: number | null; date_of_admission: string | null }[]>();
-      students.forEach((s: any) => {
-        const classFee = N(classMap.get(s.admission_class_id)?.monthly_fee ?? s.monthly_fee);
-        if (!studentMap.has(s.parent_id)) studentMap.set(s.parent_id, []);
-        studentMap.get(s.parent_id)!.push({
-          monthly_fee: classFee,
-          discount_type: s.discount_type,
-          discount_value: s.discount_value,
-          date_of_admission: s.date_of_admission,
-        });
-      });
-
-      const paymentMap = new Map<string, { amount: number; months_paid: string[] }[]>();
-      payments.forEach((p: any) => {
-        if (!paymentMap.has(p.parent_id)) paymentMap.set(p.parent_id, []);
-        paymentMap.get(p.parent_id)!.push({ amount: N(p.amount), months_paid: Array.isArray(p.months_paid) ? p.months_paid : [] });
-      });
-
-      const duesRows: ParentDuesRow[] = parents
-        .map((par: any) => {
-          const children = studentMap.get(par.id) || [];
-          const pmts = paymentMap.get(par.id) || [];
-          const balance = computeBalance(children, pmts, cm);
+      /* ── Outstanding Dues ── */
+      const duesRows: ParentDuesRow[] = parentBalances
+        .map((b: any) => {
+          const p = b.parents;
+          // In our ledger, balance < 0 means dues. We convert to positive for display.
+          const outstanding = -N(b.balance); 
           return {
-            id: par.id,
-            name: `${par.first_name} ${par.last_name}`,
-            contact: par.contact || '—',
-            childrenCount: children.length,
-            balance: Math.round(balance),
+            id: b.parent_id,
+            name: `${p.first_name} ${p.last_name}`,
+            contact: p.contact || '—',
+            childrenCount: 0, // Not easily available in one join, keep 0 or extend query
+            balance: Math.round(outstanding)
           };
         })
-        .filter(r => r.balance > 0)            // only parents who owe money
-        .sort((a, b) => b.balance - a.balance); // highest dues first
+        .filter(r => r.balance > 0)
+        .sort((a, b) => b.balance - a.balance);
 
       setAllParentDues(duesRows);
 
@@ -374,74 +328,65 @@ export const FeeStatsManager = ({ schoolId }: { schoolId: string }) => {
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
-  /* ── filtered dues ───────────────────────────────────────────────── */
+  /* ── filtered dues ── */
   const filteredDues = useMemo(() => {
     const threshold = parseFloat(duesThreshold);
     if (!duesThreshold.trim() || isNaN(threshold) || threshold <= 0) return allParentDues;
     return allParentDues.filter(r => r.balance >= threshold);
   }, [allParentDues, duesThreshold]);
 
-  /* ── collection rate ─────────────────────────────────────────────── */
+  /* ── collection rate ── */
   const collectionRate = expectedMonthly > 0
     ? Math.min(100, Math.round((receivedThisMonth / expectedMonthly) * 100))
     : 0;
 
-  /* ── render ──────────────────────────────────────────────────────── */
-  if (loading) {
-    return (
-      <div className="fss-loading">
-        <div className="spinner" />
-        <span>Loading fee statistics…</span>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="fss-loading">
+      <div className="spinner" />
+      <span>Calculating statistics from ledger…</span>
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="fss-error">
-        <AlertCircle size={32} />
-        <p>{error}</p>
-        <button className="fss-retry-btn" onClick={loadStats}>Retry</button>
-      </div>
-    );
-  }
+  if (error) return (
+    <div className="fss-error">
+      <AlertCircle size={32} />
+      <p>{error}</p>
+      <button className="fss-retry-btn" onClick={loadStats}>Retry</button>
+    </div>
+  );
 
   return (
     <div className="fss-shell animate-fade-up">
-
-      {/* ── Section Title ─────────────────────────────────────────────── */}
       <div className="fss-section-header">
         <div>
-          <h2 className="fss-section-title">Fee Statistics</h2>
+          <h2 className="fss-section-title">Financial Insights</h2>
           <p className="fss-section-sub">
-            {new Date().toLocaleString('en-PK', { month: 'long', year: 'numeric' })} — live snapshot
+            {new Date().toLocaleString('en-PK', { month: 'long', year: 'numeric' })} — Source: Ledger v2
           </p>
         </div>
-        <button className="fss-refresh-btn" onClick={loadStats} title="Refresh data">
-          <TrendingUp size={16} />
-          Refresh
+        <button className="fss-refresh-btn" onClick={loadStats}>
+          <TrendingUp size={16} /> Refresh
         </button>
       </div>
 
-      {/* ── KPI Cards ─────────────────────────────────────────────────── */}
       <div className="fss-kpi-grid">
         <div className="fss-kpi-card amber">
           <div className="fss-kpi-icon"><TrendingUp size={20} /></div>
           <div className="fss-kpi-body">
-            <div className="fss-kpi-label">Expected Monthly</div>
+            <div className="fss-kpi-label">Billed This Month</div>
             <div className="fss-kpi-value">{formatPKR(expectedMonthly)}</div>
-            <div className="fss-kpi-sub">Total fees billed this month</div>
+            <div className="fss-kpi-sub">Sum of all generated student fees</div>
           </div>
         </div>
 
         <div className="fss-kpi-card green">
           <div className="fss-kpi-icon"><Calendar size={20} /></div>
           <div className="fss-kpi-body">
-            <div className="fss-kpi-label">Received This Month</div>
+            <div className="fss-kpi-label">Payments Received</div>
             <div className="fss-kpi-value">{formatPKR(receivedThisMonth)}</div>
             <div className="fss-kpi-sub">
               <span className={`fss-rate-badge ${collectionRate >= 75 ? 'good' : collectionRate >= 40 ? 'warn' : 'bad'}`}>
-                {collectionRate}% collected
+                {collectionRate}% of monthly bill collected
               </span>
             </div>
           </div>
@@ -452,62 +397,43 @@ export const FeeStatsManager = ({ schoolId }: { schoolId: string }) => {
           <div className="fss-kpi-body">
             <div className="fss-kpi-label">Collected Today</div>
             <div className="fss-kpi-value">{formatPKR(collectedToday)}</div>
-            <div className="fss-kpi-sub">
-              {new Date().toLocaleDateString('en-PK', { weekday: 'short', day: 'numeric', month: 'short' })}
-            </div>
+            <div className="fss-kpi-sub">New payments recorded today</div>
           </div>
         </div>
       </div>
 
-      {/* ── Class-wise Chart ──────────────────────────────────────────── */}
       <div className="fss-card">
         <div className="fss-card-header">
-          <h3 className="fss-card-title">Class-wise Collection</h3>
-          <span className="fss-card-sub">Expected vs Collected — {new Date().toLocaleString('en-PK', { month: 'long' })}</span>
+          <h3 className="fss-card-title">Class-wise Performance</h3>
+          <span className="fss-card-sub">Billed vs Collected (Proportional Distribution)</span>
         </div>
         <ClassBarChart data={classBreakdown} />
       </div>
 
-      {/* ── Dues Search ───────────────────────────────────────────────── */}
       <div className="fss-card">
         <div className="fss-card-header">
-          <h3 className="fss-card-title">Search by Outstanding Dues</h3>
-          <span className="fss-card-sub">Find parents who owe a certain amount or more</span>
+          <h3 className="fss-card-title">Outstanding Arrears</h3>
+          <span className="fss-card-sub">Filter parents by their total standing dues</span>
         </div>
 
         <div className="fss-dues-search-row">
           <div className="fss-dues-search-box">
             <Search size={16} />
             <input
-              id="dues-threshold-input"
               type="number"
-              min="0"
-              placeholder="Enter minimum dues amount (e.g. 5000)"
+              placeholder="Minimum dues (e.g. 5000)"
               value={duesThreshold}
               onChange={e => setDuesThreshold(e.target.value)}
             />
-            {duesThreshold && (
-              <button
-                className="fss-dues-clear"
-                onClick={() => setDuesThreshold('')}
-                title="Clear"
-              >×</button>
-            )}
           </div>
           <div className="fss-dues-count">
-            <Users size={14} />
-            {filteredDues.length} {filteredDues.length === 1 ? 'parent' : 'parents'} found
+            <Users size={14} /> {filteredDues.length} Parents Found
           </div>
         </div>
 
         {filteredDues.length === 0 ? (
           <div className="fss-dues-empty">
-            <Users size={40} />
-            <p>
-              {duesThreshold
-                ? `No parents owe Rs ${parseFloat(duesThreshold).toLocaleString()} or more`
-                : 'All parents are clear! No outstanding dues.'}
-            </p>
+            <p>No parents found with dues ≥ {duesThreshold || 0}</p>
           </div>
         ) : (
           <div className="fss-dues-table-wrap">
@@ -517,39 +443,58 @@ export const FeeStatsManager = ({ schoolId }: { schoolId: string }) => {
                   <th>#</th>
                   <th>Parent</th>
                   <th>Contact</th>
-                  <th>Children</th>
-                  <th>Outstanding Dues</th>
+                  <th>Standing Dues</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredDues.map((row, idx) => (
+                {filteredDues.map((row: any, idx: number) => (
                   <tr key={row.id}>
-                    <td className="fss-rank">{idx + 1}</td>
+                    <td>{idx + 1}</td>
                     <td>
                       <div className="fss-parent-cell">
-                        <div className="fss-parent-avatar">
-                          {row.name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="fss-parent-name">{row.name}</span>
+                        <div className="fss-parent-avatar">{row.name.charAt(0)}</div>
+                        <span>{row.name}</span>
                       </div>
                     </td>
-                    <td className="fss-contact">{row.contact}</td>
+                    <td>{row.contact}</td>
                     <td>
-                      <span className="fss-children-badge">{row.childrenCount}</span>
+                      <span className={`fss-dues-amount ${row.balance >= 10000 ? 'high' : 'low'}`}>
+                        {formatPKR(row.balance)}
+                      </span>
                     </td>
                     <td>
-                      <span className={`fss-dues-amount ${row.balance >= 10000 ? 'high' : row.balance >= 5000 ? 'med' : 'low'}`}>
-                        Rs {row.balance.toLocaleString()}
-                      </span>
+                      <div className="fss-actions">
+                        <button 
+                          className="fss-action-btn collect"
+                          onClick={() => onAction(row.id, 'fees-payment')}
+                          title="Collect Payment"
+                        >
+                          Collect
+                        </button>
+                        <button 
+                          className="fss-action-btn view"
+                          onClick={() => onAction(row.id, 'fees-view')}
+                          title="View Statement"
+                        >
+                          View Invoice
+                        </button>
+                        <button 
+                          className="fss-action-btn print"
+                          onClick={() => onAction(row.id, 'print')}
+                          title="Print Invoice"
+                        >
+                          Print
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-              </tbody>
+</tbody>
             </table>
           </div>
         )}
       </div>
-
     </div>
   );
 };

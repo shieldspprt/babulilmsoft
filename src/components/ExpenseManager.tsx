@@ -312,11 +312,6 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
 
       {/* Add Expense Form */}
       <div className="expense-form-section">
-        <button className="btn-toggle-form" onClick={() => setShowForm(!showForm)}>
-          <Plus size={20} />
-          {showForm ? 'Cancel' : (editingId ? 'Edit Expense' : 'Record Expense')}
-        </button>
-
         {showForm && (
           <form onSubmit={handleSubmit} className="expense-form glass">
             <div className="form-row">
@@ -453,21 +448,28 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
 
       {/* Filters */}
       <div className="filters-bar">
-        <div className="search-box">
-          <Search size={18} />
-          <input 
-            type="text"
-            placeholder="Search expenses..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="filters-left">
+          <div className="search-box">
+            <Search size={18} />
+            <input 
+              type="text"
+              placeholder="Search expenses..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
+            <option value="">All Categories</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
-        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}>
-          <option value="">All Categories</option>
-          {categories.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+
+        <button className="btn-toggle-form compact" onClick={() => { if(showForm) setShowForm(false); else { resetForm(); setShowForm(true); } }}>
+          {showForm ? <X size={18} /> : <Plus size={18} />}
+          {showForm ? 'Cancel' : 'Record Expense'}
+        </button>
       </div>
 
       {/* Expenses Table */}
