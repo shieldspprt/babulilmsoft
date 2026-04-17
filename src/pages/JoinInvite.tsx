@@ -89,7 +89,7 @@ export const JoinInvite = () => {
     const { data, error: authError } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
-      options: { data: { invite_token: token } },
+      options: { data: { invite_token: token, email: email.trim().toLowerCase() } },
     });
 
     if (authError) {

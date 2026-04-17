@@ -23,7 +23,7 @@ export const Signup = () => {
     const { data, error: authError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
-      options: { data: { school_name: formData.schoolName, contact: formData.contact } }
+      options: { data: { school_name: formData.schoolName, contact: formData.contact, email: formData.email } }
     });
     if (authError) { setError(authError.message); setLoading(false); return; }
     if (data.session) {
