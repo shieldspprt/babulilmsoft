@@ -21,6 +21,7 @@ export const ResultCardPrinter: React.FC<ResultCardPrinterProps> = ({
     name: '', logo: '', 
     primary: '#1a237e', secondary: '#947029', tertiary: '#f1f5f9' 
   });
+  const [logoLoaded, setLogoLoaded] = useState(false);
   const [term, setTerm] = useState<any>(null);
   const [className, setClassName] = useState('');
 
@@ -308,7 +309,14 @@ export const ResultCardPrinter: React.FC<ResultCardPrinterProps> = ({
           position: 'sticky', top: 0, background: 'rgba(15, 23, 42, 0.95)', 
           padding: '1rem', display: 'flex', justifyContent: 'center', gap: '1rem', zIndex: 100 
       }}>
-        <Button variant="primary" size="lg" onClick={() => window.print()} style={{ background: school.primary }}>
+        <Button 
+          variant="primary" 
+          size="lg" 
+          onClick={() => window.print()} 
+          style={{ background: school.primary }}
+          disabled={!!school.logo && !logoLoaded}
+          title={!!school.logo && !logoLoaded ? "Waiting for logo to load..." : ""}
+        >
           <Printer size={20} /> Generate Print Layout
         </Button>
         <Button variant="secondary" onClick={onClose}>
@@ -323,7 +331,16 @@ export const ResultCardPrinter: React.FC<ResultCardPrinterProps> = ({
             <div className="watermark-overlay" />
             
             <div className="report-header">
-               {school.logo && <img src={school.logo} alt="Logo" style={{ maxHeight: '60px', marginBottom: '10px' }} />}
+               {school.logo && (
+                 <img 
+                   src={school.logo} 
+                   alt="Logo" 
+                   style={{ maxHeight: '60px', marginBottom: '10px' }} 
+                   crossOrigin="anonymous"
+                   onLoad={() => setLogoLoaded(true)}
+                   onError={() => setLogoLoaded(true)}
+                 />
+               )}
                <h1 className="school-name">{school.name}</h1>
                <div className="term-subtitle">{term?.name} ({term?.academic_year})</div>
                <div className="report-type-badge">Official Academic Report</div>

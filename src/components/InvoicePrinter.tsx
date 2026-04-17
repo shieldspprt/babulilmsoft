@@ -34,6 +34,7 @@ export const InvoicePrinter: React.FC<InvoicePrinterProps> = ({ schoolId, month,
   const [invoices, setInvoices] = useState<InvoiceData[]>([]);
   const [schoolName, setSchoolName] = useState('School Invoice');
   const [logo, setLogo] = useState<string | null>(null);
+  const [logoLoaded, setLogoLoaded] = useState(false);
   const [classList, setClassList] = useState<{id: string, name: string}[]>([]);
   
   // Filtering states
@@ -81,7 +82,6 @@ export const InvoicePrinter: React.FC<InvoicePrinterProps> = ({ schoolId, month,
       }
 
       const { data: parentData, error: parentError } = await parentQuery;
-
       if (parentError) throw parentError;
 
       // 3. Fetch monthly student fees for this month
@@ -104,89 +104,68 @@ export const InvoicePrinter: React.FC<InvoicePrinterProps> = ({ schoolId, month,
         feeQuery = feeQuery.eq('parent_id', parentId);
       }
 
-      const { data: monthlyFees, error: feeError } = await feeQuery;
+      const { data: monthlyFees } = await feeQuery;
 
-      if (feeError) throw feeError;
-
-      // 4. Fetch ledger entries for ALL time for these parents (to compute "New System Only" balance)
-      let ledgerQuery = supabase
-        .from('ledger')
-        .select('parent_id, entry_type, amount, reference_type, created_at, month')
+      // 4. Fetch students directly (fallback for when no fees exist for the month)
+      const { data: allStudents } = await supabase
+        .from('students')
+        .select('parent_id, first_name, last_name, classes:current_class_id(name)')
         .eq('school_id', schoolId)
-        .in('reference_type', ['fee_generation', 'payment', 'adjustment']); // EXCLUDE 'opening_balance'
-      
-      if (parentId) {
-        ledgerQuery = ledgerQuery.eq('parent_id', parentId);
-      }
-
-      const { data: allLedger, error: ledgerError } = await ledgerQuery;
-
-      if (ledgerError) throw ledgerError;
+        .eq('active', true);
 
       // Helper to group by parent
       const parentInvoices: InvoiceData[] = [];
 
       parentData.forEach(p => {
         const pFees = monthlyFees?.filter(f => f.parent_id === p.id) || [];
-        if (pFees.length === 0) return; // Only print invoices for parents with charges this month
+        
+        // If no fees and no specific parentId provided, skip (avoids printing thousands of empty invoices in batch)
+        // BUT if parentId IS provided, we MUST show the invoice/statement.
+        if (pFees.length === 0 && !parentId) return;
+
+        // Current real balance from DB
+        const dbBalance = (p.parent_balances as any)?.[0]?.balance || 0;
+        const arrearsTotal = -dbBalance; // Convert negative balance to positive arrears
 
         const currentMonthTotal = pFees.reduce((sum, f) => sum + f.net_amount, 0);
+        const prevArrears = arrearsTotal - currentMonthTotal;
         
-        // Calculate "New System Only" Balance from filtered ledger
-        const pLedger = allLedger?.filter(l => l.parent_id === p.id) || [];
-        
-        // Final Current Balance (New System Only)
-        const currentBalance = pLedger.reduce((sum, l) => {
-          return sum + (l.entry_type === 'credit' ? Number(l.amount) : -Number(l.amount));
-        }, 0);
-        
-        // Find ledger activity for the CURRENT invoice month to calculate PREVIOUS balance
-        // We look for:
-        // 1. Fee generation entries for this specific month
-        // 2. Any other ledger activity created during the same real-world time period
-        const [targetYear, targetMonth] = month.split('-');
-        
-        const currentMonthActivity = pLedger.filter(l => {
-          // If it has a month tag, match it
-          if (l.month === month) return true;
-          
-          // For payments/adjustments without a month tag, check the creation date
-          const createdDate = new Date(l.created_at);
-          return (createdDate.getFullYear() === Number(targetYear) && 
-                  (createdDate.getMonth() + 1) === Number(targetMonth));
-        });
+        // Get students either from fees or from the students table
+        let invoiceStudents = pFees.map(f => ({
+          name: `${(f.students as any).first_name} ${(f.students as any).last_name}`,
+          className: (f.classes as any)?.name || 'Unassigned',
+          grossFee: f.gross_amount,
+          discountType: f.discount_type,
+          discountValue: f.discount_value,
+          discountAmount: f.discount_amount,
+          netAmount: f.net_amount
+        }));
 
-        const currentMonthDebits = currentMonthActivity
-          .filter(l => l.entry_type === 'debit')
-          .reduce((sum, l) => sum + Number(l.amount), 0);
-        
-        const currentMonthCredits = currentMonthActivity
-          .filter(l => l.entry_type === 'credit')
-          .reduce((sum, l) => sum + Number(l.amount), 0);
+        if (invoiceStudents.length === 0) {
+          const pStudents = allStudents?.filter(s => s.parent_id === p.id) || [];
+          invoiceStudents = pStudents.map(s => ({
+            name: `${s.first_name} ${s.last_name}`,
+            className: (s.classes as any)?.name || 'Unassigned',
+            grossFee: 0,
+            discountType: null,
+            discountValue: 0,
+            discountAmount: 0,
+            netAmount: 0
+          }));
+        }
 
-        const prevBalanceVal = currentBalance - currentMonthCredits + currentMonthDebits;
-
-        // In school bills, we usually show Arrears as positive numbers.
-        // So we will flip the sign for the bill display.
-        const arrears = -prevBalanceVal;
-        
-        parentInvoices.push({
-          parentId: p.id,
-          parentName: `${p.first_name} ${p.last_name}`,
-          contact: p.contact,
-          students: pFees.map(f => ({
-            name: `${(f.students as any).first_name} ${(f.students as any).last_name}`,
-            className: (f.classes as any)?.name || 'Unassigned',
-            grossFee: f.gross_amount,
-            discountType: f.discount_type,
-            discountValue: f.discount_value,
-            discountAmount: f.discount_amount,
-            netAmount: f.net_amount
-          })),
-          currentMonthTotal,
-          prevBalance: arrears,
-          totalDue: currentMonthTotal + arrears
-        });
+        // Only add if there's either a charge or a non-zero balance
+        if (invoiceStudents.length > 0 || arrearsTotal !== 0) {
+          parentInvoices.push({
+            parentId: p.id,
+            parentName: `${p.first_name} ${p.last_name}`,
+            contact: p.contact,
+            students: invoiceStudents,
+            currentMonthTotal,
+            prevBalance: prevArrears,
+            totalDue: arrearsTotal
+          });
+        }
       });
 
       setInvoices(parentInvoices);
@@ -235,7 +214,13 @@ export const InvoicePrinter: React.FC<InvoicePrinterProps> = ({ schoolId, month,
     <div className="invoice-print-overlay">
       <div className="print-controls no-print">
         <div className="main-actions">
-          <Button variant="primary" size="lg" onClick={handlePrint}>
+          <Button 
+            variant="primary" 
+            size="lg" 
+            onClick={handlePrint} 
+            disabled={!!logo && !logoLoaded}
+            title={!!logo && !logoLoaded ? "Waiting for logo to load..." : ""}
+          >
             <Printer size={20} /> {parentId ? 'Print Invoice' : `Print Current Batch (${displayedInvoices.length})`}
           </Button>
           <Button variant="outline" size="lg" onClick={onClose}>
@@ -327,13 +312,22 @@ export const InvoicePrinter: React.FC<InvoicePrinterProps> = ({ schoolId, month,
               <div className="school-info">
                 <h1>{schoolName}</h1>
                 <div className="invoice-meta">
-                  <span>Fee Invoice - {monthName}</span>
+                  <span>{inv.currentMonthTotal > 0 ? `Fee Invoice - ${monthName}` : 'Outstanding Balance Statement'}</span>
                   <span className="separator">|</span>
                   <span>Parent Code: {inv.parentId.slice(0, 8)}</span>
                 </div>
               </div>
               <div className="school-logo-wrap">
-                {logo && <img src={logo} alt="Logo" className="school-logo" />}
+                {logo && (
+                  <img 
+                    src={logo} 
+                    alt="Logo" 
+                    className="school-logo" 
+                    crossOrigin="anonymous"
+                    onLoad={() => setLogoLoaded(true)}
+                    onError={() => setLogoLoaded(true)} // Don't block print if logo fails
+                  />
+                )}
               </div>
             </div>
 

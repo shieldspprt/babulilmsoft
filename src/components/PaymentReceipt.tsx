@@ -28,6 +28,7 @@ export const PaymentReceipt: React.FC<PaymentReceiptProps> = ({ schoolId, paymen
   const [receipt, setReceipt] = useState<PaymentData | null>(null);
   const [schoolName, setSchoolName] = useState('School Receipt');
   const [logo, setLogo] = useState<string | null>(null);
+  const [logoLoaded, setLogoLoaded] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -120,7 +121,13 @@ export const PaymentReceipt: React.FC<PaymentReceiptProps> = ({ schoolId, paymen
   return (
     <div className="receipt-print-overlay">
       <div className="print-controls no-print">
-        <Button variant="primary" size="lg" onClick={handlePrint}>
+        <Button 
+          variant="primary" 
+          size="lg" 
+          onClick={handlePrint}
+          disabled={!!logo && !logoLoaded}
+          title={!!logo && !logoLoaded ? "Waiting for logo to load..." : ""}
+        >
           <Printer size={20} /> Print Receipt
         </Button>
         <Button variant="outline" size="lg" onClick={onClose}>
@@ -142,7 +149,16 @@ export const PaymentReceipt: React.FC<PaymentReceiptProps> = ({ schoolId, paymen
               </div>
             </div>
             <div className="school-logo-wrap">
-              {logo && <img src={logo} alt="Logo" className="school-logo" />}
+              {logo && (
+                <img 
+                  src={logo} 
+                  alt="Logo" 
+                  className="school-logo" 
+                  crossOrigin="anonymous"
+                  onLoad={() => setLogoLoaded(true)}
+                  onError={() => setLogoLoaded(true)}
+                />
+              )}
             </div>
           </div>
 

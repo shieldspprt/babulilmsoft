@@ -187,7 +187,7 @@ export const SchoolProfileManager = ({ schoolId, role }: { schoolId: string; rol
       <div className="profile-card">
         <div className="profile-logo-section">
           <div className="profile-logo-preview">
-            {form.logo_url ? <img src={form.logo_url} alt="Logo" /> : <Camera size={28} />}
+            {form.logo_url ? <img src={form.logo_url} alt="Logo" className="profile-logo-img" /> : <Camera size={28} />}
           </div>
           {isOwner && (
             <div className="profile-logo-actions">

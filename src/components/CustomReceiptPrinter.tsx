@@ -34,6 +34,7 @@ export const CustomReceiptPrinter: React.FC<CustomReceiptPrinterProps> = ({ scho
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<CustomReceiptData | null>(null);
   const [school, setSchool] = useState({ name: 'School', logo: '' });
+  const [logoLoaded, setLogoLoaded] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -127,7 +128,13 @@ export const CustomReceiptPrinter: React.FC<CustomReceiptPrinterProps> = ({ scho
       `}</style>
 
       <div className="print-controls no-print">
-        <Button variant="primary" size="lg" onClick={() => window.print()}>
+        <Button 
+          variant="primary" 
+          size="lg" 
+          onClick={() => window.print()}
+          disabled={!!school.logo && !logoLoaded}
+          title={!!school.logo && !logoLoaded ? "Waiting for logo to load..." : ""}
+        >
           <Printer size={20} /> Print {data.type === 'invoice' ? 'Invoice' : 'Receipt'}
         </Button>
         <Button variant="outline" size="lg" onClick={onClose}>
@@ -151,7 +158,16 @@ export const CustomReceiptPrinter: React.FC<CustomReceiptPrinterProps> = ({ scho
               </div>
             </div>
             <div className="school-logo-wrap">
-              {school.logo && <img src={school.logo} alt="Logo" className="school-logo" />}
+              {school.logo && (
+                <img 
+                  src={school.logo} 
+                  alt="Logo" 
+                  className="school-logo" 
+                  crossOrigin="anonymous"
+                  onLoad={() => setLogoLoaded(true)}
+                  onError={() => setLogoLoaded(true)}
+                />
+              )}
             </div>
           </div>
 
