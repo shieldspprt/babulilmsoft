@@ -67,7 +67,7 @@ export const FeeGenerationManager = ({ schoolId }: { schoolId: string }) => {
   const loadHistory = async () => {
     const { data, error } = await supabase
       .from('fee_generations')
-      .select('*')
+      .select('id, school_id, months_generated, student_count, total_amount, status, generated_at')
       .eq('school_id', schoolId)
       .order('generated_at', { ascending: false })
       .limit(10);
@@ -102,7 +102,7 @@ export const FeeGenerationManager = ({ schoolId }: { schoolId: string }) => {
 
       const { data, error } = await supabase
         .from('students')
-        .select('*')
+        .select('id, first_name, last_name, parent_id, current_monthly_fee, monthly_fee, class_id, current_class_id, admission_class_id, active, school_id, admission_no')
         .eq('school_id', schoolId)
         .eq('active', true);
 

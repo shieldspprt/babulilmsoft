@@ -12,7 +12,7 @@ interface StudentTableProps {
   onDelete: (s: Student) => void;
 }
 
-export const StudentTable: React.FC<StudentTableProps> = ({
+export const StudentTable = React.memo<StudentTableProps>(({
   students,
   visibleColumns,
   isOwner,
@@ -115,4 +115,4 @@ export const StudentTable: React.FC<StudentTableProps> = ({
       </table>
     </div>
   );
-};
+});

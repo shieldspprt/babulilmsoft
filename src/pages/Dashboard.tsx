@@ -2,16 +2,7 @@ import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ClassesManager } from '../components/ClassesManager';
-import { IncomeManager } from '../components/IncomeManager';
-import { ExpenseManager } from '../components/ExpenseManager';
-import { FeeStatsManager } from '../components/FeeStatsManager';
-import { SchoolProfileManager } from '../components/SchoolProfileManager';
-import { TeamManager } from '../components/TeamManager';
-import { FeeGenerationManager } from '../components/FeeGenerationManager';
-import { LedgerManager } from '../components/LedgerManager';
-import { MissingFeeManager } from '../components/MissingFeeManager';
-import { PaymentPortalV2 } from '../components/PaymentPortalV2';
+// Direct UI parts
 import { InvoicePrinter } from '../components/InvoicePrinter';
 import { PaymentReceipt } from '../components/PaymentReceipt';
 import { Button } from '../components/ui/Button';
@@ -36,6 +27,17 @@ const CustomReceiptManager = lazy(() => import('../components/CustomReceiptManag
 const ExamManager = lazy(() => import('../components/ExamManager').then(m => ({ default: m.default })));
 const ExamResultsManager = lazy(() => import('../components/ExamResultsSpreadsheet'));
 const ResultCardManager = lazy(() => import('../components/ResultCardManager'));
+
+const ClassesManager = lazy(() => import('../components/ClassesManager').then(m => ({ default: m.ClassesManager })));
+const IncomeManager = lazy(() => import('../components/IncomeManager').then(m => ({ default: m.IncomeManager })));
+const ExpenseManager = lazy(() => import('../components/ExpenseManager').then(m => ({ default: m.ExpenseManager })));
+const FeeStatsManager = lazy(() => import('../components/FeeStatsManager').then(m => ({ default: m.FeeStatsManager })));
+const SchoolProfileManager = lazy(() => import('../components/SchoolProfileManager').then(m => ({ default: m.SchoolProfileManager })));
+const TeamManager = lazy(() => import('../components/TeamManager').then(m => ({ default: m.TeamManager })));
+const FeeGenerationManager = lazy(() => import('../components/FeeGenerationManager').then(m => ({ default: m.FeeGenerationManager })));
+const LedgerManager = lazy(() => import('../components/LedgerManager').then(m => ({ default: m.LedgerManager })));
+const MissingFeeManager = lazy(() => import('../components/MissingFeeManager').then(m => ({ default: m.MissingFeeManager })));
+const PaymentPortalV2 = lazy(() => import('../components/PaymentPortalV2').then(m => ({ default: m.PaymentPortalV2 })));
 
 // Loading fallback for lazy components
 const ManagerFallback = () => (
@@ -137,7 +139,7 @@ export const Dashboard = () => {
   const loadAdminSettings = useCallback(async () => {
     if (!profile) return;
     try {
-      const { data, error } = await supabase.from('admin_settings').select('*').eq('id', 'global').maybeSingle();
+      const { data, error } = await supabase.from('admin_settings').select('id, jazzcash_number, jazzcash_name, bank_name, bank_account_title, bank_iban').eq('id', 'global').maybeSingle();
       if (error) {
         console.error('Error fetching admin settings:', error);
       } else if (data) {
@@ -153,7 +155,7 @@ export const Dashboard = () => {
   const loadHistory = useCallback(async () => {
     if (!profile) return;
     try {
-      const { data } = await supabase.from('credit_requests').select('*').eq('school_id', profile.id).order('created_at', { ascending: false });
+      const { data } = await supabase.from('credit_requests').select('id, school_id, credits, amount_pkr, payment_method, payment_reference, status, created_at, admin_notes').eq('school_id', profile.id).order('created_at', { ascending: false });
       setHistory(data || []);
     } catch (err: any) {
       console.error('Error loading payment history:', err);
@@ -448,52 +450,58 @@ export const Dashboard = () => {
 
           {/* Feature tabs */}
           {tab === 'fee-stats' && (
-            <FeeStatsManager 
-              schoolId={profile.id} 
-              onAction={(pid, targetTab) => {
-                setFocusedParentId(pid);
-                if (targetTab === 'print' as any) {
-                  setShowPrinterOverlay(true);
-                } else {
-                  setTab(targetTab as any);
-                }
-              }}
-            />
+            <Suspense fallback={<ManagerFallback />}>
+              <FeeStatsManager 
+                schoolId={profile.id} 
+                onAction={(pid, targetTab) => {
+                  setFocusedParentId(pid);
+                  if (targetTab === 'print' as any) {
+                    setShowPrinterOverlay(true);
+                  } else {
+                    setTab(targetTab as any);
+                  }
+                }}
+              />
+            </Suspense>
           )}
-          {tab === 'classes' && <ClassesManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'classes' && <Suspense fallback={<ManagerFallback />}><ClassesManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'people-parents' && <Suspense fallback={<ManagerFallback />}><ParentsManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'people-students' && <Suspense fallback={<ManagerFallback />}><StudentsManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'people-teachers' && <Suspense fallback={<ManagerFallback />}><TeachersManager schoolId={profile.id} role={role || undefined} /></Suspense>}
-          {tab === 'finances-income' && <IncomeManager schoolId={profile.id} role={role || undefined} />}
-          {tab === 'finances-expense' && <ExpenseManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'finances-income' && <Suspense fallback={<ManagerFallback />}><IncomeManager schoolId={profile.id} role={role || undefined} /></Suspense>}
+          {tab === 'finances-expense' && <Suspense fallback={<ManagerFallback />}><ExpenseManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'finances-suppliers' && <Suspense fallback={<ManagerFallback />}><SuppliersManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'finances-extra-fees' && <Suspense fallback={<ManagerFallback />}><ExtraFeeCollectionManager schoolId={profile.id} /></Suspense>}
           {tab === 'finances-custom-receipt' && <Suspense fallback={<ManagerFallback />}><CustomReceiptManager schoolId={profile.id} /></Suspense>}
-          {tab === 'team' && <TeamManager schoolId={profile.id} />}
-          {tab === 'profile' && <SchoolProfileManager schoolId={profile.id} role={role || undefined} />}
+          {tab === 'team' && <Suspense fallback={<ManagerFallback />}><TeamManager schoolId={profile.id} /></Suspense>}
+          {tab === 'profile' && <Suspense fallback={<ManagerFallback />}><SchoolProfileManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'extra-fees' && <Suspense fallback={<ManagerFallback />}><ExtraFeesManager schoolId={profile.id} role={role || undefined} /></Suspense>}
           {tab === 'fees-view' && (
-            <LedgerManager 
-              schoolId={profile.id} 
-              initialParentId={focusedParentId || undefined}
-              onPrintReceipt={(pid) => {
-                setActivePaymentId(pid);
-                setShowReceiptOverlay(true);
-              }}
-            />
+            <Suspense fallback={<ManagerFallback />}>
+              <LedgerManager 
+                schoolId={profile.id} 
+                initialParentId={focusedParentId || undefined}
+                onPrintReceipt={(pid) => {
+                  setActivePaymentId(pid);
+                  setShowReceiptOverlay(true);
+                }}
+              />
+            </Suspense>
           )}
           {tab === 'fees-payment' && (
-            <PaymentPortalV2 
-              schoolId={profile.id} 
-              initialParentId={focusedParentId || undefined} 
-              onPrintReceipt={(pid) => {
-                setActivePaymentId(pid);
-                setShowReceiptOverlay(true);
-              }}
-            />
+            <Suspense fallback={<ManagerFallback />}>
+              <PaymentPortalV2 
+                schoolId={profile.id} 
+                initialParentId={focusedParentId || undefined} 
+                onPrintReceipt={(pid) => {
+                  setActivePaymentId(pid);
+                  setShowReceiptOverlay(true);
+                }}
+              />
+            </Suspense>
           )}
-          {tab === 'fees-generate' && <FeeGenerationManager schoolId={profile.id} />}
-          {tab === 'fees-missing' && <MissingFeeManager schoolId={profile.id} />}
+          {tab === 'fees-generate' && <Suspense fallback={<ManagerFallback />}><FeeGenerationManager schoolId={profile.id} /></Suspense>}
+          {tab === 'fees-missing' && <Suspense fallback={<ManagerFallback />}><MissingFeeManager schoolId={profile.id} /></Suspense>}
           {tab === 'exams-terms' && <Suspense fallback={<ManagerFallback />}><ExamManager schoolId={profile.id} /></Suspense>}
           {tab === 'exams-promotion' && <Suspense fallback={<ManagerFallback />}><StudentPromotion schoolId={profile.id} /></Suspense>}
           {tab === 'exams-results' && <Suspense fallback={<ManagerFallback />}><ExamResultsManager schoolId={profile.id} /></Suspense>}

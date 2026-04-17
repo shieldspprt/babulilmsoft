@@ -54,7 +54,7 @@ export const ClassesManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     setLoading(true);
     try {
       const [classRes, studentRes] = await Promise.all([
-        supabase.from('classes').select('*')
+        supabase.from('classes').select('id, school_id, name, display_order, monthly_fee, admission_fee, active, subjects, created_at')
           .eq('school_id', schoolId)
           .order('display_order', { ascending: true })
           .order('name'),

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
@@ -65,7 +65,7 @@ export const StudentsManager = ({ schoolId, role }: { schoolId: string; role?: R
   };
 
   const openAdd = () => { setForm({ ...EMPTY_FORM }); setEditStudent(null); setShowModal(true); };
-  const openEdit = (s: Student) => {
+  const openEdit = useCallback((s: Student) => {
     setEditStudent(s);
     setForm({
       parent_id: s.parent_id, first_name: s.first_name, last_name: s.last_name,
@@ -77,7 +77,7 @@ export const StudentsManager = ({ schoolId, role }: { schoolId: string; role?: R
       active: s.active,
     });
     setShowModal(true);
-  };
+  }, []);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -117,15 +117,15 @@ export const StudentsManager = ({ schoolId, role }: { schoolId: string; role?: R
     } catch (err: any) { showFlash('Error: ' + err.message); } finally { setSaving(false); }
   };
 
-  const getParentName = (parentId: string) => {
+  const getParentName = useCallback((parentId: string) => {
     const p = parents.find(x => x.id === parentId);
     return p ? `${p.first_name} ${p.last_name}` : '—';
-  };
+  }, [parents]);
 
-  const getClassName = (classId: string | null) => {
+  const getClassName = useCallback((classId: string | null) => {
     const c = classes.find(x => x.id === classId);
     return c ? c.name : '—';
-  };
+  }, [classes]);
 
   const filtered = useMemo(() => {
     if (!debouncedSearch.trim()) return students;

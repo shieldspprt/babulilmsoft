@@ -42,7 +42,7 @@ export default function ExamResultsManager({ schoolId }: { schoolId: string }) {
       try {
         const { data, error } = await supabase
           .from('exam_terms')
-          .select('*')
+          .select('id, name, academic_year, school_id, class_ids, created_at')
           .eq('school_id', schoolId)
           .order('created_at', { ascending: false });
 
@@ -74,7 +74,7 @@ export default function ExamResultsManager({ schoolId }: { schoolId: string }) {
       try {
         const { data, error } = await supabase
           .from('classes')
-          .select('*')
+          .select('id, name, school_id, subjects, monthly_fee, active')
           .in('id', term.class_ids)
           .order('name');
 

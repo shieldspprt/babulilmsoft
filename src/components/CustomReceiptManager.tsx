@@ -52,8 +52,8 @@ export const CustomReceiptManager: React.FC<CustomReceiptManagerProps> = ({ scho
     setLoading(true);
     try {
       const [recRes, parentRes] = await Promise.all([
-        supabase.from('custom_receipts').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
-        supabase.from('parents').select('*').eq('school_id', schoolId).order('first_name')
+        supabase.from('custom_receipts').select('id, school_id, type, receipt_no, recipient_name, parent_id, date, due_date, items, total_amount, notes, created_at').eq('school_id', schoolId).order('created_at', { ascending: false }),
+        supabase.from('parents').select('id, school_id, first_name, last_name, relation, gender, cnic, contact, whatsapp, email, address, occupation, notes, is_active, opening_balance, created_at, updated_at').eq('school_id', schoolId).order('first_name')
       ]);
 
       if (recRes.error) throw recRes.error;

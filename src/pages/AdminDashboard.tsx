@@ -61,7 +61,7 @@ export const AdminDashboard = () => {
   };
 
   const loadSettings = async () => {
-    const { data } = await supabase.from('admin_settings').select('*').eq('id', 'global').single();
+    const { data } = await supabase.from('admin_settings').select('id, jazzcash_number, jazzcash_name, bank_name, bank_account_title, bank_iban').eq('id', 'global').single();
     if (data) {
       setPaySettings({
         jazzcash_number: data.jazzcash_number || '',
@@ -76,7 +76,7 @@ export const AdminDashboard = () => {
   const loadRequests = async () => {
     const { data } = await supabase
       .from('credit_requests')
-      .select('*, schools:school_id(school_name, email, contact)')
+      .select('id, school_id, credits, amount_pkr, payment_method, payment_reference, status, created_at, schools:school_id(school_name, email, contact)')
       .order('created_at', { ascending: false });
     setRequests((data || []).map((r: any) => ({
       id: r.id, school_id: r.school_id,

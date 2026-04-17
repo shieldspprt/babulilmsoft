@@ -39,12 +39,12 @@ const ExamManager = ({ schoolId }: ExamManagerProps) => {
       const [termsRes, classesRes] = await Promise.all([
         supabase
           .from('exam_terms')
-          .select('*')
+          .select('id, school_id, name, academic_year, start_date, end_date, class_ids, created_at')
           .eq('school_id', schoolId)
           .order('start_date', { ascending: false }),
         supabase
           .from('classes')
-          .select('*')
+          .select('id, school_id, name, display_order, monthly_fee, admission_fee, active, subjects, created_at, updated_at')
           .eq('school_id', schoolId)
           .eq('active', true)
           .order('name')

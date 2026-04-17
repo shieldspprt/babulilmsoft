@@ -65,7 +65,7 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
   const loadCategories = useCallback(async () => {
     const { data, error } = await supabase
       .from('income_categories')
-      .select('*')
+      .select('id, school_id, name, is_default, created_at')
       .eq('school_id', schoolId)
       .order('name', { ascending: true });
 
@@ -83,7 +83,7 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
       await supabase.from('income_categories').insert(defaultCats);
       const { data: newData } = await supabase
         .from('income_categories')
-        .select('*')
+        .select('id, school_id, name, is_default, created_at')
         .eq('school_id', schoolId)
         .order('name', { ascending: true });
       setCategories(newData || []);
@@ -95,7 +95,7 @@ export const IncomeManager = ({ schoolId, role }: IncomeManagerProps) => {
   const loadRecords = useCallback(async () => {
     const { data, error } = await supabase
       .from('income_records')
-      .select(`*, category:category_id(name)`)
+      .select(`id, school_id, category_id, amount, date, payment_method, description, additional_notes, created_at, category:category_id(name)`)
       .eq('school_id', schoolId)
       .order('date', { ascending: false });
 

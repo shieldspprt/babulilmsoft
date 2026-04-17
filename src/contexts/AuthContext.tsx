@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Refresh profile to get updated credits
       const { data: updatedSchool } = await supabase
         .from('schools')
-        .select('*')
+        .select('id, user_id, school_name, contact, email, logo_url, primary_color, secondary_color, tertiary_color, total_credits, credit_expires_at, created_at')
         .eq('id', schoolId)
         .single();
         
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRole(member.role as Role);
         const { data: school, error: schoolError } = await supabase
           .from('schools')
-          .select('*')
+          .select('id, user_id, school_name, contact, email, logo_url, primary_color, secondary_color, tertiary_color, total_credits, credit_expires_at, created_at')
           .eq('id', member.school_id)
           .single();
 
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Step 2: Fallback — check if user owns a school (backward compat)
       const { data, error } = await supabase
         .from('schools')
-        .select('*')
+        .select('id, user_id, school_name, contact, email, logo_url, primary_color, secondary_color, tertiary_color, total_credits, credit_expires_at, created_at')
         .eq('user_id', userId)
         .single();
 

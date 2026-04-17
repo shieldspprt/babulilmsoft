@@ -70,7 +70,7 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
     try {
       const { data, error } = await supabase
         .from('expense_categories')
-        .select('*')
+        .select('id, school_id, name, is_default, created_at')
         .eq('school_id', schoolId)
         .order('name');
       
@@ -89,10 +89,7 @@ export const ExpenseManager = ({ schoolId, role }: ExpenseManagerProps) => {
     try {
       const { data, error } = await supabase
         .from('expenses')
-        .select(`
-          *,
-          categories:category_id (name)
-        `)
+        .select(`id, school_id, category_id, amount, expense_date, payment_method, description, paid_by, additional_notes, created_at, categories:category_id (name)`)
         .eq('school_id', schoolId)
         .order('expense_date', { ascending: false });
       

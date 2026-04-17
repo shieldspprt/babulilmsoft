@@ -24,7 +24,7 @@ export async function generateReceiptData(
   try {
     // 1. Payment — use the current 'payments' table
     const { data: payment, error: payErr } = await supabase
-      .from('payments').select('*').eq('id', paymentId).single();
+      .from('payments').select('id, parent_id, school_id, received_amount, received_at, payment_method').eq('id', paymentId).single();
     if (payErr || !payment) return null;
 
     // 2. School + Parent + Balance in parallel
@@ -177,7 +177,7 @@ export async function getReceiptByPayment(paymentId: string): Promise<FeeReceipt
   if (!paymentId?.trim()) return null;
   try {
     const { data, error } = await supabase
-      .from('fee_receipts').select('*').eq('payment_id', paymentId.trim()).single();
+      .from('fee_receipts').select('id, receipt_no, school_id, parent_id, payment_id, receipt_data, sent_via, created_at').eq('payment_id', paymentId.trim()).single();
     if (error) {
       if (error.code === 'PGRST116') return null;
       throw error;

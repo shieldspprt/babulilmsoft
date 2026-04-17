@@ -30,7 +30,7 @@ export const ResultCardPrinter: React.FC<ResultCardPrinterProps> = ({
     try {
       const [schoolRes, termRes, classRes] = await Promise.all([
         supabase.from('schools').select('school_name, logo_url, primary_color, secondary_color, tertiary_color').eq('id', schoolId).single(),
-        supabase.from('exam_terms').select('*').eq('id', termId).single(),
+        supabase.from('exam_terms').select('id, name, academic_year, school_id, is_active').eq('id', termId).single(),
         supabase.from('classes').select('name, subjects').eq('id', classId).single()
       ]);
 
@@ -58,8 +58,8 @@ export const ResultCardPrinter: React.FC<ResultCardPrinterProps> = ({
       const totalMarksConfig = configData?.subject_totals || {};
 
       const [studentsRes, resultsRes] = await Promise.all([
-        supabase.from('students').select('*').in('id', studentIds),
-        supabase.from('exam_results').select('*').eq('exam_term_id', termId).in('student_id', studentIds)
+        supabase.from('students').select('id, first_name, last_name, registration_number, gender, school_id, current_class_id, active').in('id', studentIds),
+        supabase.from('exam_results').select('id, student_id, exam_term_id, class_id, subject_marks, school_id').eq('exam_term_id', termId).in('student_id', studentIds)
       ]);
 
       const students = studentsRes.data || [];

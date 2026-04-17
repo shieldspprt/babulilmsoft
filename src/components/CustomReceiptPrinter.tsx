@@ -53,7 +53,7 @@ export const CustomReceiptPrinter: React.FC<CustomReceiptPrinterProps> = ({ scho
       // 2. Fetch Receipt
       const { data: recRes, error } = await supabase
         .from('custom_receipts')
-        .select('*')
+        .select('id, type, receipt_no, recipient_name, date, due_date, items, total_amount, notes, school_id')
         .eq('id', receiptId)
         .single();
 

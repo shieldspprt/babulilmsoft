@@ -38,7 +38,7 @@ export const useStudents = (schoolId: string, showFlash: (msg: string) => void) 
         { data: cData, error: cErr },
         { data: pData, error: pErr },
       ] = await Promise.all([
-        supabase.from('students').select('*').eq('school_id', schoolId).order('first_name'),
+        supabase.from('students').select('id, school_id, first_name, last_name, gender, cnic, date_of_birth, date_of_admission, admission_class_id, current_class_id, monthly_fee, current_monthly_fee, discount_type, discount_value, active, parent_id').eq('school_id', schoolId).order('first_name'),
         supabase.from('classes').select('id, name, monthly_fee, active').eq('school_id', schoolId).eq('active', true).order('name'),
         supabase.from('parents').select('id, first_name, last_name').eq('school_id', schoolId).eq('is_active', true).order('first_name'),
       ]);

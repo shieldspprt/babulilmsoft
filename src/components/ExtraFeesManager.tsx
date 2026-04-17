@@ -33,8 +33,8 @@ export const ExtraFeesManager = ({ schoolId, role }: { schoolId: string; role?: 
     setLoading(true);
     try {
       const [feesRes, classesRes] = await Promise.all([
-        supabase.from('extra_fees').select('*').eq('school_id', schoolId).eq('is_active', true).order('due_date', { ascending: false }),
-        supabase.from('classes').select('*').eq('school_id', schoolId).order('name')
+        supabase.from('extra_fees').select('id, name, amount, due_date, classes, is_active, school_id, created_at').eq('school_id', schoolId).eq('is_active', true).order('due_date', { ascending: false }),
+        supabase.from('classes').select('id, name, active, school_id, display_order, monthly_fee, admission_fee, subjects, created_at, updated_at').eq('school_id', schoolId).order('name')
       ]);
       
       if (feesRes.error) throw feesRes.error;

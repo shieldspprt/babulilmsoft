@@ -41,8 +41,8 @@ export const ExtraFeeCollectionManager = ({ schoolId }: { schoolId: string; role
       setLoading(true);
       try {
         const [feesRes, classesRes] = await Promise.all([
-          supabase.from('extra_fees').select('*').eq('school_id', schoolId).eq('is_active', true).order('due_date', { ascending: false }),
-          supabase.from('classes').select('*').eq('school_id', schoolId).order('name')
+          supabase.from('extra_fees').select('id, name, amount, due_date, classes, school_id, is_active, created_at').eq('school_id', schoolId).eq('is_active', true).order('due_date', { ascending: false }),
+          supabase.from('classes').select('id, name, school_id, display_order, monthly_fee, admission_fee, active, subjects, created_at, updated_at').eq('school_id', schoolId).order('name')
         ]);
         if (feesRes.error) throw feesRes.error;
         if (classesRes.error) throw classesRes.error;
@@ -79,7 +79,7 @@ export const ExtraFeeCollectionManager = ({ schoolId }: { schoolId: string; role
         // Load payments for this fee
         const { data: payData, error: payErr } = await supabase
           .from('extra_fee_payments')
-          .select('*')
+          .select('id, school_id, extra_fee_id, student_id, parent_id, amount_paid, payment_method, payment_date, created_at')
           .eq('school_id', schoolId)
           .eq('extra_fee_id', selectedFeeId);
         if (payErr) throw payErr;
@@ -88,7 +88,7 @@ export const ExtraFeeCollectionManager = ({ schoolId }: { schoolId: string; role
         const parentIds = [...new Set((stdData || []).map(s => s.parent_id))];
         const { data: parData } = await supabase
           .from('parents')
-          .select('*')
+          .select('id, first_name, last_name, contact, whatsapp, school_id')
           .in('id', parentIds);
         
         const pMap: Record<string, any> = {};

@@ -1,14 +1,20 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Role } from '../lib/supabase';
 import { useFlashMessage } from '../hooks/useFlashMessage';
 import { useDebounce } from '../hooks/useDebounce';
 import { isValidPhone } from '../lib/validation';
-import { GraduationCap, BookOpen, Calendar, Edit2, Trash2, UserPlus, X, Plus, Users, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from './ui/Button';
-import { Input }  from './ui/Input';
+import { Trash2, Plus, Users, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useParents } from '../hooks/useParents';
 import type { Parent } from '../hooks/useParents';
+import { Button } from './ui/Button';
+
+// New Sub-components
+import { ParentStats } from './parents/ParentStats';
+import { ParentTable } from './parents/ParentTable';
+import { ParentModal } from './parents/ParentModal';
+import { ChildModal } from './parents/ChildModal';
+
 import '../components/managers.css';
 
 const EMPTY = {
@@ -131,7 +137,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     }
   };
 
-  const openEdit = async (parent: Parent) => {
+  const openEdit = useCallback(async (parent: Parent) => {
     setEditTarget(parent);
     setForm({
       first_name: parent.first_name,
@@ -149,7 +155,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     if (data) {
       setForm(prev => ({ ...prev, initial_balance: data.entry_type === 'debit' ? String(data.amount) : String(-data.amount) }));
     }
-  };
+  }, []);
 
   const handleEdit = async () => {
     if (!editTarget) return;
@@ -225,12 +231,12 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
     }
   };
 
-  const openAddChild = (parent: Parent) => {
+  const openAddChild = useCallback((parent: Parent) => {
     setSelectedParentForChild(parent);
     setChildForm({ ...EMPTY_STUDENT });
     loadClasses();
     setShowChildModal(true);
-  };
+  }, [loadClasses]);
 
   const handleSaveChild = async () => {
     if (!selectedParentForChild || !childForm.first_name.trim() || !childForm.last_name.trim()) {
@@ -316,45 +322,7 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
         </div>
       </div>
 
-      <div className="manager-stats-grid">
-        <div className="manager-stat-card blue">
-          <div className="manager-stat-icon"><Users size={20} /></div>
-          <div className="manager-stat-info">
-            <div className="manager-stat-label">Total Families</div>
-            <div className="manager-stat-value">{parentStats.totalFamilies}</div>
-            <div className="manager-stat-sub">
-              {parentStats.fathers} Fathers • {parentStats.mothers} Mothers
-            </div>
-          </div>
-        </div>
-
-        <div className="manager-stat-card green">
-          <div className="manager-stat-icon"><GraduationCap size={20} /></div>
-          <div className="manager-stat-info">
-            <div className="manager-stat-label">Total Children</div>
-            <div className="manager-stat-value">{parentStats.totalChildren}</div>
-            <div className="manager-stat-sub">Avg {parentStats.totalFamilies > 0 ? (parentStats.totalChildren / parentStats.totalFamilies).toFixed(1) : 0} per family</div>
-          </div>
-        </div>
-
-        <div className="manager-stat-card amber">
-          <div className="manager-stat-icon"><BookOpen size={20} /></div>
-          <div className="manager-stat-info">
-            <div className="manager-stat-label">Monthly Potential</div>
-            <div className="manager-stat-value">Rs {parentStats.totalPotential.toLocaleString()}</div>
-            <div className="manager-stat-sub">Total expected from parents</div>
-          </div>
-        </div>
-
-        <div className="manager-stat-card rose">
-          <div className="manager-stat-icon"><Search size={20} /></div>
-          <div className="manager-stat-info">
-            <div className="manager-stat-label">Financial Aid</div>
-            <div className="manager-stat-value">Rs {parentStats.totalScholarships.toLocaleString()}</div>
-            <div className="manager-stat-sub">Total scholarship/discounts</div>
-          </div>
-        </div>
-      </div>
+      <ParentStats stats={parentStats} />
 
       {flash && <div className={"flash " + (flash.startsWith('Error') ? 'error' : 'success')}>{flash}</div>}
 
@@ -367,78 +335,16 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
         </div>
       ) : (
         <>
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Parent Name</th>
-                  <th>CNIC</th>
-                  <th>Contact</th>
-                  <th>Children</th>
-                  <th>Monthly Payment</th>
-                  <th>Discount</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginated.map((r: any) => (
-                  <tr key={r.id}>
-                    <td>
-                      <div className="student-cell">
-                        <span style={{ fontWeight:600 }}>{r.first_name} {r.last_name}</span>
-                        {r.relation && (
-                          <span className={`rec-badge ${r.relation.toLowerCase()}`}>
-                            {r.relation}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ fontFamily:'monospace', fontSize:'0.8rem' }}>{r.cnic}</td>
-                    <td>{r.contact}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        gap: '4px',
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        background: (studentCounts[r.id] || 0) > 0 ? 'var(--primary-light)' : 'var(--bg-alt)',
-                        color: (studentCounts[r.id] || 0) > 0 ? 'var(--primary)' : 'var(--text-muted)',
-                        fontWeight: 600,
-                        fontSize: '0.85rem'
-                      }}>
-                        <GraduationCap size={14} />
-                        {studentCounts[r.id] || 0}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 600 }}>
-                      Rs {(monthlyTotals[r.id] || 0).toLocaleString()}
-                    </td>
-                    <td style={{ color: (discountTotals[r.id] || 0) > 0 ? 'var(--success)' : 'var(--text-muted)', fontSize: 'var(--font-xs)' }}>
-                      {(discountTotals[r.id] || 0) > 0 ? `-Rs ${Math.round(discountTotals[r.id] || 0).toLocaleString()}` : '-'}
-                    </td>
-                    <td>
-                      <div className="row-actions">
-                        <button className="action-btn add-child" title="Add Child" onClick={() => openAddChild(r)}>
-                          <UserPlus size={14} />
-                        </button>
-                        {isOwner && (
-                          <button className="action-btn edit" title="Edit" onClick={() => openEdit(r)}>
-                            <Edit2 size={14} />
-                          </button>
-                        )}
-                        {isOwner && (
-                          <button className="action-btn delete" title="Delete" onClick={() => setDeleteTarget(r)}>
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ParentTable 
+            records={paginated}
+            studentCounts={studentCounts}
+            monthlyTotals={monthlyTotals}
+            discountTotals={discountTotals}
+            isOwner={isOwner}
+            onAddChild={openAddChild}
+            onEdit={openEdit}
+            onDelete={setDeleteTarget}
+          />
 
           {totalPages > 1 && (
             <div className="pagination">
@@ -462,99 +368,17 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       )}
 
       {showModal && (
-        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-          <div className="modal-box">
-            <div className="modal-head">
-              <h3>Add Parent</h3>
-              <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="form-section-label">Personal Information *</div>
-              <div className="form-grid">
-                <Input label="First Name *" placeholder="Enter first name" value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
-                <Input label="Last Name *" placeholder="Enter last name" value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
-                <Input
-                  label="CNIC *"
-                  placeholder="XXXXX-XXXXXXX-X"
-                  value={form.cnic}
-                  onChange={e => set('cnic', e.target.value)}
-                  required
-                  error={cnicError}
-                />
-                <Input label="Contact Number *" placeholder="03XX-XXXXXXX" value={form.contact} onChange={e => set('contact', e.target.value)} required />
-                <Input type="number" label="Initial Balance (Rs)" placeholder="Positive (Arrears) / Negative (Advance)" value={form.initial_balance} onChange={e => set('initial_balance', e.target.value)} />
-                <div className="span-2" style={{ marginTop: '0.5rem' }}>
-                  <label className="form-label">Address</label>
-                  <textarea className="form-textarea" rows={2} placeholder="Home address (optional)" value={form.address} onChange={e => set('address', e.target.value)} />
-                </div>
-                <div className="span-2">
-                  <label className="form-label">Family Notes</label>
-                  <textarea
-                    className="form-textarea"
-                    rows={3}
-                    placeholder="Any notes about this family (e.g. scholarship, special arrangement, reason for discount…)"
-                    value={form.notes}
-                    onChange={e => set('notes', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="modal-foot">
-              <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-              <Button onClick={handleSave} isLoading={saving} disabled={!form.first_name.trim() || !form.last_name.trim() || !form.cnic.trim() || !form.contact.trim()}>
-                <Plus size={18} /> Save Parent
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ParentModal 
+          form={form} set={set} cnicError={cnicError} saving={saving}
+          editTarget={null} onClose={() => setShowModal(false)} onSave={handleSave}
+        />
       )}
 
-      {showEditModal && (
-        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowEditModal(false)}>
-          <div className="modal-box">
-            <div className="modal-head">
-              <h3>Edit Parent</h3>
-              <button className="modal-close" onClick={() => setShowEditModal(false)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="form-section-label">Personal Information *</div>
-              <div className="form-grid">
-                <Input label="First Name *" placeholder="Enter first name" value={form.first_name} onChange={e => set('first_name', e.target.value)} required />
-                <Input label="Last Name *" placeholder="Enter last name" value={form.last_name} onChange={e => set('last_name', e.target.value)} required />
-                <Input
-                  label="CNIC *"
-                  placeholder="XXXXX-XXXXXXX-X"
-                  value={form.cnic}
-                  onChange={e => set('cnic', e.target.value)}
-                  required
-                  error={cnicError}
-                />
-                <Input label="Contact Number *" placeholder="03XX-XXXXXXX" value={form.contact} onChange={e => set('contact', e.target.value)} required />
-                <Input type="number" label="Initial Balance (Rs)" placeholder="Positive (Arrears) / Negative (Advance)" value={form.initial_balance} onChange={e => set('initial_balance', e.target.value)} />
-                <div className="span-2" style={{ marginTop: '0.5rem' }}>
-                  <label className="form-label">Address</label>
-                  <textarea className="form-textarea" rows={2} placeholder="Home address (optional)" value={form.address} onChange={e => set('address', e.target.value)} />
-                </div>
-                <div className="span-2">
-                  <label className="form-label">Family Notes</label>
-                  <textarea
-                    className="form-textarea"
-                    rows={3}
-                    placeholder="Any notes about this family (e.g. scholarship, special arrangement, reason for discount…)"
-                    value={form.notes}
-                    onChange={e => set('notes', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="modal-foot">
-              <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancel</Button>
-              <Button onClick={handleEdit} isLoading={saving} disabled={!form.first_name.trim() || !form.last_name.trim() || !form.cnic.trim() || !form.contact.trim()}>
-                <Edit2 size={14} /> Save Changes
-              </Button>
-            </div>
-          </div>
-        </div>
+      {showEditModal && editTarget && (
+        <ParentModal 
+          form={form} set={set} cnicError={cnicError} saving={saving}
+          editTarget={editTarget} onClose={() => setShowEditModal(false)} onSave={handleEdit}
+        />
       )}
 
       {deleteTarget && (
@@ -572,72 +396,11 @@ export const ParentsManager = ({ schoolId, role }: { schoolId: string; role?: Ro
       )}
 
       {showChildModal && selectedParentForChild && (
-        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowChildModal(false)}>
-          <div className="modal-box" style={{maxWidth: '550px'}}>
-            <div className="modal-head">
-              <h3><GraduationCap size={20} /> Add Child for {selectedParentForChild.first_name}</h3>
-              <button className="modal-close" onClick={() => setShowChildModal(false)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="form-section-label">Student Information *</div>
-              <div className="form-grid">
-                <Input label="First Name *" placeholder="Enter first name" value={childForm.first_name} onChange={e => setChild('first_name', e.target.value)} required />
-                <Input label="Last Name *" placeholder="Enter last name" value={childForm.last_name} onChange={e => setChild('last_name', e.target.value)} required />
-                <Input label="CNIC" placeholder="XXXXX-XXXXXXX-X" value={childForm.cnic} onChange={e => setChild('cnic', e.target.value)} />
-                <div>
-                  <label className="form-label"><Calendar size={14} style={{marginRight: 4}}/> Date of Birth</label>
-                  <input type="date" className="form-input" value={childForm.date_of_birth} onChange={e => setChild('date_of_birth', e.target.value)} />
-                </div>
-              </div>
-              <div className="form-section-label">Enrollment Details *</div>
-              <div className="form-grid">
-                <div>
-                  <label className="form-label"><BookOpen size={14} style={{marginRight: 4}}/> Class *</label>
-                  <select className="form-select" value={childForm.admission_class_id} onChange={e => setChild('admission_class_id', e.target.value)} required>
-                    <option value="">Select class...</option>
-                    {classes.map(c => <option key={c.id} value={c.id}>{c.name} (Rs {c.monthly_fee.toLocaleString()}/mo)</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label"><Calendar size={14} style={{marginRight: 4}}/> Admission Date</label>
-                  <input type="date" className="form-input" value={childForm.date_of_admission} onChange={e => setChild('date_of_admission', e.target.value)} />
-                </div>
-                <div>
-                  <label className="form-label">Discount Type</label>
-                  <select className="form-select" value={childForm.discount_type} onChange={e => setChild('discount_type', e.target.value)}>
-                    <option value="">No Discount</option>
-                    <option value="percentage">Percentage (%)</option>
-                    <option value="amount">Fixed Amount (Rs)</option>
-                  </select>
-                </div>
-                {childForm.discount_type && (
-                  <div>
-                    <label className="form-label">{childForm.discount_type === 'percentage' ? 'Discount %' : 'Discount Amount (Rs)'}</label>
-                    <Input
-                      type="number"
-                      value={childForm.discount_value || ''}
-                      onChange={e => setChild('discount_value', parseFloat(e.target.value) || 0)}
-                      placeholder={childForm.discount_type === 'percentage' ? 'e.g. 10' : 'e.g. 500'}
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="form-label">Final Monthly Fee (Rs)</label>
-                  <div className={`fee-display${childForm.discount_value ? ' discounted' : ''}`}>
-                    Rs {getFinalFee().toLocaleString()}
-                    {childForm.discount_value > 0 && <span className="fee-original">(was Rs {childForm.monthly_fee.toLocaleString()})</span>}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="modal-foot">
-              <Button variant="secondary" onClick={() => setShowChildModal(false)}>Cancel</Button>
-              <Button onClick={handleSaveChild} isLoading={savingChild} disabled={!childForm.first_name.trim() || !childForm.last_name.trim()}>
-                <Plus size={18} /> Save Student
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ChildModal 
+          parent={selectedParentForChild} childForm={childForm} setChild={setChild}
+          classes={classes} savingChild={savingChild} onClose={() => setShowChildModal(false)}
+          onSave={handleSaveChild} getFinalFee={getFinalFee}
+        />
       )}
     </div>
   );

@@ -148,7 +148,7 @@ export const LedgerManager = ({
     try {
       const { data, error } = await supabase
         .from('ledger')
-        .select('*')
+        .select('id, entry_type, amount, reference_type, reference_id, description, month, created_at')
         .eq('parent_id', parentId)
         .order('created_at', { ascending: false });
 

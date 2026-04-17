@@ -36,7 +36,7 @@ export const ResultCardManager: React.FC<{ schoolId: string }> = ({ schoolId }) 
     try {
       const { data: termData } = await supabase
         .from('exam_terms')
-        .select('*')
+        .select('id, name, academic_year, class_ids, school_id')
         .eq('school_id', schoolId)
         .order('start_date', { ascending: false });
       setTerms(termData || []);

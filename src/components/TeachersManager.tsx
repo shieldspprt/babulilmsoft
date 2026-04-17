@@ -41,7 +41,7 @@ export const TeachersManager = ({ schoolId, role }: { schoolId: string; role?: R
   const load = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('teachers').select('*')
+      const { data, error } = await supabase.from('teachers').select('id, school_id, name, type, cnic, gender, personal_contact, home_contact, address, education, salary, notes')
         .eq('school_id', schoolId).eq('is_active', true).order('type').order('name');
       if (error) throw error;
       setRecords(data || []);

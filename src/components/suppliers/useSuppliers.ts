@@ -13,7 +13,7 @@ export const useSuppliers = (schoolId: string) => {
     // Fetch suppliers
     const { data: suppliersData, error: suppliersError } = await supabase
       .from('suppliers')
-      .select('*')
+      .select('id, school_id, supplier_name, business_name, contact_number, category, contact_person, phone, address, opening_balance, current_balance, notes, created_at')
       .eq('school_id', schoolId)
       .order('supplier_name');
     
@@ -46,7 +46,7 @@ export const useSuppliers = (schoolId: string) => {
   const loadTransactions = useCallback(async (supplierId: string) => {
     const { data, error } = await supabase
       .from('supplier_transactions')
-      .select('*')
+      .select('id, school_id, supplier_id, type, amount, date, description, notes, payment_method, bill_number, balance_after, created_at')
       .eq('supplier_id', supplierId)
       .eq('school_id', schoolId)
       .order('date', { ascending: false });
