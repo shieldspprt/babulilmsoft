@@ -139,14 +139,9 @@ export type Parent = {
   school_id: string;
   first_name: string; // Note: database has first_name/last_name but type had 'name'
   last_name: string;
-  relation: 'Father' | 'Mother' | 'Guardian';
-  gender: string;
   cnic: string;
   contact: string;
-  whatsapp: string;
-  email: string;
   address: string;
-  occupation: string;
   notes: string;
   is_active: boolean;
   opening_balance: number;
@@ -162,7 +157,7 @@ export type Student = {
   last_name: string;
   date_of_birth: string;
   gender: 'Boy' | 'Girl';
-  admission_no: string;
+  registration_number: string;
   date_of_admission: string;
   admission_class_id: string;
   current_class_id: string;

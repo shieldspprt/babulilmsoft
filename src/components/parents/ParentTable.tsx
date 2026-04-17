@@ -43,11 +43,6 @@ export const ParentTable = React.memo<ParentTableProps>(({
               <td>
                 <div className="student-cell">
                   <span style={{ fontWeight: 600 }}>{r.first_name} {r.last_name}</span>
-                  {r.relation && (
-                    <span className={`rec-badge ${r.relation.toLowerCase()}`}>
-                      {r.relation}
-                    </span>
-                  )}
                 </div>
               </td>
               <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{r.cnic}</td>

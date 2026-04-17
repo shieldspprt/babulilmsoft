@@ -21,7 +21,7 @@ export const ParentStats: React.FC<ParentStatsProps> = ({ stats }) => {
           <div className="manager-stat-label">Total Families</div>
           <div className="manager-stat-value">{stats.totalFamilies}</div>
           <div className="manager-stat-sub">
-            {stats.fathers} Fathers • {stats.mothers} Mothers
+            Registered family records
           </div>
         </div>
       </div>

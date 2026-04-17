@@ -34,7 +34,7 @@ export const FeeGenerationManager = ({ schoolId }: { schoolId: string }) => {
     if (!preview?.students) return {};
     const groups: Record<string, any[]> = {};
     preview.students.forEach((s: any) => {
-      const cid = (s.class_id || s.current_class_id || s.admission_class_id || 'unassigned') as string;
+      const cid = (s.current_class_id || s.admission_class_id || 'unassigned') as string;
       if (!groups[cid]) groups[cid] = [];
       groups[cid].push(s);
     });
@@ -102,7 +102,7 @@ export const FeeGenerationManager = ({ schoolId }: { schoolId: string }) => {
 
       const { data, error } = await supabase
         .from('students')
-        .select('id, first_name, last_name, parent_id, current_monthly_fee, monthly_fee, class_id, current_class_id, admission_class_id, active, school_id, admission_no')
+        .select('id, first_name, last_name, parent_id, current_monthly_fee, monthly_fee, current_class_id, admission_class_id, active, school_id, registration_number')
         .eq('school_id', schoolId)
         .eq('active', true);
 
@@ -117,7 +117,7 @@ export const FeeGenerationManager = ({ schoolId }: { schoolId: string }) => {
         
         // Count how many have missing class_id (used by DB triggers)
         // Check for common variations: class_id, current_class_id, admission_class_id
-        const missingClass = data.filter(s => !s.class_id && !(s as any).current_class_id && !(s as any).admission_class_id);
+        const missingClass = data.filter(s => !s.current_class_id && !(s as any).admission_class_id);
 
         setPreview({ 
           count, 
@@ -140,7 +140,7 @@ export const FeeGenerationManager = ({ schoolId }: { schoolId: string }) => {
     if (!preview?.students) return;
     setFixing(true);
     try {
-      const targets = preview.students.filter(s => !s.class_id && (s.current_class_id || s.admission_class_id));
+      const targets = preview.students.filter(s => !s.current_class_id && s.admission_class_id);
       if (targets.length === 0) {
         showFlash('No students found needing class alignment.');
         return;
@@ -152,7 +152,6 @@ export const FeeGenerationManager = ({ schoolId }: { schoolId: string }) => {
         const bestClassId = s.current_class_id || s.admission_class_id;
         return supabase.from('students')
           .update({ 
-            class_id: bestClassId,
             current_class_id: bestClassId,
             admission_class_id: bestClassId
           })
@@ -380,9 +379,9 @@ export const FeeGenerationManager = ({ schoolId }: { schoolId: string }) => {
                       <tr key={s.id}>
                         <td>
                           <div style={{ fontWeight: 600 }}>{s.first_name} {s.last_name}</div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.admission_no}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.registration_number}</div>
                         </td>
-                        <td>{classes.find(c => c.id === (s.class_id || s.current_class_id))?.name || '—'}</td>
+                        <td>{classes.find(c => c.id === s.current_class_id)?.name || '—'}</td>
                         <td style={{ textAlign: 'right', fontWeight: 700, color: s.current_monthly_fee === 0 ? 'var(--danger)' : 'var(--text)' }}>
                           Rs. {(s.current_monthly_fee || 0).toLocaleString()}
                         </td>

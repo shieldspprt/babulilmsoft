@@ -32,7 +32,7 @@ export const useParents = (schoolId: string, showFlash: (msg: string) => void) =
     setLoading(true);
     try {
       const [{ data: parents }, { data: students }] = await Promise.all([
-        supabase.from('parents').select('id, school_id, first_name, last_name, relation, gender, cnic, contact, address, notes, created_at, updated_at').eq('school_id', schoolId).eq('is_active', true).order('created_at', { ascending: false }),
+        supabase.from('parents').select('id, school_id, first_name, last_name, cnic, contact, address, notes, created_at, updated_at').eq('school_id', schoolId).eq('is_active', true).order('created_at', { ascending: false }),
         supabase.from('students')
           .select('id, parent_id, monthly_fee, discount_type, discount_value, current_monthly_fee')
           .eq('school_id', schoolId)
@@ -99,9 +99,9 @@ export const useParents = (schoolId: string, showFlash: (msg: string) => void) =
       totalChildren: globalStats.totalChildren, 
       totalPotential: globalStats.totalNet,
       totalScholarships: globalStats.totalScholarships,
-      fathers: records.filter(r => r.relation === 'Father').length,
-      mothers: records.filter(r => r.relation === 'Mother').length,
-      guardians: records.filter(r => r.relation === 'Guardian').length
+      fathers: 0,
+      mothers: 0,
+      guardians: 0
     };
   }, [records, globalStats]);
 
