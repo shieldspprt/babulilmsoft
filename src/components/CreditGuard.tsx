@@ -11,9 +11,10 @@ type CreditStatus = {
 };
 
 export const CreditGuard: FC<{ children: ReactNode }> = ({ children }) => {
-  const { profile } = useAuth();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
+  const [isSlow, setIsSlow] = useState(false);
+  const { profile, refreshProfile } = useAuth();
 
   // Memoize navigation handler to prevent re-renders
   const handleBuyCredits = useCallback(() => {
@@ -36,13 +37,37 @@ export const CreditGuard: FC<{ children: ReactNode }> = ({ children }) => {
   }, [profile?.total_credits, profile?.credit_expires_at]);
 
   useEffect(() => {
-    // Allow a tick for status to compute
-    setTimeout(() => setChecking(false), 0);
+    const timer = setTimeout(() => setChecking(false), 800);
+    const slowTimer = setTimeout(() => setIsSlow(true), 5000);
+    return () => { clearTimeout(timer); clearTimeout(slowTimer); };
   }, []);
 
-  if (checking || !status) return (
-    <div className="cg-loading"><div className="spinner" /> Checking access…</div>
+  if (checking || (!status && !isSlow)) return (
+    <div className="cg-loading">
+      <div className="spinner" /> 
+      <span>Checking enrollment status…</span>
+    </div>
   );
+
+  if (!status && isSlow) return (
+    <div className="cg-block">
+      <div className="cg-card">
+        <div className="cg-icon alert"><AlertTriangle size={40} /></div>
+        <h2>School Setup in Progress</h2>
+        <p>We're finishing the setup for your school profile. This usually takes a moment after email confirmation.</p>
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+          <Button onClick={() => refreshProfile()}>
+            Check Again
+          </Button>
+          <Button variant="secondary" onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!status) return null;
 
   if (!status.hasCredits || status.expired) return (
     <div className="cg-block">

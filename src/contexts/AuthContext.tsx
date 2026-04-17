@@ -36,40 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading]       = useState(true);
   const userIdRef = useRef<string | null>(null);
 
-  /**
-   * Initialize free credits for new school owners
-   * Called when a user has 0 credits and no expiration (new user)
-   */
-  const initializeFreeCredits = useCallback(async (schoolId: string): Promise<void> => {
-    try {
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
-      
-      await supabase
-        .from('schools')
-        .update({ 
-          total_credits: 30, 
-          credit_expires_at: expiresAt.toISOString() 
-        })
-        .eq('id', schoolId);
-        
-      // Refresh profile to get updated credits
-      const { data: updatedSchool } = await supabase
-        .from('schools')
-        .select('id, user_id, school_name, contact, email, logo_url, primary_color, secondary_color, tertiary_color, total_credits, credit_expires_at, created_at')
-        .eq('id', schoolId)
-        .single();
-        
-      if (updatedSchool) {
-        setProfile(updatedSchool as SchoolProfile);
-      }
-    } catch (err) {
-      // Only log in development
-      if (import.meta.env.DEV) {
-        console.error('Error initializing free credits:', err);
-      }
-    }
-  }, []);
 
   /**
    * Fetch user profile with role detection:
@@ -130,15 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Error fetching profile:', error.message);
         }
       } else if (data) {
-        const schoolProfile = data as SchoolProfile;
-        setProfile(schoolProfile);
+        setProfile(data as SchoolProfile);
         setRole('owner');
-        
-        // Check if this is a new school owner who hasn't received free credits yet
-        // New users have 0 credits and no expiration date
-        if (schoolProfile.total_credits === 0 && !schoolProfile.credit_expires_at) {
-          await initializeFreeCredits(schoolProfile.id);
-        }
       }
     } catch (err) {
       if (attempt <= MAX_RETRIES) {
@@ -150,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Unexpected error fetching profile', err);
       }
     }
-  }, [initializeFreeCredits]);
+  }, []);
 
   useEffect(() => {
     const initSession = async () => {

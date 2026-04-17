@@ -21,35 +21,20 @@ export const Signup = () => {
     setLoading(true);
     setError('');
 
-    // 1. Create auth user
     const { data, error: authError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
-      options: { data: { school_name: formData.schoolName, contact: formData.contact, email: formData.email } }
+      options: { 
+        data: { 
+          school_name: formData.schoolName.trim(), 
+          contact: formData.contact.trim(), 
+          email: formData.email.trim().toLowerCase() 
+        } 
+      }
     });
 
     if (authError) { setError(authError.message); setLoading(false); return; }
     if (!data.user) { setError('Unexpected error — no user returned'); setLoading(false); return; }
-
-    // 2. Create school record immediately so it exists before first login
-    const { error: schoolError } = await supabase.from('schools').insert({
-      user_id: data.user.id,
-      school_name: formData.schoolName.trim(),
-      contact: formData.contact.trim(),
-      email: formData.email.trim().toLowerCase(),
-      // Defaults — user can update these in School Profile
-      logo_url: '',
-      primary_color: '#4f46e5',
-      secondary_color: '#818cf8',
-      tertiary_color: '#c7d2fe',
-      total_credits: 0,
-      credit_expires_at: null,
-    });
-
-    if (schoolError) {
-      // Don't block signup if school insert fails — user can retry or contact support
-      if (import.meta.env.DEV) console.error('School insert error:', schoolError.message);
-    }
 
     // 3. Navigate or prompt email confirmation
     if (data.session) {
